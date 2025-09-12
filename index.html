@@ -102,13 +102,14 @@
   </div>
 
   <script>
-    // 🧠 Replace with your Supabase project URL and anon key:
-    const SUPABASE_URL = 'https://bruuuxsrrejsretoqurs.supabase.co'; // ← replace
-    const SUPABASE_ANON_KEY = 'process.env.SUPABASE_KEY'; // ← replace
+    // ✅ Supabase config (your actual credentials)
+    const SUPABASE_URL = 'https://bruuuxsrrejsretoqurs.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydXV1eHNycmVqc3JldG9xdXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODg3NzMsImV4cCI6MjA3MzI2NDc3M30.rHi56j_9bhgruItwRzTR1Aiuu82ioCREU7DOEsqosjw';
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const messagesDiv = document.getElementById('chat-messages');
 
+    // Load chat messages
     async function fetchMessages() {
       const { data, error } = await supabase
         .from('messages')
@@ -154,12 +155,12 @@
       }
     }
 
-    // Send on Enter
+    // Send on Enter key
     document.getElementById('message-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Live updates (optional)
+    // Realtime updates
     supabase
       .channel('public:messages')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
