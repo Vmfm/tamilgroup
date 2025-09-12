@@ -81,20 +81,26 @@ document.body.classList.toggle("dark");
 document.getElementById("toggleTheme").textContent=document.body.classList.contains("dark")?"☀️ Light Mode":"🌙 Dark Mode";
 }
 
-// Join chat
+// Join chat with single-device enforcement
 function joinChat(){
 let inputName=document.getElementById("username").value.trim();
 if(!inputName) inputName="Guest"+Math.floor(Math.random()*10000);
 name=inputName;
+
+const userRef = db.ref("onlineUsers/"+name);
+userRef.once("value").then(snapshot=>{
+if(snapshot.exists()){
+alert("This username is already logged in on another device.");
+return;
+}else{
+userRef.set({ connected: true });
+userRef.onDisconnect().remove();
+
 document.getElementById("loginBox").style.display="none";
 document.getElementById("chatControls").style.display="flex";
 chatBox.style.display="block";
 document.getElementById("onlineUsers").style.display="block";
 
-// Online users
-let usersRef=db.ref("onlineUsers/"+name);
-usersRef.set(true);
-usersRef.onDisconnect().remove();
 updateUserList();
 
 // Default group tab
@@ -102,8 +108,10 @@ addChatTab("group","Group Chat");
 openChat("group");
 listenChat("group","messages");
 }
+});
+}
 
-// Update online users list
+// Update online users
 function updateUserList(){
 let container=document.getElementById("onlineUsers");
 container.innerHTML="<b>Online Users:</b> ";
