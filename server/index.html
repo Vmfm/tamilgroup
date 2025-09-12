@@ -29,6 +29,7 @@ body.dark .tabBtn{background:#333;color:#fff;}
 .msg{text-align:left;margin:5px 0;font-size:0.95rem;word-wrap:break-word;}
 .me{font-weight:bold;color:blue;}
 body.dark .me{color:#4aa3ff;}
+#typingIndicator{width:95%;max-width:600px;text-align:left;margin-bottom:5px;color:gray;}
 #chatControls{display:none;width:95%;max-width:600px;display:flex;gap:5px;margin-bottom:15px;}
 #msg{flex:1;padding:10px;border:1px solid var(--border);border-radius:5px;background:var(--box);color:var(--text);}
 #chatControls button{padding:10px 15px;border:none;background:var(--btn);color:var(--btn-text);border-radius:5px;cursor:pointer;}
@@ -36,6 +37,8 @@ body.dark .me{color:#4aa3ff;}
 #scrollBtn{position:absolute;bottom:10px;right:10px;padding:6px 12px;background:var(--btn);color:var(--btn-text);border:none;border-radius:5px;cursor:pointer;display:none;font-size:0.85rem;}
 .userBtn{cursor:pointer;background:#eee;color:#000;padding:5px 8px;margin:2px;border-radius:5px;display:inline-block;}
 body.dark .userBtn{background:#333;color:#fff;}
+.online-dot{color:green;font-weight:bold;margin-right:3px;}
+.offline-dot{color:gray;font-weight:bold;margin-right:3px;}
 </style>
 </head>
 <body>
@@ -47,14 +50,10 @@ body.dark .userBtn{background:#333;color:#fff;}
 <button onclick="joinChat()">Join</button>
 </div>
 
-<!-- Online users -->
 <div id="onlineUsers"></div>
-
-<!-- Tabs -->
 <div id="chatTabs"></div>
-
-<!-- Chat -->
 <div id="chatBox"><button id="scrollBtn" onclick="scrollToBottom()">⬇ New Messages</button></div>
+<div id="typingIndicator"></div>
 <div id="chatControls">
 <input type="text" id="msg" placeholder="Type message with emojis...">
 <button onclick="send()">Send</button>
@@ -78,9 +77,11 @@ const db=firebase.database();
 let name=null;
 let chatBox=document.getElementById("chatBox");
 let scrollBtn=document.getElementById("scrollBtn");
-let currentChat="group"; // default group
+let typingIndicator=document.getElementById("typingIndicator");
+let currentChat="group";
 let chatTabs=document.getElementById("chatTabs");
-let chats={}; // store active chat listeners
+let chats={};
+let typingTimeout;
 
 function toggleTheme(){
 document.body.classList.toggle("dark");
@@ -102,19 +103,16 @@ usersRef.set(true);
 usersRef.onDisconnect().remove();
 updateUserList();
 
-// create default group tab
+// default group tab
 addChatTab("group","Group Chat");
 openChat("group");
-
-// listen group chat
 listenChat("group","messages");
 }
 
-// online users
 function updateUserList(){
 let container=document.getElementById("onlineUsers");
 container.innerHTML="<b>Online Users:</b> ";
-db.ref("onlineUsers").once("value",snap=>{
+db.ref("onlineUsers").once("value").then(snap=>{
 snap.forEach(userSnap=>{
 let user=userSnap.key;
 if(user!==name){
@@ -128,7 +126,6 @@ container.appendChild(btn);
 });
 }
 
-// add tab
 function addChatTab(id,label){
 if(document.getElementById("tab_"+id)) return;
 let btn=document.createElement("div");
@@ -139,17 +136,16 @@ btn.onclick=()=>openChat(id);
 chatTabs.appendChild(btn);
 }
 
-// switch chat
 function openChat(id){
 currentChat=id;
 Array.from(chatTabs.children).forEach(tab=>tab.classList.remove("active"));
 document.getElementById("tab_"+id).classList.add("active");
 chatBox.innerHTML='<button id="scrollBtn" onclick="scrollToBottom()">⬇ New Messages</button>';
+listenTyping(id);
 }
 
-// listen messages
 function listenChat(id,refPath){
-if(chats[id]) return; // already listening
+if(chats[id]) return;
 chats[id]=true;
 db.ref(refPath).limitToLast(100).on("child_added", snapshot=>{
 let data=snapshot.val();
@@ -157,18 +153,38 @@ if(currentChat===id) addMessage(data);
 });
 }
 
-// add message
 function addMessage(data){
+db.ref("onlineUsers/"+data.user).once("value").then(snap=>{
+let online=snap.exists();
 let div=document.createElement("div");
 div.classList.add("msg");
 if(data.user===name) div.classList.add("me");
-div.textContent=`[${data.time}] ${data.user}: ${data.text}`;
+let dot=online?'<span class="online-dot">●</span>':'<span class="offline-dot">○</span>';
+div.innerHTML=`[${data.time}] ${dot}${data.user}: ${data.text}`;
 chatBox.insertBefore(div,scrollBtn);
 let atBottom=chatBox.scrollTop+chatBox.clientHeight>=chatBox.scrollHeight-50;
 if(atBottom) scrollToBottom(); else scrollBtn.style.display="block";
+});
 }
 
-// send message
+// typing indicator
+document.getElementById("msg").addEventListener("input", function(){
+if(!name) return;
+let chatId = currentChat;
+let typingRef = db.ref("typing/"+chatId+"/"+name);
+typingRef.set(true);
+clearTimeout(typingTimeout);
+typingTimeout = setTimeout(() => { typingRef.remove(); }, 2000);
+});
+
+function listenTyping(chatId){
+db.ref("typing/"+chatId).on("value", snap=>{
+let usersTyping=[];
+snap.forEach(userSnap=>{ if(userSnap.key!==name) usersTyping.push(userSnap.key); });
+typingIndicator.textContent = usersTyping.length>0 ? usersTyping.join(", ")+" is typing..." : "";
+});
+}
+
 function send(){
 let msg=document.getElementById("msg").value;
 if(!msg||!name) return;
@@ -176,18 +192,16 @@ let entry={user:name,text:msg,time:new Date().toLocaleTimeString()};
 let refPath=currentChat==="group"?"messages":"privateChats/"+currentChat+"/messages";
 let ref=db.ref(refPath);
 ref.push(entry);
-
-// keep last 100 messages
 ref.once("value",snap=>{
 let total=snap.numChildren();
 if(total>100){let keys=[];snap.forEach(c=>keys.push(c.key));keys.slice(0,total-100).forEach(k=>ref.child(k).remove());}
 });
 document.getElementById("msg").value="";
+db.ref("typing/"+currentChat+"/"+name).remove(); // remove typing
 }
 
 function scrollToBottom(){chatBox.scrollTop=chatBox.scrollHeight;scrollBtn.style.display="none";}
 
-// open private chat
 function getChatId(u1,u2){return [u1,u2].sort().join("_");}
 function openPrivateChat(user){
 let chatId=getChatId(name,user);
