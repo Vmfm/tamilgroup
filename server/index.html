@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>🔥 Tamil VM Multi Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+--bg:#f5f5f5;--text:#000;--box:#fff;--border:#ccc;--btn:#007bff;--btn-text:#fff;
+}
+body.dark{
+--bg:#121212;--text:#eaeaea;--box:#1e1e1e;--border:#444;--btn:#4aa3ff;--btn-text:#fff;
+}
+body{
+font-family:Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:0;
+display:flex;flex-direction:column;align-items:center;transition:0.3s;
+}
+h2{font-size:1.4rem;margin:15px 0;text-align:center;}
+#toggleTheme{margin-top:10px;padding:5px 10px;border:none;border-radius:5px;background:var(--btn);color:var(--btn-text);cursor:pointer;}
+#loginBox{margin-top:20px;width:90%;max-width:400px;text-align:center;}
+#loginBox input{width:70%;padding:10px;margin-bottom:10px;border:1px solid var(--border);border-radius:5px;background:var(--box);color:var(--text);}
+#loginBox button{padding:10px 15px;border:none;border-radius:5px;background:var(--btn);color:var(--btn-text);cursor:pointer;}
+#onlineUsers{width:95%;max-width:600px;margin:10px 0;padding:5px;border:1px solid var(--border);border-radius:5px;background:var(--box);display:none;}
+#chatTabs{width:95%;max-width:600px;display:flex;gap:5px;overflow-x:auto;margin:5px 0;}
+.tabBtn{padding:5px 10px;background:#eee;border-radius:5px;cursor:pointer;white-space:nowrap;}
+body.dark .tabBtn{background:#333;color:#fff;}
+.tabBtn.active{background:var(--btn);color:var(--btn-text);}
+#chatBox{width:95%;max-width:600px;height:40vh;overflow-y:auto;border:1px solid var(--border);background:var(--box);margin:5px 0;padding:10px;display:none;border-radius:8px;position:relative;}
+.msg{text-align:left;margin:5px 0;font-size:0.95rem;word-wrap:break-word;}
+.me{font-weight:bold;color:blue;}
+body.dark .me{color:#4aa3ff;}
+#chatControls{display:none;width:95%;max-width:600px;display:flex;gap:5px;margin-bottom:15px;}
+#msg{flex:1;padding:10px;border:1px solid var(--border);border-radius:5px;background:var(--box);color:var(--text);}
+#chatControls button{padding:10px 15px;border:none;background:var(--btn);color:var(--btn-text);border-radius:5px;cursor:pointer;}
+#chatControls button:hover{background:#0056b3;}
+#scrollBtn{position:absolute;bottom:10px;right:10px;padding:6px 12px;background:var(--btn);color:var(--btn-text);border:none;border-radius:5px;cursor:pointer;display:none;font-size:0.85rem;}
+.userBtn{cursor:pointer;background:#eee;color:#000;padding:5px 8px;margin:2px;border-radius:5px;display:inline-block;}
+body.dark .userBtn{background:#333;color:#fff;}
+</style>
+</head>
+<body>
+<h2>🔥 Tamil VM Multi Chat</h2>
+<button id="toggleTheme" onclick="toggleTheme()">🌙 Dark Mode</button>
+
+<div id="loginBox">
+<input type="text" id="username" placeholder="Enter your name">
+<button onclick="joinChat()">Join</button>
+</div>
+
+<!-- Online users -->
+<div id="onlineUsers"></div>
+
+<!-- Tabs -->
+<div id="chatTabs"></div>
+
+<!-- Chat -->
+<div id="chatBox"><button id="scrollBtn" onclick="scrollToBottom()">⬇ New Messages</button></div>
+<div id="chatControls">
+<input type="text" id="msg" placeholder="Type message with emojis...">
+<button onclick="send()">Send</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig={
+apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+authDomain:"tamil-chat-2d54e.firebaseapp.com",
+databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+projectId:"tamil-chat-2d54e",
+storageBucket:"tamil-chat-2d54e.appspot.com",
+messagingSenderId:"804705969240",
+appId:"1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let name=null;
+let chatBox=document.getElementById("chatBox");
+let scrollBtn=document.getElementById("scrollBtn");
+let currentChat="group"; // default group
+let chatTabs=document.getElementById("chatTabs");
+let chats={}; // store active chat listeners
+
+function toggleTheme(){
+document.body.classList.toggle("dark");
+document.getElementById("toggleTheme").textContent=document.body.classList.contains("dark")?"☀️ Light Mode":"🌙 Dark Mode";
+}
+
+function joinChat(){
+let inputName=document.getElementById("username").value.trim();
+if(!inputName) inputName="Guest"+Math.floor(Math.random()*10000);
+name=inputName;
+document.getElementById("loginBox").style.display="none";
+document.getElementById("chatControls").style.display="flex";
+chatBox.style.display="block";
+document.getElementById("onlineUsers").style.display="block";
+
+// add user online
+let usersRef=db.ref("onlineUsers/"+name);
+usersRef.set(true);
+usersRef.onDisconnect().remove();
+updateUserList();
+
+// create default group tab
+addChatTab("group","Group Chat");
+openChat("group");
+
+// listen group chat
+listenChat("group","messages");
+}
+
+// online users
+function updateUserList(){
+let container=document.getElementById("onlineUsers");
+container.innerHTML="<b>Online Users:</b> ";
+db.ref("onlineUsers").once("value",snap=>{
+snap.forEach(userSnap=>{
+let user=userSnap.key;
+if(user!==name){
+let btn=document.createElement("span");
+btn.textContent=user;
+btn.className="userBtn";
+btn.onclick=()=>openPrivateChat(user);
+container.appendChild(btn);
+}
+});
+});
+}
+
+// add tab
+function addChatTab(id,label){
+if(document.getElementById("tab_"+id)) return;
+let btn=document.createElement("div");
+btn.className="tabBtn";
+btn.id="tab_"+id;
+btn.textContent=label;
+btn.onclick=()=>openChat(id);
+chatTabs.appendChild(btn);
+}
+
+// switch chat
+function openChat(id){
+currentChat=id;
+Array.from(chatTabs.children).forEach(tab=>tab.classList.remove("active"));
+document.getElementById("tab_"+id).classList.add("active");
+chatBox.innerHTML='<button id="scrollBtn" onclick="scrollToBottom()">⬇ New Messages</button>';
+}
+
+// listen messages
+function listenChat(id,refPath){
+if(chats[id]) return; // already listening
+chats[id]=true;
+db.ref(refPath).limitToLast(100).on("child_added", snapshot=>{
+let data=snapshot.val();
+if(currentChat===id) addMessage(data);
+});
+}
+
+// add message
+function addMessage(data){
+let div=document.createElement("div");
+div.classList.add("msg");
+if(data.user===name) div.classList.add("me");
+div.textContent=`[${data.time}] ${data.user}: ${data.text}`;
+chatBox.insertBefore(div,scrollBtn);
+let atBottom=chatBox.scrollTop+chatBox.clientHeight>=chatBox.scrollHeight-50;
+if(atBottom) scrollToBottom(); else scrollBtn.style.display="block";
+}
+
+// send message
+function send(){
+let msg=document.getElementById("msg").value;
+if(!msg||!name) return;
+let entry={user:name,text:msg,time:new Date().toLocaleTimeString()};
+let refPath=currentChat==="group"?"messages":"privateChats/"+currentChat+"/messages";
+let ref=db.ref(refPath);
+ref.push(entry);
+
+// keep last 100 messages
+ref.once("value",snap=>{
+let total=snap.numChildren();
+if(total>100){let keys=[];snap.forEach(c=>keys.push(c.key));keys.slice(0,total-100).forEach(k=>ref.child(k).remove());}
+});
+document.getElementById("msg").value="";
+}
+
+function scrollToBottom(){chatBox.scrollTop=chatBox.scrollHeight;scrollBtn.style.display="none";}
+
+// open private chat
+function getChatId(u1,u2){return [u1,u2].sort().join("_");}
+function openPrivateChat(user){
+let chatId=getChatId(name,user);
+addChatTab(chatId,user);
+listenChat(chatId,"privateChats/"+chatId+"/messages");
+openChat(chatId);
+}
+</script>
+</body>
+</html>
