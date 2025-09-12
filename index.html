@@ -23,13 +23,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
   <script>
-    // 🔑 Your Firebase configuration
+    // 🔑 Correct Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
       authDomain: "tamil-chat-2d54e.firebaseapp.com",
       databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
       projectId: "tamil-chat-2d54e",
-      storageBucket: "tamil-chat-2d54e.firebasestorage.app",
+      storageBucket: "tamil-chat-2d54e.appspot.com",  // ✅ fixed
       messagingSenderId: "804705969240",
       appId: "1:804705969240:web:658df281dd8360843c162d"
     };
@@ -38,31 +38,31 @@
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let name = "Guest-" + Math.floor(Math.random()*1000);
+    let name = "Guest-" + Math.floor(Math.random() * 1000);
     let chatBox = document.getElementById("chatBox");
 
-    // Listen for new messages
+    // 📡 Listen for new messages
     db.ref("messages").on("child_added", snapshot => {
       let data = snapshot.val();
       let div = document.createElement("div");
       div.classList.add("msg");
-      if(data.user === name) div.classList.add("me");
+      if (data.user === name) div.classList.add("me");
       div.textContent = `[${data.time}] ${data.user}: ${data.text}`;
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // Send message
-    function send(){
+    // ✍️ Send message
+    function send() {
       let msg = document.getElementById("msg").value;
-      if(!msg) return;
+      if (!msg) return;
       let entry = {
         user: name,
         text: msg,
         time: new Date().toLocaleTimeString()
       };
       db.ref("messages").push(entry);
-      document.getElementById("msg").value="";
+      document.getElementById("msg").value = "";
     }
   </script>
 </body>
