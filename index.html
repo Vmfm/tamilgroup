@@ -2,45 +2,144 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Group Chat - Guest Login</title>
+  <title>🔥 Tamil VM Group Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; background:#f5f5f5; text-align:center; }
-    #chatBox { width:90%; max-width:600px; height:400px; overflow-y:scroll; border:1px solid #ccc; background:#fff; margin:20px auto; padding:10px; display:none; }
-    #msg { width:70%; padding:10px; }
-    button { padding:10px; }
-    .msg { text-align:left; margin:5px; }
-    .me { font-weight:bold; color:blue; }
-    #loginBox { margin-top: 50px; }
+    body {
+      font-family: Arial, sans-serif;
+      background:#f5f5f5;
+      margin:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background:#121212;
+      color:#eaeaea;
+    }
+    h2 {
+      font-size:1.4rem;
+      margin:15px 0;
+      text-align:center;
+    }
+    #loginBox {
+      margin-top: 40px;
+      width:90%;
+      max-width:400px;
+    }
+    #loginBox input {
+      width:70%;
+      padding:10px;
+      font-size:1rem;
+      margin-bottom:10px;
+    }
+    #loginBox button {
+      padding:10px 15px;
+      font-size:1rem;
+    }
+    #chatBox {
+      width:95%;
+      max-width:600px;
+      height:60vh;
+      overflow-y:auto;
+      border:1px solid #ccc;
+      background:#fff;
+      margin:10px 0;
+      padding:10px;
+      display:none;
+      border-radius:8px;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark #chatBox {
+      background:#1e1e1e;
+      border-color:#444;
+    }
+    .msg {
+      text-align:left;
+      margin:5px 0;
+      font-size:0.95rem;
+      word-wrap:break-word;
+    }
+    .me {
+      font-weight:bold;
+      color:blue;
+    }
+    body.dark .me {
+      color:#4aa3ff;
+    }
+    #chatControls {
+      display:none;
+      width:95%;
+      max-width:600px;
+      display:flex;
+      gap:5px;
+      margin-bottom:15px;
+    }
+    #msg {
+      flex:1;
+      padding:10px;
+      font-size:1rem;
+      border:1px solid #ccc;
+      border-radius:5px;
+    }
+    #chatControls button {
+      padding:10px 15px;
+      font-size:1rem;
+      border:none;
+      background:#007bff;
+      color:white;
+      border-radius:5px;
+      cursor:pointer;
+    }
+    #chatControls button:hover {
+      background:#0056b3;
+    }
+    #toggleTheme {
+      margin-top:10px;
+      padding:5px 10px;
+      font-size:0.9rem;
+      border:none;
+      border-radius:5px;
+      background:#444;
+      color:white;
+      cursor:pointer;
+    }
+    body.dark #toggleTheme {
+      background:#eaeaea;
+      color:#121212;
+    }
   </style>
 </head>
 <body>
   <h2>🔥 Tamil VM Group Chat</h2>
+  <button id="toggleTheme" onclick="toggleTheme()">🌙 Dark Mode</button>
 
   <!-- Login screen -->
   <div id="loginBox">
     <input type="text" id="username" placeholder="Enter your name">
-    <button onclick="joinChat()">Join Chat</button>
+    <button onclick="joinChat()">Join</button>
   </div>
 
   <!-- Chat screen -->
   <div id="chatBox"></div>
-  <div id="chatControls" style="display:none;">
+  <div id="chatControls">
     <input type="text" id="msg" placeholder="Type message...">
     <button onclick="send()">Send</button>
   </div>
 
-  <!-- ✅ Use Firebase v8 SDK -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // 🔑 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
       authDomain: "tamil-chat-2d54e.firebaseapp.com",
       databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
       projectId: "tamil-chat-2d54e",
-      storageBucket: "tamil-chat-2d54e.appspot.com", // ✅ fixed
+      storageBucket: "tamil-chat-2d54e.appspot.com",
       messagingSenderId: "804705969240",
       appId: "1:804705969240:web:658df281dd8360843c162d"
     };
@@ -50,6 +149,17 @@
 
     let name = null;
     let chatBox = document.getElementById("chatBox");
+
+    // 🌙 Theme toggle
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+      const btn = document.getElementById("toggleTheme");
+      if (document.body.classList.contains("dark")) {
+        btn.textContent = "☀️ Light Mode";
+      } else {
+        btn.textContent = "🌙 Dark Mode";
+      }
+    }
 
     // 👤 Join chat
     function joinChat() {
@@ -61,10 +171,10 @@
       name = inputName;
       document.getElementById("loginBox").style.display = "none";
       chatBox.style.display = "block";
-      document.getElementById("chatControls").style.display = "block";
+      document.getElementById("chatControls").style.display = "flex";
 
-      // Start listening for messages
-      db.ref("messages").on("child_added", snapshot => {
+      // Show only last 100 messages
+      db.ref("messages").limitToLast(100).on("child_added", snapshot => {
         let data = snapshot.val();
         let div = document.createElement("div");
         div.classList.add("msg");
@@ -75,7 +185,7 @@
       });
     }
 
-    // ✍️ Send message
+    // ✍️ Send message + auto-delete old
     function send() {
       let msg = document.getElementById("msg").value;
       if (!msg || !name) return;
@@ -84,7 +194,24 @@
         text: msg,
         time: new Date().toLocaleTimeString()
       };
-      db.ref("messages").push(entry);
+      let messagesRef = db.ref("messages");
+      messagesRef.push(entry);
+
+      // 🚀 Auto-delete old messages (keep last 100)
+      messagesRef.once("value", snapshot => {
+        let total = snapshot.numChildren();
+        if (total > 100) {
+          let extras = total - 100;
+          let keys = [];
+          snapshot.forEach(child => {
+            keys.push(child.key);
+          });
+          keys.slice(0, extras).forEach(key => {
+            messagesRef.child(key).remove();
+          });
+        }
+      });
+
       document.getElementById("msg").value = "";
     }
   </script>
