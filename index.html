@@ -5,57 +5,80 @@
   <title>Group Chat - Guest Login</title>
   <style>
     body { font-family: Arial, sans-serif; background:#f5f5f5; text-align:center; }
-    #chatBox { width:90%; max-width:600px; height:400px; overflow-y:scroll; border:1px solid #ccc; background:#fff; margin:20px auto; padding:10px; }
+    #chatBox { width:90%; max-width:600px; height:400px; overflow-y:scroll; border:1px solid #ccc; background:#fff; margin:20px auto; padding:10px; display:none; }
     #msg { width:70%; padding:10px; }
     button { padding:10px; }
     .msg { text-align:left; margin:5px; }
     .me { font-weight:bold; color:blue; }
+    #loginBox { margin-top: 50px; }
   </style>
 </head>
 <body>
-  <h2>🔥 Tamil VM Group Chat (Guest)</h2>
-  <div id="chatBox"></div>
-  <input type="text" id="msg" placeholder="Type message...">
-  <button onclick="send()">Send</button>
+  <h2>🔥 Tamil VM Group Chat</h2>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <!-- Login screen -->
+  <div id="loginBox">
+    <input type="text" id="username" placeholder="Enter your name">
+    <button onclick="joinChat()">Join Chat</button>
+  </div>
+
+  <!-- Chat screen -->
+  <div id="chatBox"></div>
+  <div id="chatControls" style="display:none;">
+    <input type="text" id="msg" placeholder="Type message...">
+    <button onclick="send()">Send</button>
+  </div>
+
+  <!-- ✅ Use Firebase v8 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // 🔑 Correct Firebase config
+    // 🔑 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
       authDomain: "tamil-chat-2d54e.firebaseapp.com",
       databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
       projectId: "tamil-chat-2d54e",
-      storageBucket: "tamil-chat-2d54e.appspot.com",  // ✅ fixed
+      storageBucket: "tamil-chat-2d54e.appspot.com", // ✅ fixed
       messagingSenderId: "804705969240",
       appId: "1:804705969240:web:658df281dd8360843c162d"
     };
 
-    // ✅ Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let name = "Guest-" + Math.floor(Math.random() * 1000);
+    let name = null;
     let chatBox = document.getElementById("chatBox");
 
-    // 📡 Listen for new messages
-    db.ref("messages").on("child_added", snapshot => {
-      let data = snapshot.val();
-      let div = document.createElement("div");
-      div.classList.add("msg");
-      if (data.user === name) div.classList.add("me");
-      div.textContent = `[${data.time}] ${data.user}: ${data.text}`;
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    // 👤 Join chat
+    function joinChat() {
+      let inputName = document.getElementById("username").value.trim();
+      if (!inputName) {
+        alert("Please enter a name");
+        return;
+      }
+      name = inputName;
+      document.getElementById("loginBox").style.display = "none";
+      chatBox.style.display = "block";
+      document.getElementById("chatControls").style.display = "block";
+
+      // Start listening for messages
+      db.ref("messages").on("child_added", snapshot => {
+        let data = snapshot.val();
+        let div = document.createElement("div");
+        div.classList.add("msg");
+        if (data.user === name) div.classList.add("me");
+        div.textContent = `[${data.time}] ${data.user}: ${data.text}`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+    }
 
     // ✍️ Send message
     function send() {
       let msg = document.getElementById("msg").value;
-      if (!msg) return;
+      if (!msg || !name) return;
       let entry = {
         user: name,
         text: msg,
