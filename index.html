@@ -48,11 +48,19 @@
     }
 
     .chat-input input {
-      flex: 1;
       padding: 10px;
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 4px;
+    }
+
+    #username {
+      width: 25%;
+      margin-right: 10px;
+    }
+
+    #message-input {
+      flex: 1;
     }
 
     .chat-input button {
@@ -102,14 +110,25 @@
   </div>
 
   <script>
-    // ✅ Supabase config (your actual credentials)
+    // ✅ Supabase setup
     const SUPABASE_URL = 'https://bruuuxsrrejsretoqurs.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydXV1eHNycmVqc3JldG9xdXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODg3NzMsImV4cCI6MjA3MzI2NDc3M30.rHi56j_9bhgruItwRzTR1Aiuu82ioCREU7DOEsqosjw';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydXV1eHNycmVqc3JldG9xdXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODg3NzMsImV4cCI6MjA3MzI2NDc3M30.rHi56j_9bhgruItwRzTR1Aiuu82ioCREU7DOEsqosjw';
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const messagesDiv = document.getElementById('chat-messages');
 
-    // Load chat messages
+    // ✅ Add message to DOM
+    function addMessageToDOM(user, text, time) {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      const date = new Date(time);
+      const formattedTime = date.toLocaleTimeString();
+      messageElement.innerHTML = `<span class="user">${user}:</span><span class="text">${text}</span><span class="timestamp">${formattedTime}</span>`;
+      messagesDiv.appendChild(messageElement);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // ✅ Fetch all messages
     async function fetchMessages() {
       const { data, error } = await supabase
         .from('messages')
@@ -125,18 +144,9 @@
       data.forEach(msg => {
         addMessageToDOM(msg.username, msg.message, msg.created_at);
       });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function addMessageToDOM(user, text, time) {
-      const messageElement = document.createElement('div');
-      messageElement.classList.add('message');
-      const date = new Date(time);
-      const formattedTime = date.toLocaleTimeString();
-      messageElement.innerHTML = `<span class="user">${user}:</span><span class="text">${text}</span><span class="timestamp">${formattedTime}</span>`;
-      messagesDiv.appendChild(messageElement);
-    }
-
+    // ✅ Send message
     async function sendMessage() {
       const username = document.getElementById('username').value.trim();
       const message = document.getElementById('message-input').value.trim();
@@ -151,24 +161,32 @@
         console.error('Error sending message:', error);
       } else {
         document.getElementById('message-input').value = '';
-        fetchMessages();
       }
     }
 
-    // Send on Enter key
+    // ✅ Send on Enter key
     document.getElementById('message-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Realtime updates
+    // ✅ Real-time updates using new Supabase channel API
     supabase
-      .channel('public:messages')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-        fetchMessages();
-      })
+      .channel('messages_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const msg = payload.new;
+          addMessageToDOM(msg.username, msg.message, msg.created_at);
+        }
+      )
       .subscribe();
 
-    // Initial load
+    // ✅ Initial load
     fetchMessages();
   </script>
 </body>
