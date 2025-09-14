@@ -1,191 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>🔥 Tamil VM Group Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background:#f5f5f5;
-      margin:0;
-      padding:0;
-    }
-    #loginPage, #chatPage {
-      display: none;
-      padding: 20px;
-    }
-    #chatBox {
-      border:1px solid #ccc;
-      background:#fff;
-      height: 400px;
-      overflow-y: scroll;
-      padding:10px;
-      margin-bottom:10px;
-    }
-    .msg {
-      margin:5px 0;
-      padding:5px 8px;
-      border-radius:6px;
-      background:#e3e3e3;
-      display:flex;
-      align-items:flex-start;
-      gap:8px;
-    }
-    .msg img {
-      width:35px;
-      height:35px;
-      border-radius:50%;
-      object-fit:cover;
-    }
-    .msg strong {
-      color:#d12;
-    }
-    input, select, button {
-      padding:8px;
-      margin:5px 0;
-    }
-    button {
-      cursor:pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>🔥 Tamil VM Group Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f0f0f0; }
+#loginPage, #chatPage { display:none; padding:20px; }
+input, select, button { padding:10px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; }
+button { cursor:pointer; }
+#usernameStatus { font-size:14px; margin-left:5px; }
+#chatContainer { display:flex; flex-direction:column; }
+#chatBox { flex:1; border-radius:10px; background:#fff; padding:10px; height:400px; overflow-y:auto; margin-bottom:10px; }
+.msg { display:flex; align-items:flex-end; margin:5px 0; }
+.msg img { width:36px; height:36px; border-radius:50%; }
+.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; }
+.msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
+.msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
+#usersBox { background:#fff; padding:10px; border-radius:10px; margin-top:10px; }
+.user { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.user img { width:32px; height:32px; border-radius:50%; }
+#typingStatus { font-style:italic; color:#555; margin-bottom:5px; }
+@media (min-width:700px){ #chatContainer { flex-direction:row; gap:20px; } #chatBox { flex:3; } #usersBox { flex:1; max-height:400px; overflow-y:auto; } }
+</style>
 </head>
 <body>
 
-  <!-- Login Page -->
-  <div id="loginPage">
-    <h2>Login to Group Chat</h2>
-    <input type="text" id="username" placeholder="Enter Username" required><br>
-    <input type="number" id="age" placeholder="Enter Age" required><br>
-    <select id="gender">
-      <option value="" disabled selected>Select Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select><br>
-    <input type="file" id="profilePic" accept="image/*"><br>
-    <button onclick="login()">Join Chat</button>
-  </div>
+<!-- Login Page -->
+<div id="loginPage">
+<h2>Login to Group Chat</h2>
+<input type="text" id="username" placeholder="Enter Username" required>
+<span id="usernameStatus"></span><br>
+<input type="number" id="age" placeholder="Enter Age" required><br>
+<select id="gender">
+<option value="" disabled selected>Select Gender</option>
+<option value="Male">Male</option>
+<option value="Female">Female</option>
+<option value="Other">Other</option>
+</select><br>
+<input type="file" id="profilePic" accept="image/*"><br>
+<button id="loginBtn" onclick="login()" disabled>Join Chat</button>
+</div>
 
-  <!-- Chat Page -->
-  <div id="chatPage">
-    <h2>🔥 Tamil VM Group Chat</h2>
-    <div id="userInfo"></div>
+<!-- Chat Page -->
+<div id="chatPage">
+<h2>🔥 Tamil VM Group Chat</h2>
+<div id="userInfo"></div>
+<div id="chatContainer">
+  <div style="flex:3; display:flex; flex-direction:column;">
+    <div id="typingStatus"></div>
     <div id="chatBox"></div>
-    <input type="text" id="message" placeholder="Type a message...">
+    <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
     <button onclick="sendMessage()">Send</button>
     <button onclick="logout()" style="background:red;color:white;">Logout</button>
   </div>
+  <div id="usersBox">
+    <h3>👥 Online Users</h3>
+    <div id="onlineUsers"></div>
+  </div>
+</div>
+</div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain:"tamil-chat-2d54e.firebaseapp.com",
+  databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId:"tamil-chat-2d54e",
+  storageBucket:"tamil-chat-2d54e.firebasestorage.app",
+  messagingSenderId:"804705969240"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  <script>
-    // ✅ Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
-      authDomain: "tamil-chat-2d54e.firebaseapp.com",
-      databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-      projectId: "tamil-chat-2d54e",
-      storageBucket: "tamil-chat-2d54e.firebasestorage.app",
-      messagingSenderId: "804705969240"
-    };
-    firebase.initializeApp(firebaseConfig);
+let currentUser={};
+let typingTimeout;
+const userColors = {}; // store pastel color per user
 
-    const db = firebase.database();
-    let currentUser = {};
+// Generate a readable pastel color from username
+function stringToPastelColor(str){
+  let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
+  const h=hash%360; const s=70+(hash%10); const l=80;
+  return `hsl(${h},${s}%,${l}%)`;
+}
 
-    // ✅ Check localStorage on page load
-    window.onload = function () {
-      const savedUser = localStorage.getItem("chatUser");
-      if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        showChat();
-      } else {
-        document.getElementById("loginPage").style.display = "block";
+// Auto-login
+window.onload=function(){
+  const savedUser=localStorage.getItem("chatUser");
+  if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
+  else{document.getElementById("loginPage").style.display="block";}
+};
+
+// Username availability check
+const usernameInput=document.getElementById("username");
+const usernameStatus=document.getElementById("usernameStatus");
+const loginBtn=document.getElementById("loginBtn");
+usernameInput.addEventListener("input",function(){
+  const name=usernameInput.value.trim();
+  if(!name){usernameStatus.innerText=""; loginBtn.disabled=true; return;}
+  db.ref("users/"+name).once("value").then(snap=>{
+    if(snap.exists()){usernameStatus.innerText="❌ Taken"; usernameStatus.style.color="red"; loginBtn.disabled=true;}
+    else{usernameStatus.innerText="✅ Available"; usernameStatus.style.color="green"; loginBtn.disabled=false;}
+  });
+});
+
+// Login
+function login(){
+  const username=usernameInput.value.trim();
+  const age=document.getElementById("age").value.trim();
+  const gender=document.getElementById("gender").value;
+  const file=document.getElementById("profilePic").files[0];
+  if(!username||!age||!gender){alert("Fill all fields"); return;}
+  if(file){const reader=new FileReader(); reader.onload=e=>saveUser(username,age,gender,e.target.result); reader.readAsDataURL(file);}
+  else saveUser(username,age,gender,"");
+}
+
+function saveUser(username,age,gender,profilePic){
+  currentUser={username,age,gender,profilePic};
+  localStorage.setItem("chatUser",JSON.stringify(currentUser));
+  const userRef=db.ref("users/"+username);
+  userRef.set({username,age,gender,profilePic,online:true});
+  userRef.onDisconnect().update({online:false});
+  showChat();
+}
+
+// Show chat
+function showChat(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("chatPage").style.display="block";
+  document.getElementById("userInfo").innerHTML=`<b>Logged in as:</b> ${currentUser.username} (${currentUser.age},${currentUser.gender}) <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%;">`;
+
+  // Messages
+  db.ref("messages").off();
+  db.ref("messages").on("child_added",snap=>{
+    const msg=snap.val();
+    if(!userColors[msg.username]) userColors[msg.username]=stringToPastelColor(msg.username);
+    const div=document.createElement("div");
+    div.className="msg "+(msg.username===currentUser.username?"self":"other");
+    div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
+      <div class="msgContent" style="background:${userColors[msg.username]}; color:#000;">
+        ${msg.username} (${msg.age},${msg.gender}): ${msg.text}
+      </div>`;
+    document.getElementById("chatBox").appendChild(div);
+    document.getElementById("chatBox").scrollTop=document.getElementById("chatBox").scrollHeight;
+  });
+
+  // Online users
+  db.ref("users").off();
+  db.ref("users").on("value",snap=>{
+    const div=document.getElementById("onlineUsers"); div.innerHTML="";
+    snap.forEach(child=>{
+      const u=child.val();
+      if(u.online){
+        const d=document.createElement("div"); d.className="user";
+        d.innerHTML=`<img src="${u.profilePic||'https://via.placeholder.com/32'}">${u.username} (${u.age},${u.gender})`;
+        div.appendChild(d);
       }
-    };
+    });
+  });
 
-    function login() {
-      const username = document.getElementById("username").value.trim();
-      const age = document.getElementById("age").value.trim();
-      const gender = document.getElementById("gender").value;
-      const file = document.getElementById("profilePic").files[0];
+  // Typing indicator
+  db.ref("typing").off();
+  db.ref("typing").on("value",snap=>{
+    const data=snap.val()||{};
+    let status="";
+    for(const user in data){if(user!==currentUser.username && data[user]) status+=`${user} is typing... `;}
+    document.getElementById("typingStatus").innerText=status;
+  });
+}
 
-      if (!username || !age || !gender) {
-        alert("Please fill all fields");
-        return;
-      }
+// Send message
+function sendMessage(){
+  const text=document.getElementById("message").value.trim();
+  if(!text) return;
+  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
+  document.getElementById("message").value="";
+  db.ref("typing/"+currentUser.username).set(false);
+}
 
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          currentUser = {
-            username,
-            age,
-            gender,
-            profilePic: e.target.result // Base64 image
-          };
-          localStorage.setItem("chatUser", JSON.stringify(currentUser));
-          showChat();
-        };
-        reader.readAsDataURL(file);
-      } else {
-        currentUser = {
-          username,
-          age,
-          gender,
-          profilePic: "https://via.placeholder.com/35" // Default avatar
-        };
-        localStorage.setItem("chatUser", JSON.stringify(currentUser));
-        showChat();
-      }
-    }
+// Logout
+function logout(){
+  if(currentUser.username){
+    db.ref("users/"+currentUser.username).update({online:false});
+    db.ref("typing/"+currentUser.username).set(false);
+  }
+  localStorage.removeItem("chatUser"); currentUser={};
+  document.getElementById("chatPage").style.display="none";
+  document.getElementById("loginPage").style.display="block";
+}
 
-    function showChat() {
-      document.getElementById("loginPage").style.display = "none";
-      document.getElementById("chatPage").style.display = "block";
-      document.getElementById("userInfo").innerHTML = 
-        `<b>Logged in as:</b> <img src="${currentUser.profilePic}" width="30" height="30" style="border-radius:50%;"> ${currentUser.username} (${currentUser.age}, ${currentUser.gender})`;
-
-      // Load chat messages
-      db.ref("messages").off(); // prevent duplicate listeners
-      db.ref("messages").on("child_added", snapshot => {
-        const msg = snapshot.val();
-        const div = document.createElement("div");
-        div.className = "msg";
-        div.innerHTML = `
-          <img src="${msg.profilePic || 'https://via.placeholder.com/35'}">
-          <div>
-            <strong>${msg.username} (${msg.age}, ${msg.gender}):</strong><br>${msg.text}
-          </div>`;
-        document.getElementById("chatBox").appendChild(div);
-        document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
-      });
-    }
-
-    function sendMessage() {
-      const text = document.getElementById("message").value.trim();
-      if (text === "") return;
-
-      db.ref("messages").push({
-        username: currentUser.username,
-        age: currentUser.age,
-        gender: currentUser.gender,
-        profilePic: currentUser.profilePic,
-        text: text
-      });
-
-      document.getElementById("message").value = "";
-    }
-
-    function logout() {
-      localStorage.removeItem("chatUser");
-      currentUser = {};
-      document.getElementById("chatPage").style.display = "none";
-      document.getElementById("loginPage").style.display = "block";
-    }
-  </script>
+// Typing
+function userTyping(){
+  db.ref("typing/"+currentUser.username).set(true);
+  clearTimeout(typingTimeout);
+  typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
+}
+</script>
 </body>
 </html>
