@@ -10,18 +10,16 @@ body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f0f0f0; }
 input, select, button { padding:10px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; }
 button { cursor:pointer; }
 #usernameStatus { font-size:14px; margin-left:5px; }
-#chatContainer { display:flex; flex-direction:column; }
-#chatBox { flex:1; border-radius:10px; background:#fff; padding:10px; height:400px; overflow-y:auto; margin-bottom:10px; }
+#chatBox { border-radius:10px; background:#fff; padding:10px; overflow-y:auto; margin-bottom:0; height:calc(100vh - 150px); }
 .msg { display:flex; align-items:flex-end; margin:5px 0; }
 .msg img { width:36px; height:36px; border-radius:50%; }
 .msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; }
 .msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
 .msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
-#usersBox { background:#fff; padding:10px; border-radius:10px; margin-top:10px; }
-.user { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.user img { width:32px; height:32px; border-radius:50%; }
 #typingStatus { font-style:italic; color:#555; margin-bottom:5px; }
-@media (min-width:700px){ #chatContainer { flex-direction:row; gap:20px; } #chatBox { flex:3; } #usersBox { flex:1; max-height:400px; overflow-y:auto; } }
+#inputContainer { position:fixed; bottom:0; left:0; width:100%; background:#f0f0f0; padding:10px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #ccc; }
+#inputContainer input { flex:1; margin:0; max-width:none; }
+#inputContainer button { flex:0; }
 </style>
 </head>
 <body>
@@ -46,18 +44,13 @@ button { cursor:pointer; }
 <div id="chatPage">
 <h2>🔥 Tamil VM Group Chat</h2>
 <div id="userInfo"></div>
-<div id="chatContainer">
-  <div style="flex:3; display:flex; flex-direction:column;">
-    <div id="typingStatus"></div>
-    <div id="chatBox"></div>
-    <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="logout()" style="background:red;color:white;">Logout</button>
-  </div>
-  <div id="usersBox">
-    <h3>👥 Online Users</h3>
-    <div id="onlineUsers"></div>
-  </div>
+<div id="typingStatus"></div>
+<div id="chatBox"></div>
+
+<div id="inputContainer">
+  <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
+  <button onclick="sendMessage()">Send</button>
+  <button onclick="logout()" style="background:red;color:white;">Logout</button>
 </div>
 </div>
 
@@ -78,23 +71,20 @@ const db = firebase.database();
 
 let currentUser={};
 let typingTimeout;
-const userColors = {}; // store pastel color per user
+const userColors = {};
 
-// Generate a readable pastel color from username
 function stringToPastelColor(str){
   let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
   const h=hash%360; const s=70+(hash%10); const l=80;
   return `hsl(${h},${s}%,${l}%)`;
 }
 
-// Auto-login
 window.onload=function(){
   const savedUser=localStorage.getItem("chatUser");
   if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
   else{document.getElementById("loginPage").style.display="block";}
 };
 
-// Username availability check
 const usernameInput=document.getElementById("username");
 const usernameStatus=document.getElementById("usernameStatus");
 const loginBtn=document.getElementById("loginBtn");
@@ -107,7 +97,6 @@ usernameInput.addEventListener("input",function(){
   });
 });
 
-// Login
 function login(){
   const username=usernameInput.value.trim();
   const age=document.getElementById("age").value.trim();
@@ -127,13 +116,11 @@ function saveUser(username,age,gender,profilePic){
   showChat();
 }
 
-// Show chat
 function showChat(){
   document.getElementById("loginPage").style.display="none";
   document.getElementById("chatPage").style.display="block";
   document.getElementById("userInfo").innerHTML=`<b>Logged in as:</b> ${currentUser.username} (${currentUser.age},${currentUser.gender}) <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%;">`;
 
-  // Messages
   db.ref("messages").off();
   db.ref("messages").on("child_added",snap=>{
     const msg=snap.val();
@@ -148,21 +135,6 @@ function showChat(){
     document.getElementById("chatBox").scrollTop=document.getElementById("chatBox").scrollHeight;
   });
 
-  // Online users
-  db.ref("users").off();
-  db.ref("users").on("value",snap=>{
-    const div=document.getElementById("onlineUsers"); div.innerHTML="";
-    snap.forEach(child=>{
-      const u=child.val();
-      if(u.online){
-        const d=document.createElement("div"); d.className="user";
-        d.innerHTML=`<img src="${u.profilePic||'https://via.placeholder.com/32'}">${u.username} (${u.age},${u.gender})`;
-        div.appendChild(d);
-      }
-    });
-  });
-
-  // Typing indicator
   db.ref("typing").off();
   db.ref("typing").on("value",snap=>{
     const data=snap.val()||{};
@@ -172,7 +144,6 @@ function showChat(){
   });
 }
 
-// Send message
 function sendMessage(){
   const text=document.getElementById("message").value.trim();
   if(!text) return;
@@ -181,7 +152,6 @@ function sendMessage(){
   db.ref("typing/"+currentUser.username).set(false);
 }
 
-// Logout
 function logout(){
   if(currentUser.username){
     db.ref("users/"+currentUser.username).update({online:false});
@@ -192,7 +162,6 @@ function logout(){
   document.getElementById("loginPage").style.display="block";
 }
 
-// Typing
 function userTyping(){
   db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
