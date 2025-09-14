@@ -28,6 +28,15 @@
       padding:5px 8px;
       border-radius:6px;
       background:#e3e3e3;
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+    }
+    .msg img {
+      width:35px;
+      height:35px;
+      border-radius:50%;
+      object-fit:cover;
     }
     .msg strong {
       color:#d12;
@@ -54,6 +63,7 @@
       <option value="Female">Female</option>
       <option value="Other">Other</option>
     </select><br>
+    <input type="file" id="profilePic" accept="image/*"><br>
     <button onclick="login()">Join Chat</button>
   </div>
 
@@ -101,23 +111,43 @@
       const username = document.getElementById("username").value.trim();
       const age = document.getElementById("age").value.trim();
       const gender = document.getElementById("gender").value;
+      const file = document.getElementById("profilePic").files[0];
 
       if (!username || !age || !gender) {
         alert("Please fill all fields");
         return;
       }
 
-      currentUser = { username, age, gender };
-      localStorage.setItem("chatUser", JSON.stringify(currentUser));
-
-      showChat();
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          currentUser = {
+            username,
+            age,
+            gender,
+            profilePic: e.target.result // Base64 image
+          };
+          localStorage.setItem("chatUser", JSON.stringify(currentUser));
+          showChat();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        currentUser = {
+          username,
+          age,
+          gender,
+          profilePic: "https://via.placeholder.com/35" // Default avatar
+        };
+        localStorage.setItem("chatUser", JSON.stringify(currentUser));
+        showChat();
+      }
     }
 
     function showChat() {
       document.getElementById("loginPage").style.display = "none";
       document.getElementById("chatPage").style.display = "block";
       document.getElementById("userInfo").innerHTML = 
-        `<b>Logged in as:</b> ${currentUser.username} (${currentUser.age}, ${currentUser.gender})`;
+        `<b>Logged in as:</b> <img src="${currentUser.profilePic}" width="30" height="30" style="border-radius:50%;"> ${currentUser.username} (${currentUser.age}, ${currentUser.gender})`;
 
       // Load chat messages
       db.ref("messages").off(); // prevent duplicate listeners
@@ -125,7 +155,11 @@
         const msg = snapshot.val();
         const div = document.createElement("div");
         div.className = "msg";
-        div.innerHTML = `<strong>${msg.username} (${msg.age}, ${msg.gender}):</strong> ${msg.text}`;
+        div.innerHTML = `
+          <img src="${msg.profilePic || 'https://via.placeholder.com/35'}">
+          <div>
+            <strong>${msg.username} (${msg.age}, ${msg.gender}):</strong><br>${msg.text}
+          </div>`;
         document.getElementById("chatBox").appendChild(div);
         document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
       });
@@ -139,6 +173,7 @@
         username: currentUser.username,
         age: currentUser.age,
         gender: currentUser.gender,
+        profilePic: currentUser.profilePic,
         text: text
       });
 
