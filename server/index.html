@@ -1,219 +1,156 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>🔥 Tamil VM Multi Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body{font-family:Arial,sans-serif;margin:0;padding:0;display:flex;flex-direction:column;align-items:center;background:#f5f5f5;color:#000;transition:0.3s;}
-body.dark{background:#121212;color:#eaeaea;}
-h2{margin:15px 0;font-size:1.4rem;}
-#toggleTheme{margin:10px;padding:5px 10px;border:none;border-radius:5px;background:#444;color:white;cursor:pointer;}
-body.dark #toggleTheme{background:#eaeaea;color:#121212;}
-#loginBox{margin-top:20px;width:90%;max-width:400px;text-align:center;}
-#loginBox input{width:70%;padding:10px;margin-bottom:10px;border-radius:5px;border:1px solid #ccc;}
-#loginBox button{padding:10px 15px;border-radius:5px;border:none;background:#007bff;color:white;cursor:pointer;}
-#onlineUsers{width:95%;max-width:600px;margin:5px 0;padding:5px;border-radius:5px;background:#fff;display:none;border:1px solid #ccc;}
-#chatTabs{width:95%;max-width:600px;display:flex;gap:5px;overflow-x:auto;margin:5px 0;}
-.tabBtn{padding:5px 10px;background:#eee;border-radius:5px;cursor:pointer;white-space:nowrap;}
-body.dark .tabBtn{background:#333;color:#fff;}
-.tabBtn.active{background:#007bff;color:white;}
-#chatBox{width:95%;max-width:600px;height:50vh;overflow-y:auto;border-radius:8px;border:1px solid #ccc;background:#fff;margin:5px 0;padding:10px;display:none;position:relative;}
-body.dark #chatBox{background:#1e1e1e;border-color:#444;}
-.msg{margin:5px 0;font-size:0.95rem;word-wrap:break-word;}
-.me{font-weight:bold;color:blue;}
-body.dark .me{color:#4aa3ff;}
-#typingIndicator{width:95%;max-width:600px;text-align:left;margin-bottom:5px;color:gray;}
-#chatControls{display:none;width:95%;max-width:600px;display:flex;gap:5px;margin-bottom:15px;}
-#msg{flex:1;padding:10px;border-radius:5px;border:1px solid #ccc;background:#fff;color:#000;}
-body.dark #msg{background:#2a2a2a;color:#eaeaea;border:1px solid #555;}
-#chatControls button{padding:10px 15px;border:none;border-radius:5px;background:#007bff;color:white;cursor:pointer;}
-#chatControls button:hover{background:#0056b3;}
-.userBtn{cursor:pointer;background:#eee;color:#000;padding:5px 8px;margin:2px;border-radius:5px;display:inline-block;}
-body.dark .userBtn{background:#333;color:#fff;}
-.online-dot{color:green;font-weight:bold;margin-right:3px;}
-.offline-dot{color:gray;font-weight:bold;margin-right:3px;}
-</style>
+  <meta charset="UTF-8">
+  <title>🔥 Tamil VM Group Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background:#f5f5f5;
+      margin:0;
+      padding:0;
+    }
+    #loginPage, #chatPage {
+      display: none;
+      padding: 20px;
+    }
+    #chatBox {
+      border:1px solid #ccc;
+      background:#fff;
+      height: 400px;
+      overflow-y: scroll;
+      padding:10px;
+      margin-bottom:10px;
+    }
+    .msg {
+      margin:5px 0;
+      padding:5px 8px;
+      border-radius:6px;
+      background:#e3e3e3;
+    }
+    .msg strong {
+      color:#d12;
+    }
+    input, select, button {
+      padding:8px;
+      margin:5px 0;
+    }
+    button {
+      cursor:pointer;
+    }
+  </style>
 </head>
 <body>
-<h2>🔥 Tamil VM Chat</h2>
-<button id="toggleTheme" onclick="toggleTheme()">🌙 Dark Mode</button>
 
-<div id="loginBox">
-<input type="text" id="username" placeholder="Enter your name">
-<button onclick="joinChat()">Join</button>
-</div>
+  <!-- Login Page -->
+  <div id="loginPage">
+    <h2>Login to Group Chat</h2>
+    <input type="text" id="username" placeholder="Enter Username" required><br>
+    <input type="number" id="age" placeholder="Enter Age" required><br>
+    <select id="gender">
+      <option value="" disabled selected>Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select><br>
+    <button onclick="login()">Join Chat</button>
+  </div>
 
-<div id="onlineUsers"></div>
-<div id="chatTabs"></div>
-<div id="chatBox"></div>
-<div id="typingIndicator"></div>
-<div id="chatControls">
-<input type="text" id="msg" placeholder="Type message...">
-<button onclick="send()">Send</button>
-</div>
+  <!-- Chat Page -->
+  <div id="chatPage">
+    <h2>🔥 Tamil VM Group Chat</h2>
+    <div id="userInfo"></div>
+    <div id="chatBox"></div>
+    <input type="text" id="message" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="logout()" style="background:red;color:white;">Logout</button>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script>
-const firebaseConfig={
-apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
-authDomain:"tamil-chat-2d54e.firebaseapp.com",
-databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-projectId:"tamil-chat-2d54e",
-storageBucket:"tamil-chat-2d54e.appspot.com",
-messagingSenderId:"804705969240",
-appId:"1:804705969240:web:658df281dd8360843c162d"
-};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-let name=null;
-let chatBox=document.getElementById("chatBox");
-let typingIndicator=document.getElementById("typingIndicator");
-let currentChat="group";
-let chatTabs=document.getElementById("chatTabs");
-let chats={}, typingTimeout;
+  <script>
+    // ✅ Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+      authDomain: "tamil-chat-2d54e.firebaseapp.com",
+      databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+      projectId: "tamil-chat-2d54e",
+      storageBucket: "tamil-chat-2d54e.firebasestorage.app",
+      messagingSenderId: "804705969240"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-// Theme toggle
-function toggleTheme(){
-document.body.classList.toggle("dark");
-document.getElementById("toggleTheme").textContent=document.body.classList.contains("dark")?"☀️ Light Mode":"🌙 Dark Mode";
-}
+    const db = firebase.database();
+    let currentUser = {};
 
-// Join chat with single-device enforcement
-function joinChat(){
-let inputName=document.getElementById("username").value.trim();
-if(!inputName) inputName="Guest"+Math.floor(Math.random()*10000);
-name=inputName;
+    // ✅ Check localStorage on page load
+    window.onload = function () {
+      const savedUser = localStorage.getItem("chatUser");
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showChat();
+      } else {
+        document.getElementById("loginPage").style.display = "block";
+      }
+    };
 
-const userRef = db.ref("onlineUsers/"+name);
-userRef.once("value").then(snapshot=>{
-if(snapshot.exists()){
-alert("This username is already logged in on another device.");
-return;
-}else{
-userRef.set({ connected: true });
-userRef.onDisconnect().remove();
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const age = document.getElementById("age").value.trim();
+      const gender = document.getElementById("gender").value;
 
-document.getElementById("loginBox").style.display="none";
-document.getElementById("chatControls").style.display="flex";
-chatBox.style.display="block";
-document.getElementById("onlineUsers").style.display="block";
+      if (!username || !age || !gender) {
+        alert("Please fill all fields");
+        return;
+      }
 
-updateUserList();
+      currentUser = { username, age, gender };
+      localStorage.setItem("chatUser", JSON.stringify(currentUser));
 
-// Default group tab
-addChatTab("group","Group Chat");
-openChat("group");
-listenChat("group","messages");
-}
-});
-}
+      showChat();
+    }
 
-// Update online users
-function updateUserList(){
-let container=document.getElementById("onlineUsers");
-container.innerHTML="<b>Online Users:</b> ";
-db.ref("onlineUsers").once("value").then(snap=>{
-snap.forEach(userSnap=>{
-let user=userSnap.key;
-if(user!==name){
-let btn=document.createElement("span");
-btn.textContent=user;
-btn.className="userBtn";
-btn.onclick=()=>openPrivateChat(user);
-container.appendChild(btn);
-}
-});
-});
-}
+    function showChat() {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("chatPage").style.display = "block";
+      document.getElementById("userInfo").innerHTML = 
+        `<b>Logged in as:</b> ${currentUser.username} (${currentUser.age}, ${currentUser.gender})`;
 
-// Chat tabs
-function addChatTab(id,label){
-if(document.getElementById("tab_"+id)) return;
-let btn=document.createElement("div");
-btn.className="tabBtn";
-btn.id="tab_"+id;
-btn.textContent=label;
-btn.onclick=()=>openChat(id);
-chatTabs.appendChild(btn);
-}
+      // Load chat messages
+      db.ref("messages").off(); // prevent duplicate listeners
+      db.ref("messages").on("child_added", snapshot => {
+        const msg = snapshot.val();
+        const div = document.createElement("div");
+        div.className = "msg";
+        div.innerHTML = `<strong>${msg.username} (${msg.age}, ${msg.gender}):</strong> ${msg.text}`;
+        document.getElementById("chatBox").appendChild(div);
+        document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
+      });
+    }
 
-function openChat(id){
-currentChat=id;
-Array.from(chatTabs.children).forEach(tab=>tab.classList.remove("active"));
-document.getElementById("tab_"+id).classList.add("active");
-chatBox.innerHTML="";
-listenTyping(id);
-}
+    function sendMessage() {
+      const text = document.getElementById("message").value.trim();
+      if (text === "") return;
 
-// Listen chat messages
-function listenChat(id,refPath){
-if(chats[id]) return;
-chats[id]=true;
-db.ref(refPath).limitToLast(100).on("child_added", snapshot=>{
-let data=snapshot.val();
-if(currentChat===id) addMessage(data);
-});
-}
+      db.ref("messages").push({
+        username: currentUser.username,
+        age: currentUser.age,
+        gender: currentUser.gender,
+        text: text
+      });
 
-// Add a message to chat box
-function addMessage(data){
-db.ref("onlineUsers/"+data.user).once("value").then(snap=>{
-let online=snap.exists();
-let div=document.createElement("div");
-div.classList.add("msg");
-if(data.user===name) div.classList.add("me");
-let dot=online?'<span class="online-dot">●</span>':'<span class="offline-dot">○</span>';
-div.innerHTML=`[${data.time}] ${dot}${data.user}: ${data.text}`;
-chatBox.appendChild(div);
-chatBox.scrollTop=chatBox.scrollHeight;
-});
-}
+      document.getElementById("message").value = "";
+    }
 
-// Typing indicator
-document.getElementById("msg").addEventListener("input", function(){
-if(!name) return;
-let chatId=currentChat;
-let typingRef=db.ref("typing/"+chatId+"/"+name);
-typingRef.set(true);
-clearTimeout(typingTimeout);
-typingTimeout=setTimeout(()=>{ typingRef.remove(); },2000);
-});
-
-function listenTyping(chatId){
-db.ref("typing/"+chatId).on("value", snap=>{
-let usersTyping=[];
-snap.forEach(userSnap=>{ if(userSnap.key!==name) usersTyping.push(userSnap.key); });
-typingIndicator.textContent=usersTyping.length>0?usersTyping.join(", ")+" is typing...":"";
-});
-}
-
-// Send message
-function send(){
-let msg=document.getElementById("msg").value;
-if(!msg||!name) return;
-let entry={user:name,text:msg,time:new Date().toLocaleTimeString()};
-let refPath=currentChat==="group"?"messages":"privateChats/"+currentChat+"/messages";
-let ref=db.ref(refPath);
-ref.push(entry);
-ref.once("value",snap=>{
-let total=snap.numChildren();
-if(total>100){let keys=[];snap.forEach(c=>keys.push(c.key));keys.slice(0,total-100).forEach(k=>ref.child(k).remove());}
-});
-document.getElementById("msg").value="";
-db.ref("typing/"+currentChat+"/"+name).remove();
-}
-
-// Private chat
-function getChatId(u1,u2){return [u1,u2].sort().join("_");}
-function openPrivateChat(user){
-let chatId=getChatId(name,user);
-addChatTab(chatId,user);
-listenChat(chatId,"privateChats/"+chatId+"/messages");
-openChat(chatId);
-}
-</script>
+    function logout() {
+      localStorage.removeItem("chatUser");
+      currentUser = {};
+      document.getElementById("chatPage").style.display = "none";
+      document.getElementById("loginPage").style.display = "block";
+    }
+  </script>
 </body>
 </html>
