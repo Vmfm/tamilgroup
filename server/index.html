@@ -9,7 +9,7 @@ body {
   font-family: Arial,sans-serif;
   margin:0;
   padding:0;
-  background:#000; /* always black */
+  background:#000;
   color:#fff;
   display:flex;
   flex-direction:column;
@@ -27,8 +27,8 @@ button { cursor:pointer; }
 .msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
 .msgContent span.deleteBtn { position:absolute; top:2px; right:4px; font-size:0.7rem; cursor:pointer; color:red; }
 .msgContent audio {
-  width: 120px;        /* small compact width */
-  height: 25px;        /* compact height */
+  width: 120px;
+  height: 25px;
   border-radius: 5px;
   outline: none;
   margin-top: 5px;
@@ -38,6 +38,9 @@ button { cursor:pointer; }
 #inputContainer input { flex:1; padding:10px; border-radius:5px; border:none; }
 #inputContainer button { flex:0; padding:10px; border:none; border-radius:5px; background:#007bff; color:#fff; }
 #inputContainer button:hover { background:#0056b3; }
+#userHeader { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+#profileInfo img { border-radius:50%; width:40px; height:40px; margin-left:5px; }
+#logoutBtn { background:red; color:white; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -59,7 +62,10 @@ button { cursor:pointer; }
 
 <!-- Chat Page -->
 <div id="chatPage" style="display:none; height:100vh; display:flex; flex-direction:column;">
-<div id="userInfo"></div>
+<div id="userHeader">
+  <div id="profileInfo"></div>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+</div>
 <div id="typingStatus"></div>
 <div id="chatBox"></div>
 
@@ -67,7 +73,6 @@ button { cursor:pointer; }
   <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
   <button onclick="sendMessage()">Send</button>
   <button id="recordBtn">🎤</button>
-  <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 </div>
 
@@ -141,7 +146,10 @@ function saveUser(username,age,gender,profilePic){
 function showChat(){
   document.getElementById("loginPage").style.display="none";
   document.getElementById("chatPage").style.display="flex";
-  document.getElementById("userInfo").innerHTML=`<b>Logged in as:</b> ${currentUser.username} (${currentUser.age},${currentUser.gender}) <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%;">`;
+  document.getElementById("profileInfo").innerHTML = `
+    <b>${currentUser.username}</b> (${currentUser.age},${currentUser.gender})
+    <img src="${currentUser.profilePic || 'https://via.placeholder.com/40'}">
+  `;
 
   db.ref("messages").off();
   db.ref("messages").limitToLast(100).on("child_added", snap=>{
@@ -208,29 +216,36 @@ function sendMessage(){
   db.ref("typing/"+currentUser.username).set(false);
 }
 
-// Voice recording
-document.getElementById("recordBtn").onclick = function(){
-  if(mediaRecorder && mediaRecorder.state==="recording"){ 
-    mediaRecorder.stop(); this.innerText="🎤";
-  } else {
-    navigator.mediaDevices.getUserMedia({ audio:true }).then(stream=>{
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = e => {
-        const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
-        const reader = new FileReader();
-        reader.onload = () => {
-          db.ref("messages").push({
-            username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, audio:reader.result
-          });
-        };
-        reader.readAsDataURL(audioBlob);
+// Typing
+function userTyping(){
+  db.ref("typing/"+currentUser.username).set(true);
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
+}
+
+// Voice record
+const recordBtn = document.getElementById("recordBtn");
+let isRecording = false;
+recordBtn.onclick = () => {
+  if(isRecording){ mediaRecorder.stop(); recordBtn.innerText="🎤"; isRecording=false; return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRecorder = new MediaRecorder(stream);
+    let audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = e => {
+      const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
+      const reader = new FileReader();
+      reader.onload = () => {
+        db.ref("messages").push({
+          username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, audio:reader.result
+        });
       };
-      mediaRecorder.start();
-      this.innerText="⏹️";
-    }).catch(()=>alert("Microphone access denied"));
-  }
+      reader.readAsDataURL(audioBlob);
+    };
+    mediaRecorder.start();
+    isRecording=true;
+    recordBtn.innerText="⏹️";
+  }).catch(()=>alert("Microphone access denied"));
 }
 
 // Logout
@@ -239,16 +254,10 @@ function logout(){
     db.ref("users/"+currentUser.username).update({online:false});
     db.ref("typing/"+currentUser.username).set(false);
   }
-  localStorage.removeItem("chatUser"); currentUser={};
+  localStorage.removeItem("chatUser");
+  currentUser={};
   document.getElementById("chatPage").style.display="none";
   document.getElementById("loginPage").style.display="block";
-}
-
-// Typing indicator
-function userTyping(){
-  db.ref("typing/"+currentUser.username).set(true);
-  clearTimeout(typingTimeout);
-  typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
 }
 </script>
 </body>
