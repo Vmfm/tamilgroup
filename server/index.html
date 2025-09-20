@@ -9,26 +9,28 @@ body {
   font-family: Arial,sans-serif;
   margin:0;
   padding:0;
-  background:#f5f5f5; /* fixed background color */
+  background:#000; /* always black */
+  color:#fff;
   display:flex;
   flex-direction:column;
-  align-items:center;
+  height:100vh;
 }
-#loginPage, #chatPage { width:95%; max-width:400px; margin-top:20px; }
+#loginPage, #chatPage { width:100%; padding:10px; box-sizing:border-box; }
 input, select, button { padding:10px; margin:5px 0; width:100%; box-sizing:border-box; }
 button { cursor:pointer; }
-#usernameStatus { font-size:14px; margin-left:5px; }
-#chatBox { border-radius:10px; background:#fff; padding:10px; overflow-y:auto; height:60vh; margin-bottom:10px; }
+#usernameStatus { font-size:14px; margin-left:5px; color:#fff; }
+#chatBox { border-radius:10px; background:#111; padding:10px; overflow-y:auto; flex:1; margin-bottom:0; }
 .msg { display:flex; align-items:flex-start; margin:5px 0; }
 .msg img { width:36px; height:36px; border-radius:50%; }
-.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; position:relative; }
+.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; position:relative; background:#222; color:#fff; }
 .msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
 .msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
 .msgContent span.deleteBtn { position:absolute; top:2px; right:4px; font-size:0.7rem; cursor:pointer; color:red; }
-#typingStatus { font-style:italic; color:#555; margin-bottom:5px; }
-#inputContainer { display:flex; gap:5px; margin-bottom:15px; }
-#inputContainer input { flex:1; }
-#inputContainer button { flex:0; }
+#typingStatus { font-style:italic; color:#aaa; margin-bottom:5px; }
+#inputContainer { position:fixed; bottom:0; left:0; width:100%; background:#111; padding:5px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #333; }
+#inputContainer input { flex:1; padding:10px; border-radius:5px; border:none; }
+#inputContainer button { flex:0; padding:10px; border:none; border-radius:5px; background:#007bff; color:#fff; }
+#inputContainer button:hover { background:#0056b3; }
 </style>
 </head>
 <body>
@@ -49,7 +51,7 @@ button { cursor:pointer; }
 </div>
 
 <!-- Chat Page -->
-<div id="chatPage">
+<div id="chatPage" style="display:none; height:100vh; display:flex; flex-direction:column;">
 <div id="userInfo"></div>
 <div id="typingStatus"></div>
 <div id="chatBox"></div>
@@ -57,8 +59,8 @@ button { cursor:pointer; }
 <div id="inputContainer">
   <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
   <button onclick="sendMessage()">Send</button>
-  <button id="recordBtn">🎤 Record</button>
-  <button onclick="logout()" style="background:red;color:white;">Logout</button>
+  <button id="recordBtn">🎤</button>
+  <button onclick="logout()" style="background:red;">Logout</button>
 </div>
 </div>
 
@@ -84,14 +86,12 @@ let mediaRecorder;
 let audioChunks = [];
 const userColors = {};
 
-// Helper for pastel colors
 function stringToPastelColor(str){
   let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
   const h=hash%360; const s=70+(hash%10); const l=80;
   return `hsl(${h},${s}%,${l}%)`;
 }
 
-// Auto-login if user saved
 window.onload = function(){
   const savedUser = localStorage.getItem("chatUser");
   if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
@@ -133,7 +133,7 @@ function saveUser(username,age,gender,profilePic){
 // Show chat
 function showChat(){
   document.getElementById("loginPage").style.display="none";
-  document.getElementById("chatPage").style.display="block";
+  document.getElementById("chatPage").style.display="flex";
   document.getElementById("userInfo").innerHTML=`<b>Logged in as:</b> ${currentUser.username} (${currentUser.age},${currentUser.gender}) <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%;">`;
 
   db.ref("messages").off();
@@ -148,7 +148,7 @@ function showChat(){
     contentDiv.className="msgContent";
     contentDiv.style.background=userColors[msg.username];
 
-    // Delete button
+    // Delete button for text or audio
     if(msg.username===currentUser.username){
       const deleteBtn = document.createElement("span");
       deleteBtn.innerText="🗑️";
@@ -166,7 +166,7 @@ function showChat(){
       audio.controls = true;
       audio.src = msg.audio;
       contentDiv.appendChild(audio);
-    } else {
+    } else if(msg.text){
       const textNode = document.createTextNode(`${msg.username} (${msg.age},${msg.gender}): ${msg.text}`);
       contentDiv.appendChild(textNode);
     }
@@ -194,47 +194,37 @@ function showChat(){
 function sendMessage(){
   const text = document.getElementById("message").value.trim();
   if(!text) return;
-  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
+  db.ref("messages").push({
+    username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, text
+  });
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
 }
 
 // Voice recording
-const recordBtn = document.getElementById("recordBtn");
-recordBtn.onclick = async () => {
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    mediaRecorder.stop();
-    recordBtn.innerText = "🎤 Record";
+document.getElementById("recordBtn").onclick = function(){
+  if(mediaRecorder && mediaRecorder.state==="recording"){ 
+    mediaRecorder.stop(); this.innerText="🎤";
   } else {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("Audio recording not supported in this browser.");
-      return;
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const audioBase64 = reader.result;
-        db.ref("messages").push({
-          username: currentUser.username,
-          age: currentUser.age,
-          gender: currentUser.gender,
-          profilePic: currentUser.profilePic,
-          audio: audioBase64
-        });
+    navigator.mediaDevices.getUserMedia({ audio:true }).then(stream=>{
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = e => {
+        const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
+        const reader = new FileReader();
+        reader.onload = () => {
+          db.ref("messages").push({
+            username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, audio:reader.result
+          });
+        };
+        reader.readAsDataURL(audioBlob);
       };
-      reader.readAsDataURL(audioBlob);
-    };
-
-    mediaRecorder.start();
-    recordBtn.innerText = "⏹️ Stop";
+      mediaRecorder.start();
+      this.innerText="⏹️";
+    }).catch(()=>alert("Microphone access denied"));
   }
-};
+}
 
 // Logout
 function logout(){
