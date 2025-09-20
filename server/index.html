@@ -5,32 +5,27 @@
 <title>🔥 Tamil VM Group Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:0; background:#000; color:#fff; display:flex; flex-direction:column; }
-#loginPage, #chatPage { display:none; padding:20px; }
-input, select, button { padding:10px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; }
-button { cursor:pointer; }
-#usernameStatus { font-size:14px; margin-left:5px; }
-#chatBox { border-radius:10px; background:#111; padding:10px; overflow-y:auto; height:calc(100vh - 200px); }
+body { font-family: Arial,sans-serif; margin:0; padding:0; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; }
+#loginPage, #chatPage { display:none; width:100%; max-width:480px; padding:10px; box-sizing:border-box; }
+input, select, button { padding:8px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; border-radius:5px; border:none; }
+button { cursor:pointer; background:#007bff; color:#fff; }
+#chatBox { border-radius:10px; background:#111; padding:10px; overflow-y:auto; margin:10px 0; height:calc(100vh - 220px); width:100%; }
 .msg { display:flex; align-items:flex-end; margin:5px 0; }
 .msg img { width:36px; height:36px; border-radius:50%; }
-.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; background:#222; color:#fff; display:flex; align-items:center; justify-content:space-between; }
-.msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
-.msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
-#typingStatus { font-style:italic; color:#aaa; margin-bottom:5px; }
-#inputContainer { position:fixed; bottom:0; left:0; width:100%; background:#111; padding:10px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #444; }
-#inputContainer input { flex:1; margin:0; max-width:none; background:#222; color:#fff; border:1px solid #444; border-radius:5px; padding:8px; }
-#inputContainer button { flex:0; border:none; border-radius:5px; background:#007bff; color:#fff; padding:10px; }
-#topBar { display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-bottom:1px solid #444; }
-#topBar button { padding:5px 8px; font-size:0.8rem; background:red; color:#fff; border:none; border-radius:4px; cursor:pointer; }
-#notification { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 12px; border-radius:5px; display:none; z-index:1000; }
-.audioMsg { display:flex; align-items:center; gap:5px; background:#333; padding:4px 6px; border-radius:5px; }
-.audioMsg audio { width:120px; }
+.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; background:#222; color:#fff; position:relative; }
+.msg.self .msgContent { margin-left:auto; margin-right:0; }
+.deleteBtn { cursor:pointer; margin-left:5px; font-size:0.9rem; }
+#typingStatus { font-style:italic; color:#888; margin-bottom:5px; }
+#inputContainer { position:fixed; bottom:0; left:0; width:100%; max-width:480px; background:#000; padding:10px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #333; }
+#inputContainer input { flex:1; margin:0; border-radius:5px; border:1px solid #333; padding:8px; background:#111; color:#fff; }
+#inputContainer button { flex:0; border-radius:5px; padding:8px; }
+#topBar { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+#topBar button { flex:0; padding:5px 10px; font-size:0.9rem; background:red; color:white; border-radius:5px; }
 </style>
 </head>
 <body>
 
-<div id="notification"></div>
-
+<!-- Login Page -->
 <div id="loginPage">
 <h2>Login to Group Chat</h2>
 <input type="text" id="username" placeholder="Enter Username" required>
@@ -46,22 +41,23 @@ button { cursor:pointer; }
 <button id="loginBtn" onclick="login()" disabled>Join Chat</button>
 </div>
 
+<!-- Chat Page -->
 <div id="chatPage">
 <div id="topBar">
   <div id="userInfo"></div>
   <button onclick="logout()">Logout</button>
 </div>
-
 <div id="typingStatus"></div>
 <div id="chatBox"></div>
 
 <div id="inputContainer">
   <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
-  <button onclick="sendMessage()" id="sendBtn">Send</button>
+  <button id="sendBtn" onclick="sendMessage()">Send</button>
   <button id="recordBtn">🎤</button>
 </div>
 </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script>
@@ -70,27 +66,19 @@ const firebaseConfig = {
   authDomain:"tamil-chat-2d54e.firebaseapp.com",
   databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
   projectId:"tamil-chat-2d54e",
-  storageBucket:"tamil-chat-2d54e.firebasestorage.app",
+  storageBucket:"tamil-chat-2d54e.appspot.com",
   messagingSenderId:"804705969240"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let currentUser={}, typingTimeout;
-let mediaRecorder, audioChunks = [];
-const userColors = {};
+let currentUser={}, typingTimeout, mediaRecorder, recordTimeout, isRecording=false;
+const userColors={}, blockedUsers=JSON.parse(localStorage.getItem("blockedUsers")||"{}");
 
 function stringToPastelColor(str){
   let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
   const h=hash%360; const s=70+(hash%10); const l=80;
   return `hsl(${h},${s}%,${l}%)`;
-}
-
-function showNotification(text){
-  const notif=document.getElementById("notification");
-  notif.innerText=text;
-  notif.style.display="block";
-  setTimeout(()=>{notif.style.display="none";},2000);
 }
 
 window.onload=function(){
@@ -99,6 +87,7 @@ window.onload=function(){
   else{document.getElementById("loginPage").style.display="block";}
 };
 
+// Username check
 const usernameInput=document.getElementById("username");
 const usernameStatus=document.getElementById("usernameStatus");
 const loginBtn=document.getElementById("loginBtn");
@@ -111,12 +100,13 @@ usernameInput.addEventListener("input",function(){
   });
 });
 
+// Login function
 function login(){
   const username=usernameInput.value.trim();
   const age=document.getElementById("age").value.trim();
   const gender=document.getElementById("gender").value;
   const file=document.getElementById("profilePic").files[0];
-  if(!username||!age||!gender){showNotification("Fill all fields"); return;}
+  if(!username||!age||!gender){alert("Fill all fields"); return;}
   if(file){const reader=new FileReader(); reader.onload=e=>saveUser(username,age,gender,e.target.result); reader.readAsDataURL(file);}
   else saveUser(username,age,gender,"");
 }
@@ -130,39 +120,74 @@ function saveUser(username,age,gender,profilePic){
   showChat();
 }
 
+// Show chat page
 function showChat(){
   document.getElementById("loginPage").style.display="none";
   document.getElementById("chatPage").style.display="block";
-  document.getElementById("userInfo").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="30" height="30" style="border-radius:50%;">`;
+  document.getElementById("userInfo").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="36" height="36" style="border-radius:50%;">`;
 
+  // Messages
   db.ref("messages").off();
-  db.ref("messages").on("child_added",snap=>{
-    const msg=snap.val();
+  db.ref("messages").limitToLast(100).on("child_added", snap=>{
+    const msg = snap.val();
+    if(blockedUsers[msg.username]) return;
+
     if(!userColors[msg.username]) userColors[msg.username]=stringToPastelColor(msg.username);
-    const div=document.createElement("div");
-    div.className="msg "+(msg.username===currentUser.username?"self":"other");
-    if(msg.type==="audio"){
-      div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
-        <div class="msgContent" style="background:${userColors[msg.username]}; color:#fff;">
-          ${msg.username}: 
-          <div class="audioMsg">
-            <audio controls src="${msg.audioUrl}"></audio>
-            ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}','${msg.username}')" style="font-size:10px;">🗑️</button>`:""}
-          </div>
-        </div>`;
-    } else {
-      div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
-        <div class="msgContent" style="background:${userColors[msg.username]}; color:#fff;">
-          ${msg.username}: ${msg.text} 
-          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}','${msg.username}')" style="font-size:10px;">🗑️</button>`:""}
-        </div>`;
+
+    const div = document.createElement("div");
+    div.className = "msg "+(msg.username===currentUser.username?"self":"other");
+    const contentDiv = document.createElement("div");
+    contentDiv.className="msgContent"; contentDiv.style.background=userColors[msg.username];
+
+    // Delete button for own messages
+    if(msg.username===currentUser.username){
+      const deleteBtn = document.createElement("span");
+      deleteBtn.innerText="🗑️";
+      deleteBtn.className="deleteBtn";
+      deleteBtn.onclick = () => { db.ref("messages/"+snap.key).remove(); div.remove(); };
+      contentDiv.appendChild(deleteBtn);
     }
+
+    // Report/Block for other users
+    if(msg.username!==currentUser.username){
+      const reportBtn = document.createElement("span");
+      reportBtn.innerText="🚩"; reportBtn.className="deleteBtn"; reportBtn.title="Report User";
+      reportBtn.onclick = () => { db.ref("reports/"+msg.username).push({reportBy:currentUser.username, time:new Date().toISOString()}); alert("User reported!"); };
+      contentDiv.appendChild(reportBtn);
+
+      const blockBtn = document.createElement("span");
+      blockBtn.innerText = blockedUsers[msg.username] ? "🔓":"🚫";
+      blockBtn.title = blockedUsers[msg.username] ? "Unblock User":"Block User";
+      blockBtn.className="deleteBtn";
+      blockBtn.onclick = () => { 
+        if(blockedUsers[msg.username]) delete blockedUsers[msg.username]; 
+        else blockedUsers[msg.username]=true; 
+        localStorage.setItem("blockedUsers", JSON.stringify(blockedUsers)); 
+        div.remove(); 
+      };
+      contentDiv.appendChild(blockBtn);
+    }
+
+    if(msg.audio){
+      const audio = document.createElement("audio");
+      audio.controls=true; audio.src=msg.audio; audio.style.width="150px";
+      contentDiv.appendChild(audio);
+    } else if(msg.text){
+      const textNode=document.createTextNode(`${msg.username} (${msg.age},${msg.gender}): ${msg.text}`);
+      contentDiv.appendChild(textNode);
+    }
+
+    const img=document.createElement("img");
+    img.src = msg.profilePic || 'https://via.placeholder.com/32';
+    div.appendChild(img);
+    div.appendChild(contentDiv);
     document.getElementById("chatBox").appendChild(div);
     document.getElementById("chatBox").scrollTop=document.getElementById("chatBox").scrollHeight;
   });
 
+  // Typing indicator
   db.ref("typing").off();
-  db.ref("typing").on("value",snap=>{
+  db.ref("typing").on("value", snap=>{
     const data=snap.val()||{};
     let status="";
     for(const user in data){if(user!==currentUser.username && data[user]) status+=`${user} is typing... `;}
@@ -170,66 +195,55 @@ function showChat(){
   });
 }
 
-// Text message
+// Send text
 function sendMessage(){
+  if(isRecording) return;
   const text=document.getElementById("message").value.trim();
   if(!text) return;
-  db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,text,type:"text"});
+  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
 }
 
-// Delete
-function deleteMessage(key,user){
-  if(user!==currentUser.username){ showNotification("You can only delete your own message"); return;}
-  db.ref("messages/"+key).remove();
-  showNotification("Message deleted");
-}
-
-// Logout
-function logout(){
-  if(currentUser.username){
-    db.ref("users/"+currentUser.username).update({online:false});
-    db.ref("typing/"+currentUser.username).set(false);
-  }
-  localStorage.removeItem("chatUser"); currentUser={};
-  document.getElementById("chatPage").style.display="none";
-  document.getElementById("loginPage").style.display="block";
-}
-
 // Typing
 function userTyping(){
+  if(isRecording) return;
   db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
   typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
 }
 
 // Voice recording
-const recordBtn=document.getElementById("recordBtn");
-let isRecording=false;
-recordBtn.onclick=async ()=>{
+const recordBtn = document.getElementById("recordBtn");
+const messageInput = document.getElementById("message");
+recordBtn.onclick = () => {
   if(isRecording){ stopRecording(); return; }
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ showNotification("Mic not supported"); return; }
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  mediaRecorder=new MediaRecorder(stream);
-  audioChunks=[];
-  mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-  mediaRecorder.onstop=async ()=>{
-    const audioBlob=new Blob(audioChunks,{type:'audio/webm'});
-    const audioUrl=URL.createObjectURL(audioBlob);
-    db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,type:"audio",audioUrl});
-    isRecording=false;
-    recordBtn.textContent="🎤";
-    document.getElementById("message").disabled=false;
-  };
-  mediaRecorder.start();
-  isRecording=true;
-  recordBtn.textContent="⏹️";
-  document.getElementById("message").disabled=true;
-  setTimeout(stopRecording,60000); // 1 min max
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRecorder = new MediaRecorder(stream);
+    let audioChunks=[];
+    messageInput.disabled=true;
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      messageInput.disabled=false; clearTimeout(recordTimeout);
+      const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
+      const reader = new FileReader();
+      reader.onload = ()=>{ db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,audio:reader.result}); };
+      reader.readAsDataURL(audioBlob);
+    };
+    mediaRecorder.start(); isRecording=true; recordBtn.innerText="⏹️";
+    recordTimeout=setTimeout(stopRecording,60000);
+  }).catch(()=>alert("Microphone access denied"));
 };
 function stopRecording(){
-  if(isRecording && mediaRecorder){ mediaRecorder.stop(); isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false; }
+  if(isRecording){ mediaRecorder.stop(); isRecording=false; recordBtn.innerText="🎤"; messageInput.disabled=false; clearTimeout(recordTimeout); }
+}
+
+// Logout
+function logout(){
+  if(currentUser.username){ db.ref("users/"+currentUser.username).update({online:false}); db.ref("typing/"+currentUser.username).set(false);}
+  localStorage.removeItem("chatUser"); currentUser={};
+  document.getElementById("chatPage").style.display="none";
+  document.getElementById("loginPage").style.display="block";
 }
 </script>
 </body>
