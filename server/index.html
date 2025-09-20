@@ -26,13 +26,7 @@ button { cursor:pointer; }
 .msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
 .msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
 .msgContent span.deleteBtn { position:absolute; top:2px; right:4px; font-size:0.7rem; cursor:pointer; color:red; }
-.msgContent audio {
-  width: 120px;
-  height: 25px;
-  border-radius: 5px;
-  outline: none;
-  margin-top: 5px;
-}
+.msgContent audio { width:120px; height:25px; border-radius:5px; outline:none; margin-top:5px; }
 #typingStatus { font-style:italic; color:#aaa; margin-bottom:5px; }
 #inputContainer { position:fixed; bottom:0; left:0; width:100%; background:#111; padding:5px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #333; }
 #inputContainer input { flex:1; padding:10px; border-radius:5px; border:none; }
@@ -40,7 +34,7 @@ button { cursor:pointer; }
 #inputContainer button:hover { background:#0056b3; }
 #userHeader { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
 #profileInfo img { border-radius:50%; width:40px; height:40px; margin-left:5px; }
-#logoutBtn { background:red; color:white; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; }
+#logoutBtn { background:red; color:white; padding:3px 6px; font-size:0.8rem; border:none; border-radius:3px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -95,7 +89,8 @@ const db = firebase.database();
 let currentUser = {};
 let typingTimeout;
 let mediaRecorder;
-let audioChunks = [];
+let isRecording = false;
+let recordTimeout;
 const userColors = {};
 
 function stringToPastelColor(str){
@@ -163,7 +158,7 @@ function showChat(){
     contentDiv.className="msgContent";
     contentDiv.style.background=userColors[msg.username];
 
-    // Delete button for text or audio
+    // Delete button
     if(msg.username===currentUser.username){
       const deleteBtn = document.createElement("span");
       deleteBtn.innerText="🗑️";
@@ -175,7 +170,6 @@ function showChat(){
       contentDiv.appendChild(deleteBtn);
     }
 
-    // Message content
     if(msg.audio){
       const audio = document.createElement("audio");
       audio.controls = true;
@@ -187,10 +181,10 @@ function showChat(){
     }
 
     const img = document.createElement("img");
-    img.src = msg.profilePic || "https://via.placeholder.com/32";
-
+    img.src = msg.profilePic || 'https://via.placeholder.com/32';
     div.appendChild(img);
     div.appendChild(contentDiv);
+
     document.getElementById("chatBox").appendChild(div);
     document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
   });
@@ -198,20 +192,20 @@ function showChat(){
   // Typing indicator
   db.ref("typing").off();
   db.ref("typing").on("value", snap=>{
-    const data = snap.val() || {};
-    let status = "";
-    for(const user in data){ if(user!==currentUser.username && data[user]) status += `${user} is typing... `;}
-    document.getElementById("typingStatus").innerText = status;
+    const data = snap.val()||{};
+    let status="";
+    for(const user in data){
+      if(user!==currentUser.username && data[user]) status+=`${user} is typing... `;
+    }
+    document.getElementById("typingStatus").innerText=status;
   });
 }
 
-// Send text
+// Send message
 function sendMessage(){
-  const text = document.getElementById("message").value.trim();
+  const text=document.getElementById("message").value.trim();
   if(!text) return;
-  db.ref("messages").push({
-    username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, text
-  });
+  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
 }
@@ -220,32 +214,51 @@ function sendMessage(){
 function userTyping(){
   db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
+  typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
 }
 
 // Voice record
 const recordBtn = document.getElementById("recordBtn");
-let isRecording = false;
+const messageInput = document.getElementById("message");
+
 recordBtn.onclick = () => {
-  if(isRecording){ mediaRecorder.stop(); recordBtn.innerText="🎤"; isRecording=false; return; }
+  if(isRecording){ stopRecording(); return; }
+
   navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
     mediaRecorder = new MediaRecorder(stream);
     let audioChunks = [];
+
+    messageInput.disabled = true;
+
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = e => {
+    mediaRecorder.onstop = () => {
+      messageInput.disabled = false;
+      clearTimeout(recordTimeout);
+
       const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
       const reader = new FileReader();
       reader.onload = () => {
-        db.ref("messages").push({
-          username:currentUser.username, age:currentUser.age, gender:currentUser.gender, profilePic:currentUser.profilePic, audio:reader.result
-        });
+        db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,audio:reader.result});
       };
       reader.readAsDataURL(audioBlob);
     };
+
     mediaRecorder.start();
-    isRecording=true;
+    isRecording = true;
     recordBtn.innerText="⏹️";
+
+    recordTimeout = setTimeout(()=>stopRecording(),60000);
   }).catch(()=>alert("Microphone access denied"));
+};
+
+function stopRecording(){
+  if(isRecording){
+    mediaRecorder.stop();
+    isRecording=false;
+    recordBtn.innerText="🎤";
+    messageInput.disabled=false;
+    clearTimeout(recordTimeout);
+  }
 }
 
 // Logout
