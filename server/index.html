@@ -5,54 +5,60 @@
 <title>🔥 Tamil VM Group Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{margin:0;padding:0;font-family:Arial,sans-serif;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;}
-#loginPage,#chatPage{width:100%;max-width:480px;padding:10px;}
-input,select,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box;}
-button{cursor:pointer;}
-#userInfo{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-#chatBox{background:#111;border-radius:10px;padding:10px;height:70vh;overflow-y:auto;margin-bottom:5px;}
-.msg{display:flex;align-items:flex-start;margin:5px 0;gap:5px;}
-.msg img{width:32px;height:32px;border-radius:50%;}
-.msgContent{max-width:70%;padding:6px 10px;border-radius:12px;word-wrap:break-word;background:#222;}
-.msg.self .msgContent{margin-left:auto;background:#0044cc;}
-.msg.other .msgContent{background:#333;}
-.msgContent button{margin-left:5px;font-size:12px;background:none;color:#fff;border:none;cursor:pointer;}
-#typingStatus{font-style:italic;color:#aaa;margin-bottom:5px;}
-#inputContainer{display:flex;gap:5px;width:100%;margin-bottom:10px;}
-#inputContainer input{flex:1;padding:10px;border-radius:5px;border:none;background:#222;color:#fff;}
-#inputContainer button{padding:10px;border:none;border-radius:5px;background:#0044cc;color:#fff;}
-#recordBtn{width:40px;}
+body { font-family: Arial,sans-serif; margin:0; padding:0; background:#000; color:#fff; display:flex; flex-direction:column; }
+#loginPage, #chatPage { display:none; padding:20px; }
+input, select, button { padding:10px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; }
+button { cursor:pointer; }
+#usernameStatus { font-size:14px; margin-left:5px; }
+#chatBox { border-radius:10px; background:#111; padding:10px; overflow-y:auto; height:calc(100vh - 200px); }
+.msg { display:flex; align-items:flex-end; margin:5px 0; }
+.msg img { width:36px; height:36px; border-radius:50%; }
+.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; background:#222; color:#fff; display:flex; align-items:center; justify-content:space-between; }
+.msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
+.msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
+#typingStatus { font-style:italic; color:#aaa; margin-bottom:5px; }
+#inputContainer { position:fixed; bottom:0; left:0; width:100%; background:#111; padding:10px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #444; }
+#inputContainer input { flex:1; margin:0; max-width:none; background:#222; color:#fff; border:1px solid #444; border-radius:5px; padding:8px; }
+#inputContainer button { flex:0; border:none; border-radius:5px; background:#007bff; color:#fff; padding:10px; }
+#topBar { display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-bottom:1px solid #444; }
+#topBar button { padding:5px 8px; font-size:0.8rem; background:red; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+#notification { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 12px; border-radius:5px; display:none; z-index:1000; }
+.audioMsg { display:flex; align-items:center; gap:5px; background:#333; padding:4px 6px; border-radius:5px; }
+.audioMsg audio { width:120px; }
 </style>
 </head>
 <body>
 
-<!-- Login Page -->
+<div id="notification"></div>
+
 <div id="loginPage">
-<h2>Login</h2>
+<h2>Login to Group Chat</h2>
 <input type="text" id="username" placeholder="Enter Username" required>
-<input type="number" id="age" placeholder="Enter Age" required>
+<span id="usernameStatus"></span><br>
+<input type="number" id="age" placeholder="Enter Age" required><br>
 <select id="gender">
 <option value="" disabled selected>Select Gender</option>
 <option value="Male">Male</option>
 <option value="Female">Female</option>
 <option value="Other">Other</option>
-</select>
-<input type="file" id="profilePic" accept="image/*">
-<button id="loginBtn" onclick="login()">Join Chat</button>
+</select><br>
+<input type="file" id="profilePic" accept="image/*"><br>
+<button id="loginBtn" onclick="login()" disabled>Join Chat</button>
 </div>
 
-<!-- Chat Page -->
-<div id="chatPage" style="display:none;">
-<div id="userInfo">
-  <span id="profileDisplay"></span>
-  <button onclick="logout()" style="font-size:12px;padding:5px;">Logout</button>
+<div id="chatPage">
+<div id="topBar">
+  <div id="userInfo"></div>
+  <button onclick="logout()">Logout</button>
 </div>
+
 <div id="typingStatus"></div>
 <div id="chatBox"></div>
+
 <div id="inputContainer">
-  <input type="text" id="message" placeholder="Type message..." oninput="userTyping()">
-  <button onclick="sendMessage()">Send</button>
-  <button id="recordBtn" onclick="toggleRecording()">🎤</button>
+  <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
+  <button onclick="sendMessage()" id="sendBtn">Send</button>
+  <button id="recordBtn">🎤</button>
 </div>
 </div>
 
@@ -64,34 +70,53 @@ const firebaseConfig = {
   authDomain:"tamil-chat-2d54e.firebaseapp.com",
   databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
   projectId:"tamil-chat-2d54e",
-  storageBucket:"tamil-chat-2d54e.appspot.com",
+  storageBucket:"tamil-chat-2d54e.firebasestorage.app",
   messagingSenderId:"804705969240"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-let currentUser={};
-let typingTimeout;
-let blockedUsers=JSON.parse(localStorage.getItem("blockedUsers")||"[]");
-let mediaRecorder=null;
-let isRecording=false;
-let audioChunks=[];
+let currentUser={}, typingTimeout;
+let mediaRecorder, audioChunks = [];
+const userColors = {};
 
-function stringToColor(str){let hash=0;for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}let h=hash%360;return `hsl(${h},70%,50%)`;}
+function stringToPastelColor(str){
+  let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
+  const h=hash%360; const s=70+(hash%10); const l=80;
+  return `hsl(${h},${s}%,${l}%)`;
+}
 
-// Auto-login
+function showNotification(text){
+  const notif=document.getElementById("notification");
+  notif.innerText=text;
+  notif.style.display="block";
+  setTimeout(()=>{notif.style.display="none";},2000);
+}
+
 window.onload=function(){
-  const saved=localStorage.getItem("chatUser");
-  if(saved){currentUser=JSON.parse(saved); showChat();}
+  const savedUser=localStorage.getItem("chatUser");
+  if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
   else{document.getElementById("loginPage").style.display="block";}
 };
 
+const usernameInput=document.getElementById("username");
+const usernameStatus=document.getElementById("usernameStatus");
+const loginBtn=document.getElementById("loginBtn");
+usernameInput.addEventListener("input",function(){
+  const name=usernameInput.value.trim();
+  if(!name){usernameStatus.innerText=""; loginBtn.disabled=true; return;}
+  db.ref("users/"+name).once("value").then(snap=>{
+    if(snap.exists()){usernameStatus.innerText="❌ Taken"; usernameStatus.style.color="red"; loginBtn.disabled=true;}
+    else{usernameStatus.innerText="✅ Available"; usernameStatus.style.color="green"; loginBtn.disabled=false;}
+  });
+});
+
 function login(){
-  const username=document.getElementById("username").value.trim();
+  const username=usernameInput.value.trim();
   const age=document.getElementById("age").value.trim();
   const gender=document.getElementById("gender").value;
   const file=document.getElementById("profilePic").files[0];
-  if(!username||!age||!gender){alert("Fill all fields"); return;}
+  if(!username||!age||!gender){showNotification("Fill all fields"); return;}
   if(file){const reader=new FileReader(); reader.onload=e=>saveUser(username,age,gender,e.target.result); reader.readAsDataURL(file);}
   else saveUser(username,age,gender,"");
 }
@@ -108,27 +133,28 @@ function saveUser(username,age,gender,profilePic){
 function showChat(){
   document.getElementById("loginPage").style.display="none";
   document.getElementById("chatPage").style.display="block";
-  document.getElementById("profileDisplay").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/32'}" width="32" height="32" style="border-radius:50%">`;
+  document.getElementById("userInfo").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="30" height="30" style="border-radius:50%;">`;
 
   db.ref("messages").off();
   db.ref("messages").on("child_added",snap=>{
     const msg=snap.val();
-    if(blockedUsers.includes(msg.username)) return;
-    let div=document.createElement("div");
+    if(!userColors[msg.username]) userColors[msg.username]=stringToPastelColor(msg.username);
+    const div=document.createElement("div");
     div.className="msg "+(msg.username===currentUser.username?"self":"other");
     if(msg.type==="audio"){
       div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
-        <div class="msgContent" style="background:${stringToColor(msg.username)};">
-          ${msg.username}: <audio controls src="${msg.audioUrl}"></audio>
-          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}')">🗑️</button>`:""}
-          ${msg.username!==currentUser.username?`<button onclick="reportUser('${msg.username}')">🚩</button><button onclick="blockUser('${msg.username}')">⛔</button>`:""}
+        <div class="msgContent" style="background:${userColors[msg.username]}; color:#fff;">
+          ${msg.username}: 
+          <div class="audioMsg">
+            <audio controls src="${msg.audioUrl}"></audio>
+            ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}','${msg.username}')" style="font-size:10px;">🗑️</button>`:""}
+          </div>
         </div>`;
     } else {
       div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
-        <div class="msgContent" style="background:${stringToColor(msg.username)};">
+        <div class="msgContent" style="background:${userColors[msg.username]}; color:#fff;">
           ${msg.username}: ${msg.text} 
-          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}')">🗑️</button>`:""}
-          ${msg.username!==currentUser.username?`<button onclick="reportUser('${msg.username}')">🚩</button><button onclick="blockUser('${msg.username}')">⛔</button>`:""}
+          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}','${msg.username}')" style="font-size:10px;">🗑️</button>`:""}
         </div>`;
     }
     document.getElementById("chatBox").appendChild(div);
@@ -144,57 +170,67 @@ function showChat(){
   });
 }
 
+// Text message
 function sendMessage(){
   const text=document.getElementById("message").value.trim();
   if(!text) return;
-  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text,type:"text"});
+  db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,text,type:"text"});
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
 }
 
+// Delete
+function deleteMessage(key,user){
+  if(user!==currentUser.username){ showNotification("You can only delete your own message"); return;}
+  db.ref("messages/"+key).remove();
+  showNotification("Message deleted");
+}
+
+// Logout
 function logout(){
-  db.ref("users/"+currentUser.username).update({online:false});
-  db.ref("typing/"+currentUser.username).set(false);
-  localStorage.removeItem("chatUser");
-  currentUser={};
+  if(currentUser.username){
+    db.ref("users/"+currentUser.username).update({online:false});
+    db.ref("typing/"+currentUser.username).set(false);
+  }
+  localStorage.removeItem("chatUser"); currentUser={};
   document.getElementById("chatPage").style.display="none";
   document.getElementById("loginPage").style.display="block";
 }
 
+// Typing
 function userTyping(){
-  if(!isRecording) db.ref("typing/"+currentUser.username).set(true);
+  db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
   typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
 }
 
-// Delete, Report, Block
-function deleteMessage(key){db.ref("messages/"+key).remove();}
-function reportUser(username){db.ref("reports/"+username).transaction(c=> (c||0)+1);}
-function blockUser(username){if(!blockedUsers.includes(username)) blockedUsers.push(username); localStorage.setItem("blockedUsers",JSON.stringify(blockedUsers)); refreshChat();}
-function unblockUser(username){blockedUsers=blockedUsers.filter(u=>u!==username); localStorage.setItem("blockedUsers",JSON.stringify(blockedUsers)); refreshChat();}
-function refreshChat(){document.getElementById("chatBox").innerHTML=""; db.ref("messages").once("value").then(snap=>{snap.forEach(child=>{const msg=child.val();if(blockedUsers.includes(msg.username)) return; showChat();});});}
-
 // Voice recording
 const recordBtn=document.getElementById("recordBtn");
-function toggleRecording(){
-  if(isRecording){stopRecording();}else{startRecording();}
+let isRecording=false;
+recordBtn.onclick=async ()=>{
+  if(isRecording){ stopRecording(); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ showNotification("Mic not supported"); return; }
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  mediaRecorder=new MediaRecorder(stream);
+  audioChunks=[];
+  mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+  mediaRecorder.onstop=async ()=>{
+    const audioBlob=new Blob(audioChunks,{type:'audio/webm'});
+    const audioUrl=URL.createObjectURL(audioBlob);
+    db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,type:"audio",audioUrl});
+    isRecording=false;
+    recordBtn.textContent="🎤";
+    document.getElementById("message").disabled=false;
+  };
+  mediaRecorder.start();
+  isRecording=true;
+  recordBtn.textContent="⏹️";
+  document.getElementById("message").disabled=true;
+  setTimeout(stopRecording,60000); // 1 min max
+};
+function stopRecording(){
+  if(isRecording && mediaRecorder){ mediaRecorder.stop(); isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false; }
 }
-function startRecording(){
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-    mediaRecorder=new MediaRecorder(stream);
-    audioChunks=[];
-    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-    mediaRecorder.onstop=()=>{
-      const audioBlob=new Blob(audioChunks,{type:'audio/webm'});
-      const audioUrl=URL.createObjectURL(audioBlob);
-      db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,type:"audio",audioUrl});
-      isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false;
-    };
-    mediaRecorder.start(); isRecording=true; recordBtn.textContent="⏹️"; document.getElementById("message").disabled=true;
-    setTimeout(stopRecording,60000);
-  });
-}
-function stopRecording(){if(isRecording && mediaRecorder){mediaRecorder.stop(); isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false;}}
 </script>
 </body>
 </html>
