@@ -5,59 +5,57 @@
 <title>🔥 Tamil VM Group Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:0; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; }
-#loginPage, #chatPage { display:none; width:100%; max-width:480px; padding:10px; box-sizing:border-box; }
-input, select, button { padding:8px; margin:5px 0; width:100%; max-width:300px; box-sizing:border-box; border-radius:5px; border:none; }
-button { cursor:pointer; background:#007bff; color:#fff; }
-#chatBox { border-radius:10px; background:#111; padding:10px; overflow-y:auto; margin:10px 0; height:calc(100vh - 220px); width:100%; }
-.msg { display:flex; align-items:flex-end; margin:5px 0; }
-.msg img { width:36px; height:36px; border-radius:50%; }
-.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; background:#222; color:#fff; position:relative; }
-.msg.self .msgContent { margin-left:auto; margin-right:0; }
-.deleteBtn { cursor:pointer; margin-left:5px; font-size:0.9rem; }
-#typingStatus { font-style:italic; color:#888; margin-bottom:5px; }
-#inputContainer { position:fixed; bottom:0; left:0; width:100%; max-width:480px; background:#000; padding:10px; display:flex; gap:5px; box-sizing:border-box; border-top:1px solid #333; }
-#inputContainer input { flex:1; margin:0; border-radius:5px; border:1px solid #333; padding:8px; background:#111; color:#fff; }
-#inputContainer button { flex:0; border-radius:5px; padding:8px; }
-#topBar { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
-#topBar button { flex:0; padding:5px 10px; font-size:0.9rem; background:red; color:white; border-radius:5px; }
+body{margin:0;padding:0;font-family:Arial,sans-serif;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;}
+#loginPage,#chatPage{width:100%;max-width:480px;padding:10px;}
+input,select,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box;}
+button{cursor:pointer;}
+#userInfo{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+#chatBox{background:#111;border-radius:10px;padding:10px;height:70vh;overflow-y:auto;margin-bottom:5px;}
+.msg{display:flex;align-items:flex-start;margin:5px 0;gap:5px;}
+.msg img{width:32px;height:32px;border-radius:50%;}
+.msgContent{max-width:70%;padding:6px 10px;border-radius:12px;word-wrap:break-word;background:#222;}
+.msg.self .msgContent{margin-left:auto;background:#0044cc;}
+.msg.other .msgContent{background:#333;}
+.msgContent button{margin-left:5px;font-size:12px;background:none;color:#fff;border:none;cursor:pointer;}
+#typingStatus{font-style:italic;color:#aaa;margin-bottom:5px;}
+#inputContainer{display:flex;gap:5px;width:100%;margin-bottom:10px;}
+#inputContainer input{flex:1;padding:10px;border-radius:5px;border:none;background:#222;color:#fff;}
+#inputContainer button{padding:10px;border:none;border-radius:5px;background:#0044cc;color:#fff;}
+#recordBtn{width:40px;}
 </style>
 </head>
 <body>
 
 <!-- Login Page -->
 <div id="loginPage">
-<h2>Login to Group Chat</h2>
+<h2>Login</h2>
 <input type="text" id="username" placeholder="Enter Username" required>
-<span id="usernameStatus"></span><br>
-<input type="number" id="age" placeholder="Enter Age" required><br>
+<input type="number" id="age" placeholder="Enter Age" required>
 <select id="gender">
 <option value="" disabled selected>Select Gender</option>
 <option value="Male">Male</option>
 <option value="Female">Female</option>
 <option value="Other">Other</option>
-</select><br>
-<input type="file" id="profilePic" accept="image/*"><br>
-<button id="loginBtn" onclick="login()" disabled>Join Chat</button>
+</select>
+<input type="file" id="profilePic" accept="image/*">
+<button id="loginBtn" onclick="login()">Join Chat</button>
 </div>
 
 <!-- Chat Page -->
-<div id="chatPage">
-<div id="topBar">
-  <div id="userInfo"></div>
-  <button onclick="logout()">Logout</button>
+<div id="chatPage" style="display:none;">
+<div id="userInfo">
+  <span id="profileDisplay"></span>
+  <button onclick="logout()" style="font-size:12px;padding:5px;">Logout</button>
 </div>
 <div id="typingStatus"></div>
 <div id="chatBox"></div>
-
 <div id="inputContainer">
-  <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
-  <button id="sendBtn" onclick="sendMessage()">Send</button>
-  <button id="recordBtn">🎤</button>
+  <input type="text" id="message" placeholder="Type message..." oninput="userTyping()">
+  <button onclick="sendMessage()">Send</button>
+  <button id="recordBtn" onclick="toggleRecording()">🎤</button>
 </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script>
@@ -70,39 +68,26 @@ const firebaseConfig = {
   messagingSenderId:"804705969240"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
-let currentUser={}, typingTimeout, mediaRecorder, recordTimeout, isRecording=false;
-const userColors={}, blockedUsers=JSON.parse(localStorage.getItem("blockedUsers")||"{}");
+let currentUser={};
+let typingTimeout;
+let blockedUsers=JSON.parse(localStorage.getItem("blockedUsers")||"[]");
+let mediaRecorder=null;
+let isRecording=false;
+let audioChunks=[];
 
-function stringToPastelColor(str){
-  let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
-  const h=hash%360; const s=70+(hash%10); const l=80;
-  return `hsl(${h},${s}%,${l}%)`;
-}
+function stringToColor(str){let hash=0;for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}let h=hash%360;return `hsl(${h},70%,50%)`;}
 
+// Auto-login
 window.onload=function(){
-  const savedUser=localStorage.getItem("chatUser");
-  if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
+  const saved=localStorage.getItem("chatUser");
+  if(saved){currentUser=JSON.parse(saved); showChat();}
   else{document.getElementById("loginPage").style.display="block";}
 };
 
-// Username check
-const usernameInput=document.getElementById("username");
-const usernameStatus=document.getElementById("usernameStatus");
-const loginBtn=document.getElementById("loginBtn");
-usernameInput.addEventListener("input",function(){
-  const name=usernameInput.value.trim();
-  if(!name){usernameStatus.innerText=""; loginBtn.disabled=true; return;}
-  db.ref("users/"+name).once("value").then(snap=>{
-    if(snap.exists()){usernameStatus.innerText="❌ Taken"; usernameStatus.style.color="red"; loginBtn.disabled=true;}
-    else{usernameStatus.innerText="✅ Available"; usernameStatus.style.color="green"; loginBtn.disabled=false;}
-  });
-});
-
-// Login function
 function login(){
-  const username=usernameInput.value.trim();
+  const username=document.getElementById("username").value.trim();
   const age=document.getElementById("age").value.trim();
   const gender=document.getElementById("gender").value;
   const file=document.getElementById("profilePic").files[0];
@@ -120,74 +105,38 @@ function saveUser(username,age,gender,profilePic){
   showChat();
 }
 
-// Show chat page
 function showChat(){
   document.getElementById("loginPage").style.display="none";
   document.getElementById("chatPage").style.display="block";
-  document.getElementById("userInfo").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="36" height="36" style="border-radius:50%;">`;
+  document.getElementById("profileDisplay").innerHTML=`<b>${currentUser.username}</b> <img src="${currentUser.profilePic||'https://via.placeholder.com/32'}" width="32" height="32" style="border-radius:50%">`;
 
-  // Messages
   db.ref("messages").off();
-  db.ref("messages").limitToLast(100).on("child_added", snap=>{
-    const msg = snap.val();
-    if(blockedUsers[msg.username]) return;
-
-    if(!userColors[msg.username]) userColors[msg.username]=stringToPastelColor(msg.username);
-
-    const div = document.createElement("div");
-    div.className = "msg "+(msg.username===currentUser.username?"self":"other");
-    const contentDiv = document.createElement("div");
-    contentDiv.className="msgContent"; contentDiv.style.background=userColors[msg.username];
-
-    // Delete button for own messages
-    if(msg.username===currentUser.username){
-      const deleteBtn = document.createElement("span");
-      deleteBtn.innerText="🗑️";
-      deleteBtn.className="deleteBtn";
-      deleteBtn.onclick = () => { db.ref("messages/"+snap.key).remove(); div.remove(); };
-      contentDiv.appendChild(deleteBtn);
+  db.ref("messages").on("child_added",snap=>{
+    const msg=snap.val();
+    if(blockedUsers.includes(msg.username)) return;
+    let div=document.createElement("div");
+    div.className="msg "+(msg.username===currentUser.username?"self":"other");
+    if(msg.type==="audio"){
+      div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
+        <div class="msgContent" style="background:${stringToColor(msg.username)};">
+          ${msg.username}: <audio controls src="${msg.audioUrl}"></audio>
+          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}')">🗑️</button>`:""}
+          ${msg.username!==currentUser.username?`<button onclick="reportUser('${msg.username}')">🚩</button><button onclick="blockUser('${msg.username}')">⛔</button>`:""}
+        </div>`;
+    } else {
+      div.innerHTML=`<img src="${msg.profilePic||'https://via.placeholder.com/32'}">
+        <div class="msgContent" style="background:${stringToColor(msg.username)};">
+          ${msg.username}: ${msg.text} 
+          ${msg.username===currentUser.username?`<button onclick="deleteMessage('${snap.key}')">🗑️</button>`:""}
+          ${msg.username!==currentUser.username?`<button onclick="reportUser('${msg.username}')">🚩</button><button onclick="blockUser('${msg.username}')">⛔</button>`:""}
+        </div>`;
     }
-
-    // Report/Block for other users
-    if(msg.username!==currentUser.username){
-      const reportBtn = document.createElement("span");
-      reportBtn.innerText="🚩"; reportBtn.className="deleteBtn"; reportBtn.title="Report User";
-      reportBtn.onclick = () => { db.ref("reports/"+msg.username).push({reportBy:currentUser.username, time:new Date().toISOString()}); alert("User reported!"); };
-      contentDiv.appendChild(reportBtn);
-
-      const blockBtn = document.createElement("span");
-      blockBtn.innerText = blockedUsers[msg.username] ? "🔓":"🚫";
-      blockBtn.title = blockedUsers[msg.username] ? "Unblock User":"Block User";
-      blockBtn.className="deleteBtn";
-      blockBtn.onclick = () => { 
-        if(blockedUsers[msg.username]) delete blockedUsers[msg.username]; 
-        else blockedUsers[msg.username]=true; 
-        localStorage.setItem("blockedUsers", JSON.stringify(blockedUsers)); 
-        div.remove(); 
-      };
-      contentDiv.appendChild(blockBtn);
-    }
-
-    if(msg.audio){
-      const audio = document.createElement("audio");
-      audio.controls=true; audio.src=msg.audio; audio.style.width="150px";
-      contentDiv.appendChild(audio);
-    } else if(msg.text){
-      const textNode=document.createTextNode(`${msg.username} (${msg.age},${msg.gender}): ${msg.text}`);
-      contentDiv.appendChild(textNode);
-    }
-
-    const img=document.createElement("img");
-    img.src = msg.profilePic || 'https://via.placeholder.com/32';
-    div.appendChild(img);
-    div.appendChild(contentDiv);
     document.getElementById("chatBox").appendChild(div);
     document.getElementById("chatBox").scrollTop=document.getElementById("chatBox").scrollHeight;
   });
 
-  // Typing indicator
   db.ref("typing").off();
-  db.ref("typing").on("value", snap=>{
+  db.ref("typing").on("value",snap=>{
     const data=snap.val()||{};
     let status="";
     for(const user in data){if(user!==currentUser.username && data[user]) status+=`${user} is typing... `;}
@@ -195,56 +144,57 @@ function showChat(){
   });
 }
 
-// Send text
 function sendMessage(){
-  if(isRecording) return;
   const text=document.getElementById("message").value.trim();
   if(!text) return;
-  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
+  db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text,type:"text"});
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
 }
 
-// Typing
+function logout(){
+  db.ref("users/"+currentUser.username).update({online:false});
+  db.ref("typing/"+currentUser.username).set(false);
+  localStorage.removeItem("chatUser");
+  currentUser={};
+  document.getElementById("chatPage").style.display="none";
+  document.getElementById("loginPage").style.display="block";
+}
+
 function userTyping(){
-  if(isRecording) return;
-  db.ref("typing/"+currentUser.username).set(true);
+  if(!isRecording) db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
   typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
 }
 
-// Voice recording
-const recordBtn = document.getElementById("recordBtn");
-const messageInput = document.getElementById("message");
-recordBtn.onclick = () => {
-  if(isRecording){ stopRecording(); return; }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-    mediaRecorder = new MediaRecorder(stream);
-    let audioChunks=[];
-    messageInput.disabled=true;
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      messageInput.disabled=false; clearTimeout(recordTimeout);
-      const audioBlob = new Blob(audioChunks,{type:'audio/webm'});
-      const reader = new FileReader();
-      reader.onload = ()=>{ db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,audio:reader.result}); };
-      reader.readAsDataURL(audioBlob);
-    };
-    mediaRecorder.start(); isRecording=true; recordBtn.innerText="⏹️";
-    recordTimeout=setTimeout(stopRecording,60000);
-  }).catch(()=>alert("Microphone access denied"));
-};
-function stopRecording(){
-  if(isRecording){ mediaRecorder.stop(); isRecording=false; recordBtn.innerText="🎤"; messageInput.disabled=false; clearTimeout(recordTimeout); }
-}
+// Delete, Report, Block
+function deleteMessage(key){db.ref("messages/"+key).remove();}
+function reportUser(username){db.ref("reports/"+username).transaction(c=> (c||0)+1);}
+function blockUser(username){if(!blockedUsers.includes(username)) blockedUsers.push(username); localStorage.setItem("blockedUsers",JSON.stringify(blockedUsers)); refreshChat();}
+function unblockUser(username){blockedUsers=blockedUsers.filter(u=>u!==username); localStorage.setItem("blockedUsers",JSON.stringify(blockedUsers)); refreshChat();}
+function refreshChat(){document.getElementById("chatBox").innerHTML=""; db.ref("messages").once("value").then(snap=>{snap.forEach(child=>{const msg=child.val();if(blockedUsers.includes(msg.username)) return; showChat();});});}
 
-// Logout
-function logout(){
-  if(currentUser.username){ db.ref("users/"+currentUser.username).update({online:false}); db.ref("typing/"+currentUser.username).set(false);}
-  localStorage.removeItem("chatUser"); currentUser={};
-  document.getElementById("chatPage").style.display="none";
-  document.getElementById("loginPage").style.display="block";
+// Voice recording
+const recordBtn=document.getElementById("recordBtn");
+function toggleRecording(){
+  if(isRecording){stopRecording();}else{startRecording();}
 }
+function startRecording(){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRecorder=new MediaRecorder(stream);
+    audioChunks=[];
+    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+    mediaRecorder.onstop=()=>{
+      const audioBlob=new Blob(audioChunks,{type:'audio/webm'});
+      const audioUrl=URL.createObjectURL(audioBlob);
+      db.ref("messages").push({username:currentUser.username,profilePic:currentUser.profilePic,type:"audio",audioUrl});
+      isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false;
+    };
+    mediaRecorder.start(); isRecording=true; recordBtn.textContent="⏹️"; document.getElementById("message").disabled=true;
+    setTimeout(stopRecording,60000);
+  });
+}
+function stopRecording(){if(isRecording && mediaRecorder){mediaRecorder.stop(); isRecording=false; recordBtn.textContent="🎤"; document.getElementById("message").disabled=false;}}
 </script>
 </body>
 </html>
