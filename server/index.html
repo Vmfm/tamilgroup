@@ -2,67 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>🔥 Tamil VM Group Chat</title>
+<title>Tamil VM Group Chat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f0f0f0; display:flex; flex-direction:column; align-items:center; transition: background 0.3s,color 0.3s; }
-body.dark { background:#121212; color:#eaeaea; }
-h2 { font-size:1.4rem; margin:15px 0; text-align:center; }
-#loginPage, #chatPage { width:95%; max-width:400px; padding:10px; display:none; }
-input, select, button { padding:10px; margin:5px 0; width:100%; max-width:100%; box-sizing:border-box; }
+body {
+  font-family: Arial,sans-serif;
+  margin:0;
+  padding:0;
+  background:#f5f5f5; /* fixed background color */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+#loginPage, #chatPage { width:95%; max-width:400px; margin-top:20px; }
+input, select, button { padding:10px; margin:5px 0; width:100%; box-sizing:border-box; }
 button { cursor:pointer; }
 #usernameStatus { font-size:14px; margin-left:5px; }
-#chatBox { border-radius:10px; background:#fff; padding:10px; overflow-y:auto; height:60vh; margin-bottom:0; }
-body.dark #chatBox { background:#1e1e1e; border:1px solid #444; }
-.msg { display:flex; align-items:flex-end; margin:5px 0; }
+#chatBox { border-radius:10px; background:#fff; padding:10px; overflow-y:auto; height:60vh; margin-bottom:10px; }
+.msg { display:flex; align-items:flex-start; margin:5px 0; }
 .msg img { width:36px; height:36px; border-radius:50%; }
-.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; background:#ddd; color:#000; }
+.msgContent { max-width:70%; padding:8px 12px; border-radius:15px; margin-left:10px; word-wrap:break-word; position:relative; }
 .msg.self .msgContent { margin-left:auto; margin-right:0; border-bottom-right-radius:2px; }
 .msg.other .msgContent { margin-left:10px; border-bottom-left-radius:2px; }
+.msgContent span.deleteBtn { position:absolute; top:2px; right:4px; font-size:0.7rem; cursor:pointer; color:red; }
 #typingStatus { font-style:italic; color:#555; margin-bottom:5px; }
-#inputContainer { width:95%; display:flex; gap:5px; margin-top:5px; }
+#inputContainer { display:flex; gap:5px; margin-bottom:15px; }
 #inputContainer input { flex:1; }
-#inputContainer button { flex:0; padding:10px; border:none; border-radius:5px; }
-#toggleTheme { margin:10px 0; padding:5px 10px; border:none; border-radius:5px; background:#444; color:white; cursor:pointer; }
-body.dark #toggleTheme { background:#eaeaea; color:#121212; }
+#inputContainer button { flex:0; }
 </style>
 </head>
 <body>
 
-<h2>🔥 Tamil VM Group Chat</h2>
-<button id="toggleTheme" onclick="toggleTheme()">🌙 Dark Mode</button>
-
 <!-- Login Page -->
 <div id="loginPage">
-  <input type="text" id="username" placeholder="Enter Username" required>
-  <span id="usernameStatus"></span>
-  <input type="number" id="age" placeholder="Enter Age" required>
-  <select id="gender">
-    <option value="" disabled selected>Select Gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-    <option value="Other">Other</option>
-  </select>
-  <input type="file" id="profilePic" accept="image/*">
-  <button id="loginBtn" onclick="login()" disabled>Join Chat</button>
+<input type="text" id="username" placeholder="Enter Username" required>
+<span id="usernameStatus"></span><br>
+<input type="number" id="age" placeholder="Enter Age" required><br>
+<select id="gender">
+<option value="" disabled selected>Select Gender</option>
+<option value="Male">Male</option>
+<option value="Female">Female</option>
+<option value="Other">Other</option>
+</select><br>
+<input type="file" id="profilePic" accept="image/*"><br>
+<button id="loginBtn" onclick="login()" disabled>Join Chat</button>
 </div>
 
 <!-- Chat Page -->
 <div id="chatPage">
-  <div id="userInfo"></div>
-  <div id="typingStatus"></div>
-  <div id="chatBox"></div>
-  <div id="inputContainer">
-    <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
-    <button onclick="sendMessage()">Send</button>
-    <button id="recordBtn">🎤 Record</button>
-    <button onclick="logout()" style="background:red;color:white;">Logout</button>
-  </div>
+<div id="userInfo"></div>
+<div id="typingStatus"></div>
+<div id="chatBox"></div>
+
+<div id="inputContainer">
+  <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
+  <button onclick="sendMessage()">Send</button>
+  <button id="recordBtn">🎤 Record</button>
+  <button onclick="logout()" style="background:red;color:white;">Logout</button>
+</div>
 </div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <script>
 const firebaseConfig = {
   apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
@@ -70,8 +73,7 @@ const firebaseConfig = {
   databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
   projectId:"tamil-chat-2d54e",
   storageBucket:"tamil-chat-2d54e.appspot.com",
-  messagingSenderId:"804705969240",
-  appId:"1:804705969240:web:658df281dd8360843c162d"
+  messagingSenderId:"804705969240"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -82,30 +84,26 @@ let mediaRecorder;
 let audioChunks = [];
 const userColors = {};
 
+// Helper for pastel colors
 function stringToPastelColor(str){
   let hash=0; for(let i=0;i<str.length;i++){hash=str.charCodeAt(i)+((hash<<5)-hash);}
   const h=hash%360; const s=70+(hash%10); const l=80;
   return `hsl(${h},${s}%,${l}%)`;
 }
 
-function toggleTheme(){
-  document.body.classList.toggle("dark");
-  document.getElementById("toggleTheme").textContent = document.body.classList.contains("dark") ? "☀️ Light Mode" : "🌙 Dark Mode";
+// Auto-login if user saved
+window.onload = function(){
+  const savedUser = localStorage.getItem("chatUser");
+  if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
+  else {document.getElementById("loginPage").style.display="block";}
 }
 
-// Load saved user if exists
-window.onload=function(){
-  const savedUser=localStorage.getItem("chatUser");
-  if(savedUser){currentUser=JSON.parse(savedUser); showChat();}
-  else{document.getElementById("loginPage").style.display="block";}
-};
-
-// Username availability check
-const usernameInput=document.getElementById("username");
-const usernameStatus=document.getElementById("usernameStatus");
-const loginBtn=document.getElementById("loginBtn");
-usernameInput.addEventListener("input",function(){
-  const name=usernameInput.value.trim();
+// Login
+const usernameInput = document.getElementById("username");
+const usernameStatus = document.getElementById("usernameStatus");
+const loginBtn = document.getElementById("loginBtn");
+usernameInput.addEventListener("input", function(){
+  const name = usernameInput.value.trim();
   if(!name){usernameStatus.innerText=""; loginBtn.disabled=true; return;}
   db.ref("users/"+name).once("value").then(snap=>{
     if(snap.exists()){usernameStatus.innerText="❌ Taken"; usernameStatus.style.color="red"; loginBtn.disabled=true;}
@@ -113,21 +111,20 @@ usernameInput.addEventListener("input",function(){
   });
 });
 
-// Login
 function login(){
-  const username=usernameInput.value.trim();
-  const age=document.getElementById("age").value.trim();
-  const gender=document.getElementById("gender").value;
-  const file=document.getElementById("profilePic").files[0];
+  const username = usernameInput.value.trim();
+  const age = document.getElementById("age").value.trim();
+  const gender = document.getElementById("gender").value;
+  const file = document.getElementById("profilePic").files[0];
   if(!username||!age||!gender){alert("Fill all fields"); return;}
-  if(file){const reader=new FileReader(); reader.onload=e=>saveUser(username,age,gender,e.target.result); reader.readAsDataURL(file);}
+  if(file){const reader = new FileReader(); reader.onload=e=>saveUser(username,age,gender,e.target.result); reader.readAsDataURL(file);}
   else saveUser(username,age,gender,"");
 }
 
 function saveUser(username,age,gender,profilePic){
-  currentUser={username,age,gender,profilePic};
+  currentUser = {username,age,gender,profilePic};
   localStorage.setItem("chatUser",JSON.stringify(currentUser));
-  const userRef=db.ref("users/"+username);
+  const userRef = db.ref("users/"+username);
   userRef.set({username,age,gender,profilePic,online:true});
   userRef.onDisconnect().update({online:false});
   showChat();
@@ -139,78 +136,105 @@ function showChat(){
   document.getElementById("chatPage").style.display="block";
   document.getElementById("userInfo").innerHTML=`<b>Logged in as:</b> ${currentUser.username} (${currentUser.age},${currentUser.gender}) <img src="${currentUser.profilePic||'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%;">`;
 
-  // Listen for messages
-  db.ref("messages").limitToLast(100).off();
-  db.ref("messages").limitToLast(100).on("child_added", snap => {
+  db.ref("messages").off();
+  db.ref("messages").limitToLast(100).on("child_added", snap=>{
     const msg = snap.val();
     if(!userColors[msg.username]) userColors[msg.username]=stringToPastelColor(msg.username);
 
     const div = document.createElement("div");
     div.className = "msg "+(msg.username===currentUser.username?"self":"other");
 
-    let contentDiv = document.createElement("div");
-    contentDiv.className = "msgContent";
-    contentDiv.style.background = userColors[msg.username];
+    const contentDiv = document.createElement("div");
+    contentDiv.className="msgContent";
+    contentDiv.style.background=userColors[msg.username];
 
-    if(msg.type==="voice"){
-      const audio = document.createElement("audio");
-      audio.controls=true;
-      audio.src=msg.audio;
-      contentDiv.appendChild(document.createTextNode(`${msg.username}: `));
-      contentDiv.appendChild(audio);
-    } else {
-      contentDiv.innerHTML = `${msg.username} (${msg.age},${msg.gender}): ${msg.text}`;
-    }
-
-    // Delete button for current user
+    // Delete button
     if(msg.username===currentUser.username){
-      const deleteBtn=document.createElement("button");
+      const deleteBtn = document.createElement("span");
       deleteBtn.innerText="🗑️";
-      deleteBtn.style.marginLeft="5px";
-      deleteBtn.style.fontSize="0.8rem";
-      deleteBtn.style.cursor="pointer";
-      deleteBtn.onclick=()=>{ db.ref("messages/"+snap.key).remove(); div.remove(); };
+      deleteBtn.className="deleteBtn";
+      deleteBtn.onclick = () => {
+        db.ref("messages/"+snap.key).remove();
+        div.remove();
+      };
       contentDiv.appendChild(deleteBtn);
     }
 
-    // Profile image
-    const img=document.createElement("img");
-    img.src=msg.profilePic||"https://via.placeholder.com/32";
+    // Message content
+    if(msg.audio){
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.src = msg.audio;
+      contentDiv.appendChild(audio);
+    } else {
+      const textNode = document.createTextNode(`${msg.username} (${msg.age},${msg.gender}): ${msg.text}`);
+      contentDiv.appendChild(textNode);
+    }
+
+    const img = document.createElement("img");
+    img.src = msg.profilePic || "https://via.placeholder.com/32";
+
     div.appendChild(img);
     div.appendChild(contentDiv);
     document.getElementById("chatBox").appendChild(div);
-    document.getElementById("chatBox").scrollTop=document.getElementById("chatBox").scrollHeight;
+    document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
   });
 
   // Typing indicator
   db.ref("typing").off();
-  db.ref("typing").on("value",snap=>{
-    const data=snap.val()||{};
-    let status="";
-    for(const user in data){ if(user!==currentUser.username && data[user]) status+=`${user} is typing... `; }
-    document.getElementById("typingStatus").innerText=status;
+  db.ref("typing").on("value", snap=>{
+    const data = snap.val() || {};
+    let status = "";
+    for(const user in data){ if(user!==currentUser.username && data[user]) status += `${user} is typing... `;}
+    document.getElementById("typingStatus").innerText = status;
   });
 }
 
-// Send text message
+// Send text
 function sendMessage(){
-  const text=document.getElementById("message").value.trim();
+  const text = document.getElementById("message").value.trim();
   if(!text) return;
   db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,text});
   document.getElementById("message").value="";
   db.ref("typing/"+currentUser.username).set(false);
-
-  // Auto-delete old messages
-  db.ref("messages").once("value",snap=>{
-    const total=snap.numChildren();
-    if(total>100){
-      const extras=total-100;
-      let keys=[];
-      snap.forEach(child=>keys.push(child.key));
-      keys.slice(0,extras).forEach(key=>db.ref("messages/"+key).remove());
-    }
-  });
 }
+
+// Voice recording
+const recordBtn = document.getElementById("recordBtn");
+recordBtn.onclick = async () => {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    recordBtn.innerText = "🎤 Record";
+  } else {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Audio recording not supported in this browser.");
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const audioBase64 = reader.result;
+        db.ref("messages").push({
+          username: currentUser.username,
+          age: currentUser.age,
+          gender: currentUser.gender,
+          profilePic: currentUser.profilePic,
+          audio: audioBase64
+        });
+      };
+      reader.readAsDataURL(audioBlob);
+    };
+
+    mediaRecorder.start();
+    recordBtn.innerText = "⏹️ Stop";
+  }
+};
 
 // Logout
 function logout(){
@@ -228,44 +252,6 @@ function userTyping(){
   db.ref("typing/"+currentUser.username).set(true);
   clearTimeout(typingTimeout);
   typingTimeout=setTimeout(()=>{db.ref("typing/"+currentUser.username).set(false);},2000);
-}
-
-// Voice recording
-const recordBtn=document.getElementById("recordBtn");
-recordBtn.addEventListener("click", async ()=>{
-  if(!mediaRecorder || mediaRecorder.state==="inactive"){
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks=[];
-    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-    mediaRecorder.onstop=sendVoiceMessage;
-    mediaRecorder.start();
-    recordBtn.innerText="⏹ Stop";
-  }else if(mediaRecorder.state==="recording"){
-    mediaRecorder.stop();
-    recordBtn.innerText="🎤 Record";
-  }
-});
-
-function sendVoiceMessage(){
-  const blob=new Blob(audioChunks,{type:'audio/webm'});
-  const reader=new FileReader();
-  reader.onloadend=()=>{
-    const base64Audio=reader.result;
-    db.ref("messages").push({username:currentUser.username,age:currentUser.age,gender:currentUser.gender,profilePic:currentUser.profilePic,type:"voice",audio:base64Audio,time:new Date().toLocaleTimeString()});
-
-    // Auto-delete old messages
-    db.ref("messages").once("value", snap=>{
-      const total = snap.numChildren();
-      if(total>100){
-        let extras = total-100;
-        let keys = [];
-        snap.forEach(child=>keys.push(child.key));
-        keys.slice(0, extras).forEach(key=>db.ref("messages/"+key).remove());
-      }
-    });
-  };
-  reader.readAsDataURL(blob);
 }
 </script>
 </body>
