@@ -1,284 +1,270 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Group Chat — Guest + Voice + Typing Indicator</title>
-  <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071027 0%,#071527 100%);color:#e6eef6;display:flex;align-items:stretch;min-height:100vh}
-    .app{width:100%;max-width:1000px;margin:auto;display:grid;grid-template-columns:320px 1fr;gap:18px;padding:18px}
-    .panel{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.6)}
-    .left{display:flex;flex-direction:column;gap:10px}
-    .brand{display:flex;align-items:center;gap:10px}
-    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700}
-    .rooms{margin-top:6px}
-    .room{padding:8px;border-radius:8px;cursor:pointer}
-    .room.active{background:rgba(255,255,255,.03)}
-    .userbox{display:flex;gap:10px;align-items:center}
-    .avatar{width:40px;height:40px;border-radius:8px;background:#14233a;display:flex;align-items:center;justify-content:center}
-
-    .chat{display:flex;flex-direction:column;height:75vh}
-    .messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
-    .composer{display:flex;gap:8px;padding:12px;border-top:1px solid rgba(255,255,255,.03)}
-    .input{flex:1;display:flex;gap:8px}
-    input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:inherit}
-    button{background:var(--accent);color:#072; border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
-    .msg{max-width:70%;padding:10px;border-radius:10px;background:rgba(255,255,255,.03)}
-    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .me{align-self:flex-end;background:linear-gradient(90deg,#052c2f,#0ea5a0)}
-    .typing{font-size:13px;color:var(--muted);padding:4px 8px}
-    .controls{display:flex;gap:8px;align-items:center}
-    .recording{background:#7c1d1d}
-    .small{font-size:13px;color:var(--muted)}
-    .notice{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WhatsApp Style Group Chat</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #0b141a;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  #login {
+    background: #202c33;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    color: #fff;
+  }
+  #chat {
+    display: none;
+    width: 100%;
+    max-width: 420px;
+    height: 90vh;
+    background: #111b21;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    background: #008069;
+    color: white;
+    padding: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+  }
+  #messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .message-row {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 8px;
+  }
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 6px;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+  .msg {
+    max-width: 75%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    word-wrap: break-word;
+  }
+  .mine {
+    background: #005c4b;
+    color: #e9edef;
+    align-self: flex-end;
+    border-bottom-right-radius: 0;
+  }
+  .other {
+    background: #202c33;
+    color: #e9edef;
+    align-self: flex-start;
+    border-bottom-left-radius: 0;
+  }
+  .username {
+    font-size: 12px;
+    color: #8696a0;
+  }
+  .time {
+    font-size: 10px;
+    float: right;
+    color: #8696a0;
+    margin-left: 5px;
+  }
+  .input-area {
+    display: flex;
+    align-items: center;
+    background: #202c33;
+    padding: 8px;
+  }
+  #messageInput {
+    flex: 1;
+    background: #2a3942;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    color: white;
+    outline: none;
+  }
+  #sendBtn, #recordBtn {
+    background: transparent;
+    border: none;
+    color: #008069;
+    font-size: 22px;
+    margin-left: 10px;
+    cursor: pointer;
+  }
+  #typing {
+    font-size: 12px;
+    color: #8696a0;
+    padding-left: 10px;
+    height: 18px;
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <div class="panel left">
-      <div class="brand">
-        <div class="logo">GC</div>
-        <div>
-          <div style="font-weight:700">Group Chat (Guest)</div>
-          <div class="small">Voice messages • Typing indicator</div>
-        </div>
-      </div>
+  <div id="login">
+    <h2>Join as Guest</h2>
+    <input id="username" type="text" placeholder="Enter your name" style="padding:10px;border:none;border-radius:5px;width:100%;margin-bottom:10px;">
+    <button onclick="joinChat()" style="padding:10px 20px;border:none;border-radius:5px;background:#008069;color:#fff;cursor:pointer;width:100%;">Join</button>
+  </div>
 
-      <div style="margin-top:8px">
-        <div class="userbox">
-          <div class="avatar" id="avatar">G</div>
-          <div style="flex:1">
-            <input id="guestName" type="text" placeholder="Enter display name (guest)" />
-            <div style="margin-top:6px;display:flex;gap:8px">
-              <button id="saveName">Save</button>
-              <button id="clearName" style="background:transparent;border:1px solid rgba(255,255,255,.04)">Clear</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="rooms">
-        <div class="small">Rooms</div>
-        <div class="room active" data-room="lobby"># lobby (default)</div>
-      </div>
-
-      <div style="margin-top:auto">
-        <div class="notice">Connected to Tamil Chat Firebase database.</div>
-      </div>
-    </div>
-
-    <div class="panel chat">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-weight:700"># lobby</div>
-          <div class="small" id="onlineCount">Online: 0</div>
-        </div>
-        <div class="small">Local time: <span id="localTime"></span></div>
-      </div>
-
-      <div id="messages" class="messages"></div>
-
-      <div id="typingIndicator" class="typing" style="display:none"></div>
-
-      <div class="composer">
-        <div class="input">
-          <input id="textInput" type="text" placeholder="Type a message" autocomplete="off" />
-        </div>
-        <div class="controls">
-          <button id="sendBtn">Send</button>
-          <button id="recordBtn">Record</button>
-          <button id="stopBtn" disabled>Stop</button>
-        </div>
-      </div>
+  <div id="chat">
+    <div class="header">Group Chat</div>
+    <div id="messages"></div>
+    <div id="typing"></div>
+    <div class="input-area">
+      <input id="messageInput" placeholder="Type a message" oninput="showTyping()" />
+      <button id="recordBtn" title="Record" onclick="toggleRecording()">🎤</button>
+      <button id="sendBtn" title="Send" onclick="sendMessage()">📩</button>
     </div>
   </div>
 
-  <script>
-    // Firebase configuration for Tamil Chat
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
-      authDomain: "tamil-chat-2d54e.firebaseapp.com",
-      databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-      projectId: "tamil-chat-2d54e",
-      storageBucket: "tamil-chat-2d54e.appspot.com",
-      messagingSenderId: "804705969240",
-      appId: "1:804705969240:web:658df281dd8360843c162d"
-    };
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+    authDomain: "tamil-chat-2d54e.firebaseapp.com",
+    databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+    projectId: "tamil-chat-2d54e",
+    storageBucket: "tamil-chat-2d54e.appspot.com",
+    messagingSenderId: "804705969240",
+    appId: "1:804705969240:web:658df281dd8360843c162d"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    const messagesEl = document.getElementById('messages');
-    const textInput = document.getElementById('textInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const recordBtn = document.getElementById('recordBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const guestNameInput = document.getElementById('guestName');
-    const saveNameBtn = document.getElementById('saveName');
-    const clearNameBtn = document.getElementById('clearName');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const onlineCountEl = document.getElementById('onlineCount');
-    const avatarEl = document.getElementById('avatar');
+  let username = localStorage.getItem('guestName');
+  let mediaRecorder;
+  let chunks = [];
+  let isRecording = false;
 
-    const ROOM = 'lobby';
+  if (username) joinChat();
 
-    (function loadFirebase(){
-      const s1 = document.createElement('script');
-      s1.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js';
-      s1.onload = () => {
-        const s2 = document.createElement('script');
-        s2.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js';
-        s2.onload = initApp;
-        document.head.appendChild(s2);
+  function joinChat() {
+    username = document.getElementById('username')?.value || username;
+    if (!username) return alert('Enter a name');
+    localStorage.setItem('guestName', username);
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('chat').style.display = 'flex';
+    listenMessages();
+  }
+
+  function randomColor(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const color = `hsl(${hash % 360}, 60%, 50%)`;
+    return color;
+  }
+
+  function listenMessages() {
+    db.ref('messages').on('child_added', snap => {
+      const data = snap.val();
+      displayMessage(data);
+    });
+  }
+
+  function displayMessage(data) {
+    const msgRow = document.createElement('div');
+    msgRow.className = 'message-row';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.style.background = randomColor(data.name);
+    avatar.textContent = data.name.charAt(0).toUpperCase();
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg ' + (data.name === username ? 'mine' : 'other');
+
+    if (data.type === 'voice') {
+      const audio = document.createElement('audio');
+      audio.src = data.message;
+      audio.controls = true;
+      msgDiv.appendChild(audio);
+    } else {
+      msgDiv.innerHTML = `<div class='username'>${data.name}</div>${data.message}<span class='time'>${data.time}</span>`;
+    }
+
+    if (data.name === username) {
+      msgRow.style.justifyContent = 'flex-end';
+      msgRow.appendChild(msgDiv);
+    } else {
+      msgRow.appendChild(avatar);
+      msgRow.appendChild(msgDiv);
+    }
+
+    document.getElementById('messages').appendChild(msgRow);
+    msgRow.scrollIntoView();
+  }
+
+  function sendMessage() {
+    const msgInput = document.getElementById('messageInput');
+    const text = msgInput.value.trim();
+    if (!text) return;
+    const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    db.ref('messages').push({ name: username, message: text, time, type: 'text' });
+    msgInput.value = '';
+    db.ref('typing').set('');
+  }
+
+  function showTyping() {
+    db.ref('typing').set(username + ' is typing...');
+    setTimeout(() => db.ref('typing').set(''), 1500);
+  }
+
+  db.ref('typing').on('value', snap => {
+    document.getElementById('typing').innerText = snap.val() || '';
+  });
+
+  async function toggleRecording() {
+    if (!isRecording) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Audio = reader.result;
+          const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+          db.ref('messages').push({ name: username, message: base64Audio, time, type: 'voice' });
+        };
+        reader.readAsDataURL(blob);
       };
-      document.head.appendChild(s1);
-    })();
-
-    let db, app, myId;
-    function initApp(){
-      if (!window.firebase) { alert('Firebase failed to load.'); return; }
-      app = firebase.initializeApp(FIREBASE_CONFIG);
-      db = firebase.database();
-      setupGuest();
-      setupRealtime();
-      setupUI();
-      startClock();
+      isRecording = true;
+      document.getElementById('recordBtn').style.color = 'red';
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+      document.getElementById('recordBtn').style.color = '#008069';
     }
-
-    function setupGuest(){
-      const saved = localStorage.getItem('guestName');
-      if (saved){
-        guestNameInput.value = saved;
-        avatarEl.textContent = saved.charAt(0).toUpperCase();
-      }
-      saveNameBtn.addEventListener('click', ()=>{
-        const v = guestNameInput.value.trim() || ('Guest' + Math.floor(Math.random()*1000));
-        localStorage.setItem('guestName', v);
-        avatarEl.textContent = v.charAt(0).toUpperCase();
-        alert('Saved name: ' + v);
-      });
-      clearNameBtn.addEventListener('click', ()=>{
-        localStorage.removeItem('guestName');
-        guestNameInput.value = '';
-        avatarEl.textContent = 'G';
-      });
-      myId = 'u_' + Math.random().toString(36).slice(2,9);
-    }
-
-    function setupRealtime(){
-      const presenceRef = db.ref('/presence/' + ROOM + '/' + myId);
-      presenceRef.set({ts: Date.now(), name: localStorage.getItem('guestName') || 'Guest'});
-      presenceRef.onDisconnect().remove();
-
-      const onlineRef = db.ref('/presence/' + ROOM);
-      onlineRef.on('value', snap=>{
-        const v = snap.val() || {};
-        onlineCountEl.textContent = 'Online: ' + Object.keys(v).length;
-      });
-
-      const msgsRef = db.ref('/messages/' + ROOM);
-      msgsRef.limitToLast(200).on('child_added', snap=> renderMessage(snap.val()));
-
-      const typingRef = db.ref('/typing/' + ROOM);
-      typingRef.on('value', snap=>{
-        const v = snap.val() || {};
-        delete v[myId];
-        const names = Object.values(v).map(x=>x.name).filter(Boolean);
-        if (names.length) {
-          typingIndicator.style.display = 'block';
-          typingIndicator.textContent = names.join(', ') + (names.length>1? ' are typing...':' is typing...');
-        } else typingIndicator.style.display = 'none';
-      });
-
-      window._sendMessage = payload => {
-        payload.fromId = myId;
-        payload.name = localStorage.getItem('guestName') || 'Guest';
-        payload.ts = Date.now();
-        msgsRef.push(payload);
-      };
-
-      let typingTimer = null;
-      textInput.addEventListener('input', ()=>{
-        const typingRefThis = db.ref('/typing/' + ROOM + '/' + myId);
-        typingRefThis.set({name: localStorage.getItem('guestName')||'Guest', ts: Date.now()});
-        if (typingTimer) clearTimeout(typingTimer);
-        typingTimer = setTimeout(()=> typingRefThis.remove(), 2000);
-      });
-
-      window.addEventListener('beforeunload', ()=>{
-        db.ref('/typing/' + ROOM + '/' + myId).remove();
-        presenceRef.remove();
-      });
-    }
-
-    function setupUI(){
-      sendBtn.addEventListener('click', sendText);
-      textInput.addEventListener('keydown', e=>{ if (e.key==='Enter') sendText(); });
-
-      let mediaRecorder, audioChunks = [];
-      recordBtn.addEventListener('click', async ()=>{
-        if (!navigator.mediaDevices) { alert('No microphone available.'); return; }
-        try{
-          const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-          mediaRecorder = new MediaRecorder(stream);
-          audioChunks = [];
-          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-          mediaRecorder.onstop = async ()=>{
-            const blob = new Blob(audioChunks, {type:'audio/webm'});
-            const arrayBuffer = await blob.arrayBuffer();
-            const base64 = arrayBufferToBase64(arrayBuffer);
-            window._sendMessage({type:'audio', data:base64, mime:'audio/webm'});
-          };
-          mediaRecorder.start();
-          recordBtn.disabled = true; stopBtn.disabled = false; recordBtn.classList.add('recording');
-        }catch(err){ alert('Mic access error: '+err.message); }
-      });
-      stopBtn.addEventListener('click', ()=>{
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        recordBtn.disabled = false; stopBtn.disabled = true; recordBtn.classList.remove('recording');
-      });
-    }
-
-    function sendText(){
-      const txt = textInput.value.trim();
-      if (!txt) return;
-      window._sendMessage({type:'text', text:txt});
-      textInput.value = '';
-      db.ref('/typing/' + ROOM + '/' + myId).remove();
-    }
-
-    function renderMessage(m){
-      const el = document.createElement('div');
-      const isMe = m.fromId === myId;
-      el.className = 'msg' + (isMe ? ' me' : '');
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = (m.name||'Guest') + ' • ' + new Date(m.ts).toLocaleTimeString();
-      el.appendChild(meta);
-
-      if (m.type === 'text'){
-        const t = document.createElement('div'); t.textContent = m.text; el.appendChild(t);
-      } else if (m.type === 'audio'){
-        const a = document.createElement('audio'); a.controls = true;
-        a.src = 'data:' + (m.mime || 'audio/webm') + ';base64,' + m.data;
-        el.appendChild(a);
-        const note = document.createElement('div'); note.className='small'; note.textContent = 'Voice message'; el.appendChild(note);
-      }
-
-      messagesEl.appendChild(el);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function arrayBufferToBase64(buffer){
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      for (let i=0;i<bytes.byteLength;i++) binary += String.fromCharCode(bytes[i]);
-      return btoa(binary);
-    }
-
-    function startClock(){
-      const el = document.getElementById('localTime');
-      setInterval(()=> el.textContent = new Date().toLocaleString(), 1000);
-    }
-  </script>
+  }
+</script>
 </body>
 </html>
