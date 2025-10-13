@@ -10,7 +10,7 @@
   #messages {flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
   .message {display:flex;align-items:flex-end;max-width:80%;margin-bottom:5px;position:relative;}
   .message.self {align-self:flex-end;flex-direction:row-reverse;}
-  .avatar {width:32px;height:32px;border-radius:50%;background:#000;color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:0 6px;font-size:16px;user-select:none;}
+  .avatar {width:32px;height:32px;border-radius:50%;background:#000;color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:0 6px;font-size:16px;user-select:none;position:relative;cursor:pointer;}
   .bubble {background-color:#202c33;padding:8px 12px;border-radius:10px;font-size:14px;line-height:1.3;word-wrap:break-word;position:relative;}
   .message.self .bubble {background-color:#005c4b;}
   .username {font-size:12px;color:#53bdeb;}
@@ -22,9 +22,9 @@
   #loginPage input,#loginPage button {padding:10px;margin:5px;border-radius:20px;border:none;}
   #loginPage button {background-color:#25d366;color:white;font-weight:bold;cursor:pointer;}
   #typingIndicator {font-size:12px;color:#aaa;padding-left:15px;margin-bottom:3px;}
-  .popup-menu {display:none;position:absolute;top:-30px;right:0;background:#2a3942;border-radius:5px;padding:3px 5px;font-size:12px;z-index:10;}
-  .popup-menu button {background:none;border:none;color:#fff;cursor:pointer;margin:0 3px;}
-  .message:hover .popup-menu {display:flex;}
+  .popup-menu {display:none;position:absolute;top:-35px;right:0;background:#2a3942;border-radius:5px;padding:3px 5px;font-size:12px;z-index:10;flex-direction:column;}
+  .avatar:hover .popup-menu {display:flex;}
+  .popup-menu button {background:none;border:none;color:#fff;cursor:pointer;margin:2px 0;}
   .status-online {color:#00ff00;font-size:10px;margin-left:5px;}
 </style>
 </head>
@@ -108,6 +108,28 @@ function renderMessage(data, self, key){
   avatar.className='avatar';
   avatar.textContent = data.name.charAt(0).toUpperCase();
 
+  // Popup menu inside avatar
+  const popup = document.createElement('div');
+  popup.className='popup-menu';
+
+  if(self){
+    const delBtn=document.createElement('button');
+    delBtn.textContent='🗑️';
+    delBtn.onclick=()=>{db.ref('messages/'+key).remove(); div.remove();}
+    popup.appendChild(delBtn);
+  } else {
+    const reportBtn=document.createElement('button');
+    reportBtn.textContent='🚩';
+    reportBtn.onclick=()=>reportUser(data.name);
+    const blockBtn=document.createElement('button');
+    blockBtn.textContent='🚫';
+    blockBtn.onclick=()=>{blockedUsers[data.name]=true; alert('Blocked '+data.name);}
+    popup.appendChild(reportBtn);
+    popup.appendChild(blockBtn);
+  }
+
+  avatar.appendChild(popup);
+
   const content = document.createElement('div');
   const nameEl = document.createElement('div');
   nameEl.className='username';
@@ -127,28 +149,10 @@ function renderMessage(data, self, key){
   timeEl.className='timestamp';
   timeEl.textContent=formatTime(data.time);
 
-  const popup = document.createElement('div');
-  popup.className='popup-menu';
-  if(self){
-    const delBtn=document.createElement('button');
-    delBtn.textContent='🗑️';
-    delBtn.onclick=()=>{db.ref('messages/'+key).remove(); div.remove();}
-    popup.appendChild(delBtn);
-  } else {
-    const reportBtn=document.createElement('button');
-    reportBtn.textContent='🚩';
-    reportBtn.onclick=()=>reportUser(data.name);
-    const blockBtn=document.createElement('button');
-    blockBtn.textContent='🚫';
-    blockBtn.onclick=()=>{blockedUsers[data.name]=true; alert('Blocked '+data.name);}
-    popup.appendChild(reportBtn);
-    popup.appendChild(blockBtn);
-  }
-
-  bubble.appendChild(popup);
   content.appendChild(nameEl);
   content.appendChild(bubble);
   content.appendChild(timeEl);
+
   div.appendChild(avatar);
   div.appendChild(content);
   messagesDiv.appendChild(div);
