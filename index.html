@@ -55,7 +55,6 @@
       background-color: #202c33;
       padding: 8px 12px;
       border-radius: 10px;
-      position: relative;
       font-size: 14px;
       line-height: 1.3;
       max-width: 100%;
@@ -67,7 +66,6 @@
     .username {
       font-size: 12px;
       color: #53bdeb;
-      margin-bottom: 2px;
     }
     .timestamp {
       font-size: 10px;
@@ -80,6 +78,8 @@
       padding: 8px;
       background-color: #202c33;
       align-items: center;
+      position: sticky;
+      bottom: 0;
     }
     #messageInput {
       flex: 1;
@@ -97,7 +97,7 @@
       margin-left: 10px;
       cursor: pointer;
       color: #25d366;
-      font-size: 22px;
+      font-size: 24px;
     }
     #loginPage {
       display: flex;
@@ -123,11 +123,11 @@
       font-size: 12px;
       color: #aaa;
       padding-left: 15px;
+      margin-bottom: 3px;
     }
     .status {
       font-size: 10px;
       color: #888;
-      margin-top: 1px;
     }
   </style>
 </head>
@@ -142,9 +142,9 @@
     <div id="messages"></div>
     <div id="typingIndicator"></div>
     <div id="inputArea">
+      <button id="voiceBtn" title="Hold to record">🎤</button>
       <input type="text" id="messageInput" placeholder="Type a message">
-      <button id="voiceBtn">🎤</button>
-      <button id="sendBtn">📩</button>
+      <button id="sendBtn" title="Send message">📩</button>
     </div>
   </div>
 
@@ -162,8 +162,8 @@
       appId: "1:804705969240:web:658df281dd8360843c162d"
     };
     firebase.initializeApp(firebaseConfig);
-
     const db = firebase.database();
+
     const loginPage = document.getElementById('loginPage');
     const chatPage = document.getElementById('chatPage');
     const messagesDiv = document.getElementById('messages');
@@ -172,31 +172,35 @@
     const sendBtn = document.getElementById('sendBtn');
     const voiceBtn = document.getElementById('voiceBtn');
 
-    let username = "";
+    let username = localStorage.getItem('guestName') || "";
     let typingTimeout;
 
+    // Auto-login if username saved
+    if (username) startChat();
+    
     document.getElementById('loginBtn').onclick = () => {
       username = document.getElementById('usernameInput').value.trim();
       if (!username) return;
+      localStorage.setItem('guestName', username);
+      startChat();
+    };
+
+    function startChat() {
       loginPage.style.display = 'none';
       chatPage.style.display = 'flex';
       updateStatus('online');
       db.ref('status/' + username).onDisconnect().remove();
       listenMessages();
-    };
+    }
 
     function updateStatus(state) {
-      db.ref('status/' + username).set({
-        state: state,
-        time: Date.now()
-      });
+      db.ref('status/' + username).set({ state: state, time: Date.now() });
     }
 
     function listenMessages() {
-      db.ref('messages').on('child_added', (snap) => {
+      db.ref('messages').on('child_added', snap => {
         const data = snap.val();
         if (data.name !== username) {
-          // Show message briefly then delete
           renderMessage(data, false);
           db.ref('messages/' + snap.key).remove();
         }
@@ -206,7 +210,6 @@
     function renderMessage(data, self) {
       const div = document.createElement('div');
       div.className = 'message' + (self ? ' self' : '');
-
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
       avatar.textContent = data.name.charAt(0).toUpperCase();
@@ -225,13 +228,7 @@
       time.className = 'timestamp';
       time.textContent = new Date(data.time).toLocaleTimeString();
 
-      const status = document.createElement('div');
-      status.className = 'status';
-      if (data.state === 'online') status.textContent = 'Online';
-      else status.textContent = 'Last seen ' + timeAgo(data.time);
-
       content.appendChild(name);
-      content.appendChild(status);
       content.appendChild(bubble);
       content.appendChild(time);
 
@@ -244,7 +241,7 @@
     sendBtn.onclick = () => {
       const text = messageInput.value.trim();
       if (!text) return;
-      const msg = { name: username, text: text, time: Date.now(), state: 'online' };
+      const msg = { name: username, text: text, time: Date.now() };
       db.ref('messages').push(msg);
       renderMessage(msg, true);
       messageInput.value = '';
@@ -257,18 +254,26 @@
       typingTimeout = setTimeout(() => typingIndicator.textContent = '', 2000);
     });
 
+    voiceBtn.addEventListener('mousedown', () => {
+      voiceBtn.style.color = 'red';
+    });
+
+    voiceBtn.addEventListener('mouseup', () => {
+      sendMessage('🎤 Voice message sent');
+      voiceBtn.style.color = '#25d366';
+    });
+
+    function sendMessage(text) {
+      const msg = { name: username, text: text, time: Date.now() };
+      db.ref('messages').push(msg);
+      renderMessage(msg, true);
+    }
+
     function randomColor(name) {
       const colors = ['#25d366', '#128C7E', '#34B7F1', '#075E54', '#3E8E7E'];
       let hash = 0;
       for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
       return colors[Math.abs(hash) % colors.length];
-    }
-
-    function timeAgo(time) {
-      const diff = Math.floor((Date.now() - time) / 60000);
-      if (diff < 1) return 'just now';
-      if (diff === 1) return '1 minute ago';
-      return diff + ' minutes ago';
     }
   </script>
 </body>
