@@ -113,8 +113,8 @@ function renderMessage(data, self, key){
   nameEl.className='username';
   nameEl.textContent = data.name;
   if(data.online) {
-    const onlineEl = document.createElement('span');
-    onlineEl.className='status-online';
+    const onlineEl = document.createElement('span'); 
+    onlineEl.className='status-online'; 
     onlineEl.textContent='●';
     nameEl.appendChild(onlineEl);
   }
@@ -194,7 +194,7 @@ function formatTime(ms){
 // REPORT system
 function reportUser(user){
   if(user===username) return alert("Cannot report yourself!");
-  if(userReports[user]) return alert("Already reported this user!");
+  if(userReports[user]) return alert("You already reported this user!");
   userReports[user]=true;
 
   db.ref('reports/'+user+'/'+username).set(true).then(()=>{
@@ -207,6 +207,7 @@ function reportUser(user){
         db.ref('messages').push(notify);
       }
     });
+    alert("User reported successfully!");
   });
 }
 
