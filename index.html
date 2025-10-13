@@ -7,7 +7,6 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
       font-family: Arial, sans-serif;
       background-color: #111b21;
       color: #e9edef;
@@ -33,27 +32,21 @@
       align-items: flex-end;
       max-width: 80%;
       margin-bottom: 5px;
-      position: relative;
     }
     .message.self {
       align-self: flex-end;
       flex-direction: row-reverse;
     }
     .avatar {
-      width: 35px;
-      height: 35px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background-image: url('https://cdn-icons-png.flaticon.com/512/847/847969.png');
+      background-size: 60%;
+      background-position: center;
+      background-repeat: no-repeat;
       margin: 0 6px;
-      font-size: 16px;
-      color: #fff;
-    }
-    .avatar::before {
-      content: '👤';
-      font-size: 18px;
     }
     .bubble {
       background-color: #202c33;
@@ -61,24 +54,14 @@
       border-radius: 10px;
       font-size: 14px;
       line-height: 1.3;
-      max-width: 100%;
       word-wrap: break-word;
-      position: relative;
     }
     .message.self .bubble {
       background-color: #005c4b;
     }
-    .delete-btn {
-      display: none;
-      position: absolute;
-      top: -5px;
-      right: -20px;
-      font-size: 12px;
-      color: #ff5555;
-      cursor: pointer;
-    }
-    .message.self:hover .delete-btn {
-      display: block;
+    audio {
+      width: 150px;
+      height: 25px;
     }
     .username {
       font-size: 12px;
@@ -109,12 +92,29 @@
       color: #fff;
     }
     #sendBtn, #voiceBtn {
-      background: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
       border: none;
-      margin-left: 10px;
       cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 8px;
+      transition: 0.2s;
+    }
+    #sendBtn {
+      background: #25d366;
+      color: white;
+    }
+    #voiceBtn {
+      background: #2a3942;
       color: #25d366;
-      font-size: 24px;
+    }
+    #voiceBtn.recording {
+      background: red;
+      color: white;
     }
     #loginPage {
       display: flex;
@@ -157,12 +157,13 @@
     <div id="inputArea">
       <button id="voiceBtn" title="Hold to record">🎤</button>
       <input type="text" id="messageInput" placeholder="Type a message">
-      <button id="sendBtn" title="Send message">📩</button>
+      <button id="sendBtn" title="Send">✈️</button>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -176,6 +177,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const storage = firebase.storage();
 
     const loginPage = document.getElementById('loginPage');
     const chatPage = document.getElementById('chatPage');
@@ -186,11 +188,10 @@
     const voiceBtn = document.getElementById('voiceBtn');
 
     let username = localStorage.getItem('guestName') || "";
-    let typingTimeout;
-    let holdStart = 0;
+    let typingTimeout, mediaRecorder, chunks = [];
 
-    // Auto-login
     if (username) startChat();
+
     document.getElementById('loginBtn').onclick = () => {
       username = document.getElementById('usernameInput').value.trim();
       if (!username) return;
@@ -205,18 +206,15 @@
     }
 
     function listenMessages() {
-      db.ref('messages').on('child_added', snap => {
+      db.ref('messages').limitToLast(50).on('child_added', snap => {
         const data = snap.val();
-        renderMessage(data, data.name === username, snap.key);
-        enforceMessageLimit();
+        renderMessage(data, data.name === username);
       });
     }
 
-    function renderMessage(data, self, key) {
+    function renderMessage(data, self) {
       const div = document.createElement('div');
       div.className = 'message' + (self ? ' self' : '');
-      div.dataset.key = key;
-
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
 
@@ -227,14 +225,13 @@
 
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.textContent = data.text;
-
-      if (self) {
-        const delBtn = document.createElement('span');
-        delBtn.className = 'delete-btn';
-        delBtn.textContent = '🗑️';
-        delBtn.onclick = () => db.ref('messages/' + key).remove();
-        bubble.appendChild(delBtn);
+      if (data.audioUrl) {
+        const audio = document.createElement('audio');
+        audio.src = data.audioUrl;
+        audio.controls = true;
+        bubble.appendChild(audio);
+      } else {
+        bubble.textContent = data.text;
       }
 
       const time = document.createElement('div');
@@ -244,6 +241,7 @@
       content.appendChild(name);
       content.appendChild(bubble);
       content.appendChild(time);
+
       div.appendChild(avatar);
       div.appendChild(content);
       messagesDiv.appendChild(div);
@@ -251,51 +249,67 @@
     }
 
     sendBtn.onclick = () => {
-      sendMessage(messageInput.value.trim());
+      const text = messageInput.value.trim();
+      if (!text) return;
+      sendMessage({ text });
       messageInput.value = '';
     };
 
-    function sendMessage(text) {
-      if (!text) return;
-      const msg = { name: username, text: text, time: Date.now() };
-      db.ref('messages').push(msg);
-    }
-
-    // Typing indicator
     messageInput.addEventListener('input', () => {
       clearTimeout(typingTimeout);
       typingIndicator.textContent = username + ' is typing...';
-      typingTimeout = setTimeout(() => typingIndicator.textContent = '', 1500);
+      typingTimeout = setTimeout(() => typingIndicator.textContent = '', 2000);
     });
 
-    // Voice message (hold to send)
+    function sendMessage(obj) {
+      const msg = { name: username, time: Date.now(), ...obj };
+      db.ref('messages').push(msg);
+      cleanupOldMessages();
+    }
+
+    async function startRecording() {
+      let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const fileRef = storage.ref('voice/' + Date.now() + '.webm');
+        await fileRef.put(blob);
+        const url = await fileRef.getDownloadURL();
+        sendMessage({ audioUrl: url });
+      };
+      mediaRecorder.start();
+      setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          voiceBtn.classList.remove('recording');
+        }
+      }, 10000); // 10 seconds max
+    }
+
     voiceBtn.addEventListener('mousedown', () => {
-      holdStart = Date.now();
-      voiceBtn.style.color = 'red';
+      voiceBtn.classList.add('recording');
+      startRecording();
     });
     voiceBtn.addEventListener('mouseup', () => {
-      voiceBtn.style.color = '#25d366';
-      if (Date.now() - holdStart > 500) {
-        sendMessage('🎤 Voice message sent');
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        voiceBtn.classList.remove('recording');
       }
     });
 
-    // Keep only 50 latest messages
-    function enforceMessageLimit() {
-      db.ref('messages').once('value', snap => {
-        const keys = Object.keys(snap.val() || {});
+    function cleanupOldMessages() {
+      db.ref('messages').once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        const keys = Object.keys(data);
         if (keys.length > 50) {
-          const excess = keys.slice(0, keys.length - 50);
-          excess.forEach(k => db.ref('messages/' + k).remove());
+          const toDelete = keys.slice(0, keys.length - 50);
+          toDelete.forEach(k => db.ref('messages/' + k).remove());
         }
       });
     }
-
-    // Remove message visually when deleted
-    db.ref('messages').on('child_removed', snap => {
-      const el = document.querySelector(`.message[data-key="${snap.key}"]`);
-      if (el) el.remove();
-    });
   </script>
 </body>
 </html>
