@@ -19,8 +19,8 @@
   .popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
   .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
   .msg-row.self .bubble{background:#005c4b}
-  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:6px}
-  .online-dot{width:8px;height:8px;background:#25d366;border-radius:50%;display:inline-block;}
+  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .online-dot{width:8px;height:8px;background:#25d366;border-radius:50%;display:inline-block}
   .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
   #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
   #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
@@ -80,48 +80,42 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const messagesEl = document.getElementById('messages');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const toastEl = document.getElementById('toast');
-const statusLine = document.getElementById('statusLine');
-const onlineCountEl = document.getElementById('onlineCount');
-const loginWrap = document.getElementById('loginWrap');
-const nameInput = document.getElementById('nameInput');
-const joinBtn = document.getElementById('joinBtn');
+const messagesEl=document.getElementById('messages');
+const messageInput=document.getElementById('messageInput');
+const sendBtn=document.getElementById('sendBtn');
+const toastEl=document.getElementById('toast');
+const statusLine=document.getElementById('statusLine');
+const onlineCountEl=document.getElementById('onlineCount');
+const loginWrap=document.getElementById('loginWrap');
+const nameInput=document.getElementById('nameInput');
+const joinBtn=document.getElementById('joinBtn');
 
-let username = localStorage.getItem('guestName') || '';
-let userReports = {};
-let blockedUsers = {};
-let currentListeners = [];
-let typingTimer = null;
+let username=localStorage.getItem('guestName')||'';
+let userReports={},blockedUsers={},onlineUsers={},currentListeners=[],typingTimer=null;
 
 function showToast(msg){
-  toastEl.textContent = msg;
+  toastEl.textContent=msg;
   toastEl.classList.add('show');
-  setTimeout(()=> toastEl.classList.remove('show'), 2000);
+  setTimeout(()=>toastEl.classList.remove('show'),2000);
 }
 function formatTime(ms){
-  const date = new Date(ms);
-  let h = date.getHours(), m = date.getMinutes().toString().padStart(2,'0');
-  const ampm = h >= 12 ? 'PM':'AM'; h = h%12 || 12;
+  const d=new Date(ms);
+  let h=d.getHours(),m=d.getMinutes().toString().padStart(2,'0');
+  const ampm=h>=12?'PM':'AM';h=h%12||12;
   return `${h}:${m} ${ampm}`;
 }
 function scrollToBottomSoon(){
-  setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 80);
+  setTimeout(()=>messagesEl.scrollTop=messagesEl.scrollHeight,80);
 }
-
-function showLogin(){ loginWrap.style.display = 'flex'; }
-function hideLogin(){ loginWrap.style.display = 'none'; }
-
-if(!username){ showLogin(); } else { startAs(username); }
-joinBtn.onclick = ()=>{
-  const v = nameInput.value.trim();
-  if(!v) return showToast('Enter a name');
-  username = v; localStorage.setItem('guestName',v);
-  hideLogin(); startAs(username);
+function showLogin(){loginWrap.style.display='flex';}
+function hideLogin(){loginWrap.style.display='none';}
+if(!username){showLogin();}else{startAs(username);}
+joinBtn.onclick=()=>{
+  const v=nameInput.value.trim();
+  if(!v)return showToast('Enter a name');
+  username=v;localStorage.setItem('guestName',v);
+  hideLogin();startAs(username);
 };
-
 function setOnline(){
   db.ref(`status/${username}`).set(true);
   db.ref(`status/${username}`).onDisconnect().remove();
@@ -130,28 +124,29 @@ function setTyping(isTyping){
   db.ref(`typing/group/${username}`).set(isTyping?true:null);
   if(isTyping){
     clearTimeout(typingTimer);
-    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(),2000);
+    typingTimer=setTimeout(()=>db.ref(`typing/group/${username}`).remove(),2000);
   }
 }
 messageInput.oninput=()=>setTyping(true);
 
 function renderMessage(msg,key){
-  if(msg.banned || blockedUsers[msg.name]) return;
-  const isSelf = msg.name===username;
-  const row = document.createElement('div');
-  row.className = 'msg-row'+(isSelf?' self':'');
-  if(key) row.dataset.key=key;
+  if(msg.banned||blockedUsers[msg.name])return;
+  const isSelf=msg.name===username;
+  const row=document.createElement('div');
+  row.className='msg-row'+(isSelf?' self':'');
+  if(key)row.dataset.key=key;
 
   const avatar=document.createElement('div');
-  avatar.className='avatar'; avatar.textContent=msg.name.charAt(0).toUpperCase();
+  avatar.className='avatar';
+  avatar.textContent=msg.name.charAt(0).toUpperCase();
 
-  const popup=document.createElement('div'); popup.className='popup-menu';
+  const popup=document.createElement('div');popup.className='popup-menu';
   if(isSelf){
     const del=document.createElement('button');
     del.textContent='🗑️ Delete';
-    del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    del.onclick=()=>{if(key)db.ref(`messages/${key}`).remove();row.remove();};
     popup.appendChild(del);
-  } else {
+  }else{
     const report=document.createElement('button');
     report.textContent='🚩 Report';
     report.onclick=()=>reportUser(msg.name);
@@ -162,7 +157,7 @@ function renderMessage(msg,key){
     block.onclick=()=>{
       blockedUsers[msg.name]=true;
       db.ref(`blocks/${username}/${msg.name}`).set(true);
-      showToast(`Blocked ${msg.name}`); row.remove();
+      showToast(`Blocked ${msg.name}`);row.remove();
     };
     popup.appendChild(block);
   }
@@ -171,41 +166,39 @@ function renderMessage(msg,key){
   const content=document.createElement('div');
   content.style.display='flex';content.style.flexDirection='column';
   content.style.maxWidth='calc(100% - 56px)';
+
   const meta=document.createElement('div');
   meta.className='meta';
-  meta.textContent=msg.name;
-  meta.dataset.username = msg.name;
+  meta.innerHTML=`${msg.name} ${onlineUsers[msg.name] ? '<span class="online-dot"></span>' : ''}`;
 
   const bubble=document.createElement('div');
-  bubble.className='bubble'; bubble.textContent=msg.text;
+  bubble.className='bubble';bubble.textContent=msg.text;
   const t=document.createElement('div');
-  t.className='time'; t.textContent=formatTime(msg.time);
+  t.className='time';t.textContent=formatTime(msg.time);
   content.append(meta,bubble,t);
 
   row.append(avatar,content);
   messagesEl.appendChild(row);
   scrollToBottomSoon();
 }
-
 function listenGroup(){
-  currentListeners.forEach(r=>r.off()); currentListeners=[];
+  currentListeners.forEach(r=>r.off());currentListeners=[];
   const ref=db.ref('messages').limitToLast(50);
-  ref.on('child_added',snap=>{ renderMessage(snap.val(),snap.key); scrollToBottomSoon(); });
+  ref.on('child_added',snap=>{renderMessage(snap.val(),snap.key);scrollToBottomSoon();});
   ref.on('child_removed',snap=>{
-    const el=messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove();
+    const el=messagesEl.querySelector(`[data-key="${snap.key}"]`);if(el)el.remove();
   });
   currentListeners.push(ref);
 }
-
 function reportUser(user){
-  if(user===username) return showToast("Can't report yourself");
-  if(userReports[user]) return showToast("Already reported");
+  if(user===username)return showToast("Can't report yourself");
+  if(userReports[user])return showToast("Already reported");
   userReports[user]=true;
   db.ref(`reports/${user}/${username}`).set(true).then(()=>{
     db.ref(`reports/${user}`).once('value').then(snap=>{
       if(snap.numChildren()>=3){
         db.ref('messages').orderByChild('name').equalTo(user).once('value')
-        .then(ms=>{ ms.forEach(m=>m.ref.update({banned:true}));
+        .then(ms=>{ms.forEach(m=>m.ref.update({banned:true}));
           db.ref('messages').push({name:'System',text:`${user} removed from group`,time:Date.now()});
         });
       }
@@ -213,60 +206,47 @@ function reportUser(user){
     showToast("Reported successfully!");
   });
 }
-
 function listenTyping(){
   db.ref('typing/group').on('value',snap=>{
-    const val=snap.val()||{}; delete val[username];
+    const val=snap.val()||{};delete val[username];
     const who=Object.keys(val);
     statusLine.textContent=who.length?`${who.join(', ')} is typing...`:'';
   });
 }
 function listenOnline(){
   db.ref('status').on('value',snap=>{
-    const val=snap.val()||{};
-    onlineCountEl.textContent=`${Object.keys(val).length} online`;
-    document.querySelectorAll('.meta').forEach(meta=>{
-      const user=meta.dataset.username;
-      let dot=meta.querySelector('.online-dot');
-      if(val[user]){
-        if(!dot){
-          dot=document.createElement('span');
-          dot.className='online-dot';
-          meta.appendChild(dot);
-        }
-      }else if(dot){dot.remove();}
+    onlineUsers=snap.val()||{};
+    onlineCountEl.textContent=`${Object.keys(onlineUsers).length} online`;
+    messagesEl.querySelectorAll('.meta').forEach(el=>{
+      const name=el.textContent.trim().split(' ')[0];
+      el.innerHTML=`${name} ${onlineUsers[name]?'<span class="online-dot"></span>':''}`;
     });
   });
 }
-
 sendBtn.onclick=sendMessage;
 messageInput.onkeypress=e=>{if(e.key==='Enter')sendMessage();};
-
 function sendMessage(){
-  const text=messageInput.value.trim(); if(!text) return;
+  const text=messageInput.value.trim();if(!text)return;
   db.ref('messages').push({name:username,text,time:Date.now()});
-  messageInput.value=''; setTyping(false); cleanupGroupMessages(50);
+  messageInput.value='';setTyping(false);cleanupGroupMessages(50);
 }
-
 function cleanupGroupMessages(limit){
   db.ref('messages').once('value').then(snap=>{
     const val=snap.val()||{},keys=Object.keys(val);
     if(keys.length>limit){
       const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t);
       const toRemove=arr.slice(0,arr.length-limit);
-      const updates={}; toRemove.forEach(i=>updates[`messages/${i.k}`]=null);
+      const updates={};toRemove.forEach(i=>updates[`messages/${i.k}`]=null);
       db.ref().update(updates);
     }
   });
 }
-
 function startAs(name){
-  username=name; setOnline(); listenOnline(); listenGroup(); listenTyping();
+  username=name;setOnline();listenOnline();listenGroup();listenTyping();
   setTimeout(()=>messagesEl.scrollTop=messagesEl.scrollHeight,300);
 }
-
 window.onbeforeunload=()=>{
-  if(username){ db.ref(`status/${username}`).remove(); db.ref(`typing/group/${username}`).remove(); }
+  if(username){db.ref(`status/${username}`).remove();db.ref(`typing/group/${username}`).remove();}
 };
 </script>
 </body>
