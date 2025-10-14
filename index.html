@@ -26,6 +26,15 @@
   .avatar:hover .popup-menu {display:flex;}
   .popup-menu button {background:none;border:none;color:#fff;cursor:pointer;margin:2px 0;}
   .status-online {color:#00ff00;font-size:10px;margin-left:5px;}
+  /* Toast message */
+  #toast {
+    visibility:hidden;min-width:180px;margin-left:-90px;background:#2a3942;
+    color:#fff;text-align:center;border-radius:10px;padding:10px;position:fixed;
+    left:50%;bottom:30px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.5s, bottom 0.5s;
+  }
+  #toast.show {
+    visibility:visible;opacity:1;bottom:50px;
+  }
 </style>
 </head>
 <body>
@@ -43,6 +52,8 @@
     <button id="sendBtn">✈️</button>
   </div>
 </div>
+
+<div id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -66,11 +77,19 @@ const messagesDiv = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const typingIndicator = document.getElementById('typingIndicator');
+const toast = document.getElementById('toast');
 
 let username = localStorage.getItem('guestName') || "";
 let userReports = {};
 let blockedUsers = {};
 let typingTimeout;
+
+// Toast helper
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.className = "show";
+  setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2000);
+}
 
 // Auto-login
 if(username) startChat();
@@ -97,6 +116,7 @@ function listenMessages(){
     const data = snap.val();
     if(data.banned || blockedUsers[data.name]) return;
     renderMessage(data, data.name===username, snap.key);
+    setTimeout(()=>messagesDiv.scrollTop=messagesDiv.scrollHeight,100);
   });
 }
 
@@ -123,7 +143,7 @@ function renderMessage(data, self, key){
     reportBtn.onclick=()=>reportUser(data.name);
     const blockBtn=document.createElement('button');
     blockBtn.textContent='🚫';
-    blockBtn.onclick=()=>{blockedUsers[data.name]=true; alert('Blocked '+data.name);}
+    blockBtn.onclick=()=>{blockedUsers[data.name]=true; showToast('Blocked '+data.name); div.remove();}
     popup.appendChild(reportBtn);
     popup.appendChild(blockBtn);
   }
@@ -156,7 +176,6 @@ function renderMessage(data, self, key){
   div.appendChild(avatar);
   div.appendChild(content);
   messagesDiv.appendChild(div);
-  messagesDiv.scrollTop=messagesDiv.scrollHeight;
 }
 
 sendBtn.onclick = ()=>{
@@ -166,6 +185,7 @@ sendBtn.onclick = ()=>{
   db.ref('messages').push(msg);
   messageInput.value='';
   cleanupOldMessages();
+  setTimeout(()=>messagesDiv.scrollTop=messagesDiv.scrollHeight,100);
 };
 
 messageInput.addEventListener('input',()=>{
@@ -197,8 +217,8 @@ function formatTime(ms){
 
 // REPORT system
 function reportUser(user){
-  if(user===username) return alert("Cannot report yourself!");
-  if(userReports[user]) return alert("You already reported this user!");
+  if(user===username) return showToast("Cannot report yourself!");
+  if(userReports[user]) return showToast("Already reported!");
   userReports[user]=true;
 
   db.ref('reports/'+user+'/'+username).set(true).then(()=>{
@@ -211,7 +231,7 @@ function reportUser(user){
         db.ref('messages').push(notify);
       }
     });
-    alert("User reported successfully!");
+    showToast("User reported successfully!");
   });
 }
 
@@ -232,15 +252,13 @@ function listenOnline(){
     document.querySelectorAll('.message').forEach(msgDiv=>{
       const nameEl = msgDiv.querySelector('.username');
       const user = nameEl.textContent.replace('●','').trim();
+      const dot = nameEl.querySelector('.status-online');
       if(val[user]) {
-        if(!nameEl.querySelector('.status-online')){
-          const dot = document.createElement('span'); dot.className='status-online'; dot.textContent='●';
-          nameEl.appendChild(dot);
+        if(!dot){
+          const d = document.createElement('span'); d.className='status-online'; d.textContent='●';
+          nameEl.appendChild(d);
         }
-      } else {
-        const dot = nameEl.querySelector('.status-online');
-        if(dot) dot.remove();
-      }
+      } else if(dot){ dot.remove(); }
     });
   });
 }
