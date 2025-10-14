@@ -3,54 +3,55 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>WhatsApp-style Group Chat with Voice Notes</title>
+<title>WhatsApp-style Group Chat</title>
 <style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-#app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
-#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
-#title{font-weight:600}
-#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
-.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+  :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+  body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+  #app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
+  #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
+  #title{font-weight:600}
+  #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+  .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+  .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+  
+  .avatar{
+    width:34px;height:34px;border-radius:50%;background:#000;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;
+    border: 2px solid transparent;
+    transition: border 0.2s ease-in-out;
+  }
 
-.avatar{
-  width:34px;height:34px;border-radius:50%;background:#000;color:#fff;
-  display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;
-  border: 2px solid transparent;
-  transition: border 0.2s ease-in-out;
-}
-.avatar.online{
-  border: 2px solid #25d366;
-  box-shadow: 0 0 0 0 rgba(37,211,102,0.7);
-  animation: pulse 1.5s infinite;
-}
-@keyframes pulse{
-  0% { box-shadow: 0 0 0 0 rgba(37,211,102,0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(37,211,102,0); }
-  100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
-}
+  /* Pulsing green ring for online users */
+  .avatar.online{
+    border: 2px solid #25d366;
+    box-shadow: 0 0 0 0 rgba(37,211,102,0.7);
+    animation: pulse 1.5s infinite;
+  }
 
-.popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
-.avatar:hover .popup-menu{display:flex}
-.popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
-.msg-row.self .bubble{background:#005c4b}
-.meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
-#sendBtn,#recordBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#recordBtn.recording{background:red;}
-#statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
-#toast.show{opacity:1;bottom:40px}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
-#loginCard{background:#0b141a;padding:20px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
-#loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
-#loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-audio{width:200px;margin-top:4px;border-radius:6px}
-@media(max-width:640px){#app{height:100vh}}
+  @keyframes pulse{
+    0% { box-shadow: 0 0 0 0 rgba(37,211,102,0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(37,211,102,0); }
+    100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
+  }
+
+  .popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
+  .avatar:hover .popup-menu{display:flex}
+  .popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
+  .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+  .msg-row.self .bubble{background:#005c4b}
+  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+  #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+  #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
+  #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+  #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
+  #toast.show{opacity:1;bottom:40px}
+  #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+  #loginCard{background:#0b141a;padding:20px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
+  #loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
+  #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  @media(max-width:640px){#app{height:100vh}}
 </style>
 </head>
 <body>
@@ -67,7 +68,6 @@ audio{width:200px;margin-top:4px;border-radius:6px}
   <div id="inputBar">
     <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
     <button id="sendBtn">✈️</button>
-    <button id="recordBtn">🎤</button>
   </div>
 </div>
 
@@ -85,7 +85,6 @@ audio{width:200px;margin-top:4px;border-radius:6px}
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
 <script>
 const firebaseConfig = {
@@ -99,12 +98,10 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const storage = firebase.storage();
 
 const messagesEl = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
-const recordBtn = document.getElementById('recordBtn');
 const toastEl = document.getElementById('toast');
 const statusLine = document.getElementById('statusLine');
 const onlineCountEl = document.getElementById('onlineCount');
@@ -118,116 +115,183 @@ let blockedUsers = {};
 let currentListeners = [];
 let typingTimer = null;
 
-// Toast
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 2000); }
-function formatTime(ms){ const date = new Date(ms); let h = date.getHours(), m = date.getMinutes().toString().padStart(2,'0'); const ampm = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${ampm}`; }
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(()=> toastEl.classList.remove('show'), 2000);
+}
+function formatTime(ms){
+  const date = new Date(ms);
+  let h = date.getHours(), m = date.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM':'AM'; h = h%12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
 function scrollToBottomSoon(){ setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 80); }
 
-if(!username){ loginWrap.style.display='flex'; } else { startAs(username); }
+function showLogin(){ loginWrap.style.display = 'flex'; }
+function hideLogin(){ loginWrap.style.display = 'none'; }
+
+if(!username){ showLogin(); } else { startAs(username); }
 joinBtn.onclick = ()=>{
-  const v=nameInput.value.trim(); if(!v) return showToast('Enter a name'); username=v; localStorage.setItem('guestName',v); loginWrap.style.display='none'; startAs(username);
+  const v = nameInput.value.trim();
+  if(!v) return showToast('Enter a name');
+  username = v; localStorage.setItem('guestName',v);
+  hideLogin(); startAs(username);
 };
 
-// Online and typing
-function setOnline(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); }
-function setTyping(isTyping){ db.ref(`typing/group/${username}`).set(isTyping?true:null); if(isTyping){ clearTimeout(typingTimer); typingTimer=setTimeout(()=> db.ref(`typing/group/${username}`).remove(),2000); } }
+function setOnline(){
+  db.ref(`status/${username}`).set(true);
+  db.ref(`status/${username}`).onDisconnect().remove();
+}
+function setTyping(isTyping){
+  db.ref(`typing/group/${username}`).set(isTyping?true:null);
+  if(isTyping){
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(),2000);
+  }
+}
 messageInput.oninput=()=>setTyping(true);
 
-// Render message
 function renderMessage(msg,key){
   if(msg.banned || blockedUsers[msg.name]) return;
   const isSelf = msg.name===username;
-  const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); if(key) row.dataset.key=key;
+  const row = document.createElement('div');
+  row.className = 'msg-row'+(isSelf?' self':'');
+  if(key) row.dataset.key=key;
 
-  const avatar=document.createElement('div'); avatar.className='avatar'; avatar.textContent=msg.name.charAt(0).toUpperCase();
-  if(msg.online) avatar.classList.add('online');
+  const avatar=document.createElement('div');
+  avatar.className='avatar'; avatar.textContent=msg.name.charAt(0).toUpperCase();
+
+  if(msg.online) avatar.classList.add('online'); // Add green ring for online
 
   const popup=document.createElement('div'); popup.className='popup-menu';
-  if(isSelf){ const del=document.createElement('button'); del.textContent='🗑️ Delete'; del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); }; popup.appendChild(del); }
-  else{ const report=document.createElement('button'); report.textContent='🚩 Report'; report.onclick=()=>reportUser(msg.name); popup.appendChild(report); const block=document.createElement('button'); block.textContent='🚫 Block'; block.onclick=()=>{ blockedUsers[msg.name]=true; db.ref(`blocks/${username}/${msg.name}`).set(true); showToast(`Blocked ${msg.name}`); row.remove(); }; popup.appendChild(block);}
+  if(isSelf){
+    const del=document.createElement('button');
+    del.textContent='🗑️ Delete';
+    del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    popup.appendChild(del);
+  } else {
+    const report=document.createElement('button');
+    report.textContent='🚩 Report';
+    report.onclick=()=>reportUser(msg.name);
+    popup.appendChild(report);
+
+    const block=document.createElement('button');
+    block.textContent='🚫 Block';
+    block.onclick=()=>{
+      blockedUsers[msg.name]=true;
+      db.ref(`blocks/${username}/${msg.name}`).set(true);
+      showToast(`Blocked ${msg.name}`); row.remove();
+    };
+    popup.appendChild(block);
+  }
   avatar.appendChild(popup);
 
-  const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; content.style.maxWidth='calc(100% - 56px)';
-  const meta=document.createElement('div'); meta.className='meta'; meta.textContent=msg.name;
-  const bubble=document.createElement('div'); bubble.className='bubble';
-  if(msg.audio){
-    const audio=document.createElement('audio'); audio.controls=true; audio.src=msg.audio; bubble.appendChild(audio);
-  } else { bubble.textContent=msg.text; }
-  const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(msg.time);
+  const content=document.createElement('div');
+  content.style.display='flex';content.style.flexDirection='column';
+  content.style.maxWidth='calc(100% - 56px)';
+  const meta=document.createElement('div');
+  meta.className='meta'; meta.textContent=msg.name;
+  const bubble=document.createElement('div');
+  bubble.className='bubble'; bubble.textContent=msg.text;
+  const t=document.createElement('div');
+  t.className='time'; t.textContent=formatTime(msg.time);
   content.append(meta,bubble,t);
+
   row.append(avatar,content);
   messagesEl.appendChild(row);
   scrollToBottomSoon();
 }
 
-// Listeners
 function listenGroup(){
   currentListeners.forEach(r=>r.off()); currentListeners=[];
   const ref=db.ref('messages').limitToLast(50);
   ref.on('child_added',snap=>{
-    const data=snap.val(); data.online=false;
-    db.ref(`status/${data.name}`).once('value').then(snapStatus=>{ if(snapStatus.exists()) data.online=true; renderMessage(data,snap.key); });
+    const data = snap.val();
+    data.online = false; // default offline
+    // check status
+    db.ref(`status/${data.name}`).once('value').then(snapStatus=>{
+      if(snapStatus.exists()) data.online = true;
+      renderMessage(data,snap.key);
+    });
     scrollToBottomSoon();
   });
-  ref.on('child_removed',snap=>{ const el=messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); });
+  ref.on('child_removed',snap=>{
+    const el=messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove();
+  });
   currentListeners.push(ref);
 }
 
-function listenTyping(){ db.ref('typing/group').on('value',snap=>{ const val=snap.val()||{}; delete val[username]; const who=Object.keys(val); statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; }); }
-function listenOnline(){
-  db.ref('status').on('value',snap=>{
-    const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`;
-    document.querySelectorAll('.msg-row').forEach(row=>{ const nameEl=row.querySelector('.meta'); const avatarEl=row.querySelector('.avatar'); if(!nameEl||!avatarEl) return; const n=nameEl.textContent; if(val[n]) avatarEl.classList.add('online'); else avatarEl.classList.remove('online'); });
+function reportUser(user){
+  if(user===username) return showToast("Can't report yourself");
+  if(userReports[user]) return showToast("Already reported");
+  userReports[user]=true;
+  db.ref(`reports/${user}/${username}`).set(true).then(()=>{
+    db.ref(`reports/${user}`).once('value').then(snap=>{
+      if(snap.numChildren()>=3){
+        db.ref('messages').orderByChild('name').equalTo(user).once('value')
+        .then(ms=>{ ms.forEach(m=>m.ref.update({banned:true}));
+          db.ref('messages').push({name:'System',text:`${user} removed from group`,time:Date.now()});
+        });
+      }
+    });
+    showToast("Reported successfully!");
   });
 }
 
-// Send text
+function listenTyping(){
+  db.ref('typing/group').on('value',snap=>{
+    const val=snap.val()||{}; delete val[username];
+    const who=Object.keys(val);
+    statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; 
+  });
+}
+
+function listenOnline(){
+  db.ref('status').on('value',snap=>{
+    const val=snap.val()||{};
+    onlineCountEl.textContent=`${Object.keys(val).length} online`;
+    // update avatars in real-time
+    document.querySelectorAll('.msg-row').forEach(row=>{
+      const nameEl = row.querySelector('.meta');
+      const avatarEl = row.querySelector('.avatar');
+      if(!nameEl || !avatarEl) return;
+      const n = nameEl.textContent;
+      if(val[n]) avatarEl.classList.add('online');
+      else avatarEl.classList.remove('online');
+    });
+  });
+}
+
 sendBtn.onclick=sendMessage;
-messageInput.onkeypress=e=>{ if(e.key==='Enter') sendMessage(); }
-function sendMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({name:username,text,time:Date.now()}); messageInput.value=''; setTyping(false); cleanupGroupMessages(50); }
+messageInput.onkeypress=e=>{if(e.key==='Enter')sendMessage();};
+
+function sendMessage(){
+  const text=messageInput.value.trim(); if(!text) return;
+  db.ref('messages').push({name:username,text,time:Date.now()});
+  messageInput.value=''; setTyping(false); cleanupGroupMessages(50);
+}
 
 function cleanupGroupMessages(limit){
   db.ref('messages').once('value').then(snap=>{
-    const val=snap.val()||{}, keys=Object.keys(val);
-    if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const toRemove=arr.slice(0,arr.length-limit); const updates={}; toRemove.forEach(i=>updates[`messages/${i.k}`]=null); db.ref().update(updates); }
+    const val=snap.val()||{},keys=Object.keys(val);
+    if(keys.length>limit){
+      const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t);
+      const toRemove=arr.slice(0,arr.length-limit);
+      const updates={}; toRemove.forEach(i=>updates[`messages/${i.k}`]=null);
+      db.ref().update(updates);
+    }
   });
 }
 
-function reportUser(user){ if(user===username) return showToast("Can't report yourself"); if(userReports[user]) return showToast("Already reported"); userReports[user]=true; db.ref(`reports/${user}/${username}`).set(true).then(()=>{ showToast("Reported successfully!"); }); }
+function startAs(name){
+  username=name; setOnline(); listenOnline(); listenGroup(); listenTyping();
+  setTimeout(()=>messagesEl.scrollTop=messagesEl.scrollHeight,300);
+}
 
-function startAs(name){ username=name; setOnline(); listenOnline(); listenGroup(); listenTyping(); setTimeout(()=>messagesEl.scrollTop=messagesEl.scrollHeight,300); }
-window.onbeforeunload=()=>{ if(username){ db.ref(`status/${username}`).remove(); db.ref(`typing/group/${username}`).remove(); } }
-
-// --- VOICE NOTE IMPLEMENTATION ---
-let mediaRecorder=null; let audioChunks=[]; let recordingTimeout=null;
-
-recordBtn.onclick=()=>{
-  if(recordBtn.classList.contains('recording')) { stopRecording(); return; }
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ return showToast("Audio not supported"); }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-    mediaRecorder=new MediaRecorder(stream);
-    audioChunks=[];
-    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-    mediaRecorder.onstop=uploadAudio;
-    mediaRecorder.start();
-    recordBtn.classList.add('recording');
-    recordingTimeout=setTimeout(stopRecording,10000); // 10 sec max
-    showToast("Recording... max 10 seconds");
-  });
+window.onbeforeunload=()=>{
+  if(username){ db.ref(`status/${username}`).remove(); db.ref(`typing/group/${username}`).remove(); }
 };
-
-function stopRecording(){
-  if(mediaRecorder && mediaRecorder.state==='recording'){ mediaRecorder.stop(); }
-  recordBtn.classList.remove('recording');
-  clearTimeout(recordingTimeout);
-}
-
-function uploadAudio(){
-  const blob=new Blob(audioChunks,{type:'audio/webm'});
-  const fileName=`voice_${Date.now()}.webm`;
-  const storageRef=storage.ref(`voice_notes/${fileName}`);
-  storageRef.put(blob).then(()=> storageRef.getDownloadURL().then(url=>{ db.ref('messages').push({name:username,audio:url,time:Date.now()}); showToast("Voice note sent"); }));
-}
 </script>
 </body>
 </html>
