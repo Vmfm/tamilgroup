@@ -3,17 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>WhatsApp-style Chat — Group + Private</title>
+<title>WhatsApp-style Group Chat</title>
 <style>
   :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
   body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-  /* container */
   #app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
-  /* header area for private label / join */
   #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
-  #backBtn{display:none;border:0;background:none;color:var(--accent);cursor:pointer;font-size:18px}
   #title{font-weight:600}
-  /* messages area */
   #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
   .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
   .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
@@ -25,35 +21,28 @@
   .msg-row.self .bubble{background:#005c4b}
   .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
   .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
-  /* input */
   #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
   #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
   #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-  /* small status area */
   #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
-  /* toast */
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
   #toast.show{opacity:1;bottom:40px}
-  /* login overlay */
   #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
   #loginCard{background:#0b141a;padding:20px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
   #loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
   #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-  /* responsive */
   @media(max-width:640px){#app{height:100vh}}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="topBar">
-    <button id="backBtn">←</button>
     <div id="title">Group Chat</div>
     <div style="flex:1"></div>
     <div id="onlineCount" style="color:var(--muted);font-size:13px"></div>
   </div>
 
   <div id="statusLine"></div>
-
   <div id="messages" aria-live="polite"></div>
 
   <div id="inputBar">
@@ -64,7 +53,6 @@
 
 <div id="toast"></div>
 
-<!-- login overlay -->
 <div id="loginWrap" style="display:none">
   <div id="loginCard">
     <div style="font-weight:700;color:#fff">Enter your name</div>
@@ -75,14 +63,10 @@
   </div>
 </div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ---------------------------
-  CONFIG (your Firebase)
-----------------------------*/
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -95,35 +79,22 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------------------------
-  UI elements & state
-----------------------------*/
 const messagesEl = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const toastEl = document.getElementById('toast');
 const statusLine = document.getElementById('statusLine');
-const titleEl = document.getElementById('title');
-const backBtn = document.getElementById('backBtn');
 const onlineCountEl = document.getElementById('onlineCount');
-
 const loginWrap = document.getElementById('loginWrap');
 const nameInput = document.getElementById('nameInput');
 const joinBtn = document.getElementById('joinBtn');
 
 let username = localStorage.getItem('guestName') || '';
-let inPrivate = false;
-let privateWith = null;
-let privatePath = null;
-
-let userReports = {};    // local: which users this client reported
-let blockedUsers = {};   // local blocked mapping
-let currentListeners = []; // to keep track of firebase listeners to detach
+let userReports = {};
+let blockedUsers = {};
+let currentListeners = [];
 let typingTimer = null;
 
-/* ---------------------------
-  helpers
-----------------------------*/
 function showToast(msg){
   toastEl.textContent = msg;
   toastEl.classList.add('show');
@@ -131,453 +102,157 @@ function showToast(msg){
 }
 function formatTime(ms){
   const date = new Date(ms);
-  let h = date.getHours();
-  const m = date.getMinutes().toString().padStart(2,'0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
+  let h = date.getHours(), m = date.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM':'AM'; h = h%12 || 12;
   return `${h}:${m} ${ampm}`;
 }
 function scrollToBottomSoon(){
   setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 80);
 }
-function sortedPairPath(a,b){
-  const arr = [a,b].sort();
-  return `privateChats/${arr[0]}_${arr[1]}`;
-}
-function detachAll(){
-  currentListeners.forEach(r => r.off());
-  currentListeners = [];
-}
 
-/* ---------------------------
-  auth / UI startup
-----------------------------*/
-function showLogin(){
-  loginWrap.style.display = 'flex';
-}
-function hideLogin(){
-  loginWrap.style.display = 'none';
-}
-if(!username){
-  showLogin();
-} else {
-  startAs(username);
-}
-joinBtn.addEventListener('click', ()=>{
+function showLogin(){ loginWrap.style.display = 'flex'; }
+function hideLogin(){ loginWrap.style.display = 'none'; }
+
+if(!username){ showLogin(); } else { startAs(username); }
+joinBtn.onclick = ()=>{
   const v = nameInput.value.trim();
   if(!v) return showToast('Enter a name');
-  username = v;
-  localStorage.setItem('guestName', username);
-  hideLogin();
-  startAs(username);
-});
+  username = v; localStorage.setItem('guestName',v);
+  hideLogin(); startAs(username);
+};
 
-/* ---------------------------
-  presence & online / typing
-----------------------------*/
 function setOnline(){
   db.ref(`status/${username}`).set(true);
   db.ref(`status/${username}`).onDisconnect().remove();
 }
 function setTyping(isTyping){
-  if(inPrivate){
-    db.ref(`typing/${privatePath}/${username}`).set(isTyping?true:null);
-    if(isTyping) {
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(()=> db.ref(`typing/${privatePath}/${username}`).remove(), 2000);
-    }
-  } else {
-    db.ref(`typing/group/${username}`).set(isTyping?true:null);
-    if(isTyping) {
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 2000);
-    }
+  db.ref(`typing/group/${username}`).set(isTyping?true:null);
+  if(isTyping){
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(),2000);
   }
 }
+messageInput.oninput=()=>setTyping(true);
 
-messageInput.addEventListener('input', ()=>{
-  setTyping(true);
-});
-
-/* ---------------------------
-  render message (group or private)
-  - key: firebase key (may be undefined for local-only)
-----------------------------*/
-function renderMessage(msg, key, chatType){
-  // chatType: 'group' or 'private'
-  if(msg.banned) return; // skip banned messages for group
-  if(blockedUsers[msg.name]) return;
-
-  const isSelf = msg.name === username;
+function renderMessage(msg,key){
+  if(msg.banned || blockedUsers[msg.name]) return;
+  const isSelf = msg.name===username;
   const row = document.createElement('div');
-  row.className = 'msg-row' + (isSelf ? ' self' : '');
-  if(key) row.dataset.key = key;
+  row.className = 'msg-row'+(isSelf?' self':'');
+  if(key) row.dataset.key=key;
 
-  // avatar
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar';
-  avatar.textContent = msg.name.charAt(0).toUpperCase();
+  const avatar=document.createElement('div');
+  avatar.className='avatar'; avatar.textContent=msg.name.charAt(0).toUpperCase();
 
-  // popup menu (inside avatar)
-  const popup = document.createElement('div');
-  popup.className = 'popup-menu';
-
-  // private-chat option
-  if(!isSelf){
-    const privateBtn = document.createElement('button');
-    privateBtn.textContent = '💬 Private Chat';
-    privateBtn.onclick = (e)=>{
-      e.stopPropagation();
-      openPrivateChat(msg.name);
-    };
-    popup.appendChild(privateBtn);
-  }
-
+  const popup=document.createElement('div'); popup.className='popup-menu';
   if(isSelf){
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '🗑️ Delete';
-    delBtn.onclick = (e)=>{
-      e.stopPropagation();
-      if(chatType === 'group') {
-        if(key) db.ref(`messages/${key}`).remove();
-      } else if(chatType === 'private'){
-        if(key) db.ref(`${privatePath}/${key}`).remove();
-      }
-      row.remove();
-    };
-    popup.appendChild(delBtn);
+    const del=document.createElement('button');
+    del.textContent='🗑️ Delete';
+    del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    popup.appendChild(del);
   } else {
-    const reportBtn = document.createElement('button');
-    reportBtn.textContent = '🚩 Report';
-    reportBtn.onclick = (e)=>{
-      e.stopPropagation();
-      reportUser(msg.name);
-    };
-    popup.appendChild(reportBtn);
+    const report=document.createElement('button');
+    report.textContent='🚩 Report';
+    report.onclick=()=>reportUser(msg.name);
+    popup.appendChild(report);
 
-    const blockBtn = document.createElement('button');
-    blockBtn.textContent = '🚫 Block';
-    blockBtn.onclick = (e)=>{
-      e.stopPropagation();
-      blockedUsers[msg.name] = true;
-      // persist block in DB under blocks/{user}/{blocked}
-      db.ref(`blocks/${username}/${msg.name}`).set(true).catch(()=>{});
-      showToast(`Blocked ${msg.name}`);
-      // remove their visible messages in the current view
-      row.remove();
+    const block=document.createElement('button');
+    block.textContent='🚫 Block';
+    block.onclick=()=>{
+      blockedUsers[msg.name]=true;
+      db.ref(`blocks/${username}/${msg.name}`).set(true);
+      showToast(`Blocked ${msg.name}`); row.remove();
     };
-    popup.appendChild(blockBtn);
+    popup.appendChild(block);
   }
-
   avatar.appendChild(popup);
 
-  // content
-  const content = document.createElement('div');
-  content.style.display = 'flex';
-  content.style.flexDirection = 'column';
-  content.style.maxWidth = 'calc(100% - 56px)';
+  const content=document.createElement('div');
+  content.style.display='flex';content.style.flexDirection='column';
+  content.style.maxWidth='calc(100% - 56px)';
+  const meta=document.createElement('div');
+  meta.className='meta'; meta.textContent=msg.name;
+  const bubble=document.createElement('div');
+  bubble.className='bubble'; bubble.textContent=msg.text;
+  const t=document.createElement('div');
+  t.className='time'; t.textContent=formatTime(msg.time);
+  content.append(meta,bubble,t);
 
-  const meta = document.createElement('div');
-  meta.className = 'meta';
-  meta.textContent = msg.name;
-
-  // online dot if present (for group we get status separately)
-  if(msg.online){
-    const dot = document.createElement('span');
-    dot.className = 'status-online';
-    dot.textContent = ' ●';
-    dot.style.color = '#00ff66';
-    dot.style.fontSize = '11px';
-    dot.style.marginLeft = '6px';
-    meta.appendChild(dot);
-  }
-
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-  if(msg.audioUrl){
-    // previously had audio support — keep backwards compatibility
-    const au = document.createElement('audio');
-    au.controls = true;
-    au.src = msg.audioUrl;
-    bubble.appendChild(au);
-  } else {
-    bubble.textContent = msg.text;
-  }
-
-  const t = document.createElement('div');
-  t.className = 'time';
-  t.textContent = formatTime(msg.time);
-
-  content.appendChild(meta);
-  content.appendChild(bubble);
-  content.appendChild(t);
-
-  row.appendChild(avatar);
-  row.appendChild(content);
-
+  row.append(avatar,content);
   messagesEl.appendChild(row);
   scrollToBottomSoon();
 }
 
-/* ---------------------------
-  group: listen & cleanup
-----------------------------*/
 function listenGroup(){
-  detachAll();
-  titleEl.textContent = 'Group Chat';
-  backBtn.style.display = 'none';
-  inPrivate = false; privateWith = null; privatePath = null;
-
-  // group messages
-  const ref = db.ref('messages').limitToLast(50);
-  ref.on('child_added', snap => {
-    const data = snap.val();
-    renderMessage(data, snap.key, 'group');
-    scrollToBottomSoon();
+  currentListeners.forEach(r=>r.off()); currentListeners=[];
+  const ref=db.ref('messages').limitToLast(50);
+  ref.on('child_added',snap=>{ renderMessage(snap.val(),snap.key); scrollToBottomSoon(); });
+  ref.on('child_removed',snap=>{
+    const el=messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove();
   });
   currentListeners.push(ref);
-
-  // child_removed -> remove DOM for that key
-  const refRem = db.ref('messages');
-  refRem.on('child_removed', snap => {
-    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
-    if(el) el.remove();
-  });
-  currentListeners.push(refRem);
 }
 
-/* ---------------------------
-  private chat: open & listen
-  - keep only 10 latest messages for the private path
-----------------------------*/
-function openPrivateChat(other){
-  // cannot private chat yourself
-  if(other === username) return;
-  inPrivate = true;
-  privateWith = other;
-  privatePath = sortedPairPath(username, other);
-
-  // update UI
-  titleEl.textContent = `Private Chat with ${other}`;
-  backBtn.style.display = 'inline-block';
-  // clear messages area
-  messagesEl.innerHTML = '';
-
-  detachAll();
-
-  // listen for private messages
-  const pRef = db.ref(privatePath).limitToLast(10);
-  pRef.on('child_added', snap=>{
-    const data = snap.val();
-    renderMessage(data, snap.key, 'private');
-    scrollToBottomSoon();
-  });
-  currentListeners.push(pRef);
-
-  // child_removed for private
-  const pRem = db.ref(privatePath);
-  pRem.on('child_removed', snap=>{
-    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
-    if(el) el.remove();
-  });
-  currentListeners.push(pRem);
-
-  // typing for this private path will be handled by listenTyping
-  listenTypingForCurrent();
-}
-
-/* Back to group */
-backBtn.addEventListener('click', ()=>{
-  messagesEl.innerHTML = '';
-  listenGroup();
-  // remove any private typing key for this user to avoid ghost typing
-  if(privatePath) db.ref(`typing/${privatePath}/${username}`).remove().catch(()=>{});
-});
-
-/* ---------------------------
-  sending messages (group or private)
-  - private: write to privatePath and enforce 10 msg retention
-  - group: write to messages and enforce 50 retention
-----------------------------*/
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
-
-async function sendMessage(){
-  const text = messageInput.value.trim();
-  if(!text) return;
-  if(inPrivate && privateWith){
-    // check if other user has blocked you (blocks/{other}/{you} exists)
-    const blockedSnap = await db.ref(`blocks/${privateWith}/${username}`).once('value');
-    if(blockedSnap.exists()){
-      showToast(`You are blocked by ${privateWith}`);
-      return;
-    }
-    const payload = { name: username, text, time: Date.now(), private: true };
-    const pushRef = await db.ref(privatePath).push(payload);
-    messageInput.value = '';
-    cleanupPrivateMessages(privatePath, 10);
-  } else {
-    const payload = { name: username, text, time: Date.now() };
-    await db.ref('messages').push(payload);
-    messageInput.value = '';
-    cleanupGroupMessages(50);
-  }
-  // remove typing indicator
-  setTyping(false);
-}
-
-/* ---------------------------
-  cleanup routines
-----------------------------*/
-function cleanupGroupMessages(limit){
-  db.ref('messages').once('value').then(snap=>{
-    const val = snap.val() || {};
-    const keys = Object.keys(val);
-    if(keys.length > limit){
-      // sort by time (oldest first). We'll build array of {k, t}
-      const arr = keys.map(k => ({k, t: val[k].time || 0})).sort((a,b)=>a.t - b.t);
-      const toRemove = arr.slice(0, arr.length - limit);
-      const updates = {};
-      toRemove.forEach(item => updates[`messages/${item.k}`] = null);
-      db.ref().update(updates).catch(()=>{});
-    }
-  }).catch(()=>{});
-}
-
-function cleanupPrivateMessages(path, limit){
-  db.ref(path).once('value').then(snap=>{
-    const val = snap.val() || {};
-    const keys = Object.keys(val);
-    if(keys.length > limit){
-      const arr = keys.map(k => ({k, t: val[k].time || 0})).sort((a,b)=>a.t - b.t);
-      const toRemove = arr.slice(0, arr.length - limit);
-      const updates = {};
-      toRemove.forEach(item => updates[`${path}/${item.k}`] = null);
-      db.ref().update(updates).catch(()=>{});
-    }
-  }).catch(()=>{});
-}
-
-/* ---------------------------
-  REPORT system (3 unique reporters -> ban in group)
-----------------------------*/
 function reportUser(user){
-  if(user === username) return showToast("Cannot report yourself");
+  if(user===username) return showToast("Can't report yourself");
   if(userReports[user]) return showToast("Already reported");
-  userReports[user] = true;
-
+  userReports[user]=true;
   db.ref(`reports/${user}/${username}`).set(true).then(()=>{
     db.ref(`reports/${user}`).once('value').then(snap=>{
-      const count = snap.numChildren();
-      if(count >= 3){
-        // mark user's group messages as banned (so they won't show)
-        db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{
-          ms.forEach(m => m.ref.update({ banned: true }));
-          // push system notification into group
-          db.ref('messages').push({ name: 'System', text: `${user} has been removed from the group`, time: Date.now() });
+      if(snap.numChildren()>=3){
+        db.ref('messages').orderByChild('name').equalTo(user).once('value')
+        .then(ms=>{ ms.forEach(m=>m.ref.update({banned:true}));
+          db.ref('messages').push({name:'System',text:`${user} removed from group`,time:Date.now()});
         });
       }
     });
-    showToast("User reported successfully!");
-  }).catch(err => {
-    showToast("Report failed");
+    showToast("Reported successfully!");
   });
-}
-
-/* ---------------------------
-  typing & online listeners
-  - group typing path: 'typing/group'
-  - private typing path: `typing/${privatePath}`
-  - online presence: 'status/{user}' boolean
-----------------------------*/
-function listenTypingForCurrent(){
-  // detach previous typing listener(s)
-  db.ref('typing').off();
-  if(inPrivate && privatePath){
-    const p = db.ref(`typing/${privatePath}`);
-    p.on('value', snap=>{
-      const val = snap.val() || {};
-      // exclude self
-      delete val[username];
-      const who = Object.keys(val);
-      statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-    });
-    currentListeners.push(p);
-  } else {
-    const g = db.ref('typing/group');
-    g.on('value', snap=>{
-      const val = snap.val() || {};
-      delete val[username];
-      const who = Object.keys(val);
-      statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-    });
-    currentListeners.push(g);
-  }
 }
 
 function listenTyping(){
-  // call generic function (useful when switching contexts)
-  listenTypingForCurrent();
+  db.ref('typing/group').on('value',snap=>{
+    const val=snap.val()||{}; delete val[username];
+    const who=Object.keys(val);
+    statusLine.textContent=who.length?`${who.join(', ')} is typing...`:'';
+  });
 }
-
-/* online listener */
 function listenOnline(){
-  db.ref('status').on('value', snap => {
-    const val = snap.val() || {};
-    const onlineUsers = Object.keys(val);
-    onlineCountEl.textContent = `${onlineUsers.length} online`;
-    // update small online dot inside rendered messages names
-    document.querySelectorAll('.msg-row').forEach(row=>{
-      const nameEl = row.querySelector('.meta');
-      if(!nameEl) return;
-    });
+  db.ref('status').on('value',snap=>{
+    const val=snap.val()||{};
+    onlineCountEl.textContent=`${Object.keys(val).length} online`;
   });
 }
 
-/* ---------------------------
-  start main chat
-----------------------------*/
+sendBtn.onclick=sendMessage;
+messageInput.onkeypress=e=>{if(e.key==='Enter')sendMessage();};
+
+function sendMessage(){
+  const text=messageInput.value.trim(); if(!text) return;
+  db.ref('messages').push({name:username,text,time:Date.now()});
+  messageInput.value=''; setTyping(false); cleanupGroupMessages(50);
+}
+
+function cleanupGroupMessages(limit){
+  db.ref('messages').once('value').then(snap=>{
+    const val=snap.val()||{},keys=Object.keys(val);
+    if(keys.length>limit){
+      const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t);
+      const toRemove=arr.slice(0,arr.length-limit);
+      const updates={}; toRemove.forEach(i=>updates[`messages/${i.k}`]=null);
+      db.ref().update(updates);
+    }
+  });
+}
+
 function startAs(name){
-  username = name;
-  // show UI
-  // set online presence and listeners
-  setOnline();
-  listenOnline();
-  listenGroup();
-  listenTyping();
-  // on page load scroll to bottom after messages render
-  setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 300);
+  username=name; setOnline(); listenOnline(); listenGroup(); listenTyping();
+  setTimeout(()=>messagesEl.scrollTop=messagesEl.scrollHeight,300);
 }
 
-/* ---------------------------
-  listenGroup wrapper already defined above
-----------------------------*/
-
-/* ---------------------------
-  Expose openPrivateChat for popup buttons
-----------------------------*/
-window.openPrivateChat = (other) => openPrivateChat(other);
-
-/* ---------------------------
-  On load: if user already exists, prefill login input (for convenience)
-----------------------------*/
-if(username){
-  nameInput.value = username;
-} else {
-  // show login overlay
-  loginWrap.style.display = 'flex';
-}
-
-/* ---------------------------
-  ensure typing & online cleanup on unload
-----------------------------*/
-window.addEventListener('beforeunload', ()=>{
-  if(username) {
-    db.ref(`status/${username}`).remove();
-    if(inPrivate && privatePath) db.ref(`typing/${privatePath}/${username}`).remove();
-    else db.ref(`typing/group/${username}`).remove();
-  }
-});
+window.onbeforeunload=()=>{
+  if(username){ db.ref(`status/${username}`).remove(); db.ref(`typing/group/${username}`).remove(); }
+};
 </script>
 </body>
 </html>
