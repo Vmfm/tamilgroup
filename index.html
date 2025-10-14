@@ -1,64 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Style Group Chat</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>WhatsApp-style Chat — Group + Private</title>
 <style>
-  body {margin:0;font-family:Arial,sans-serif;background-color:#111b21;color:#e9edef;display:flex;flex-direction:column;height:100vh;}
-  #chatPage {flex:1;display:flex;flex-direction:column;}
-  #messages {flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
-  .message {display:flex;align-items:flex-end;max-width:80%;margin-bottom:5px;position:relative;}
-  .message.self {align-self:flex-end;flex-direction:row-reverse;}
-  .avatar {width:32px;height:32px;border-radius:50%;background:#000;color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:0 6px;font-size:16px;user-select:none;position:relative;cursor:pointer;}
-  .bubble {background-color:#202c33;padding:8px 12px;border-radius:10px;font-size:14px;line-height:1.3;word-wrap:break-word;position:relative;}
-  .message.self .bubble {background-color:#005c4b;}
-  .username {font-size:12px;color:#53bdeb;}
-  .timestamp {font-size:10px;color:#aaa;margin-top:2px;text-align:right;}
-  #inputArea {display:flex;padding:8px;background-color:#202c33;align-items:center;position:sticky;bottom:0;}
-  #messageInput {flex:1;padding:8px;border:none;border-radius:20px;outline:none;font-size:14px;background-color:#2a3942;color:#fff;}
-  #sendBtn {width:40px;height:40px;border-radius:50%;border:none;background:#25d366;color:white;font-size:20px;margin-left:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-  #loginPage {display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;background-color:#111b21;}
-  #loginPage input,#loginPage button {padding:10px;margin:5px;border-radius:20px;border:none;}
-  #loginPage button {background-color:#25d366;color:white;font-weight:bold;cursor:pointer;}
-  #typingIndicator {font-size:12px;color:#aaa;padding-left:15px;margin-bottom:3px;}
-  .popup-menu {display:none;position:absolute;top:-35px;right:0;background:#2a3942;border-radius:5px;padding:3px 5px;font-size:12px;z-index:10;flex-direction:column;}
-  .avatar:hover .popup-menu {display:flex;}
-  .popup-menu button {background:none;border:none;color:#fff;cursor:pointer;margin:2px 0;}
-  .status-online {color:#00ff00;font-size:10px;margin-left:5px;}
-  /* Toast message */
-  #toast {
-    visibility:hidden;min-width:180px;margin-left:-90px;background:#2a3942;
-    color:#fff;text-align:center;border-radius:10px;padding:10px;position:fixed;
-    left:50%;bottom:30px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.5s, bottom 0.5s;
-  }
-  #toast.show {
-    visibility:visible;opacity:1;bottom:50px;
-  }
+  :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+  body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+  /* container */
+  #app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
+  /* header area for private label / join */
+  #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
+  #backBtn{display:none;border:0;background:none;color:var(--accent);cursor:pointer;font-size:18px}
+  #title{font-weight:600}
+  /* messages area */
+  #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+  .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+  .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+  .avatar{width:34px;height:34px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer}
+  .popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
+  .avatar:hover .popup-menu{display:flex}
+  .popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
+  .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+  .msg-row.self .bubble{background:#005c4b}
+  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+  /* input */
+  #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+  #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
+  #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+  /* small status area */
+  #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
+  /* toast */
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
+  #toast.show{opacity:1;bottom:40px}
+  /* login overlay */
+  #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+  #loginCard{background:#0b141a;padding:20px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
+  #loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
+  #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  /* responsive */
+  @media(max-width:640px){#app{height:100vh}}
 </style>
 </head>
 <body>
-<div id="loginPage">
-  <h2>Enter Your Name</h2>
-  <input type="text" id="usernameInput" placeholder="Your name">
-  <button id="loginBtn">Join Chat</button>
-</div>
+<div id="app">
+  <div id="topBar">
+    <button id="backBtn">←</button>
+    <div id="title">Group Chat</div>
+    <div style="flex:1"></div>
+    <div id="onlineCount" style="color:var(--muted);font-size:13px"></div>
+  </div>
 
-<div id="chatPage" style="display:none;">
-  <div id="messages"></div>
-  <div id="typingIndicator"></div>
-  <div id="inputArea">
-    <input type="text" id="messageInput" placeholder="Type a message">
+  <div id="statusLine"></div>
+
+  <div id="messages" aria-live="polite"></div>
+
+  <div id="inputBar">
+    <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
     <button id="sendBtn">✈️</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- login overlay -->
+<div id="loginWrap" style="display:none">
+  <div id="loginCard">
+    <div style="font-weight:700;color:#fff">Enter your name</div>
+    <input id="nameInput" placeholder="Your name" />
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="joinBtn">Join</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+/* ---------------------------
+  CONFIG (your Firebase)
+----------------------------*/
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -71,197 +95,489 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const loginPage = document.getElementById('loginPage');
-const chatPage = document.getElementById('chatPage');
-const messagesDiv = document.getElementById('messages');
+/* ---------------------------
+  UI elements & state
+----------------------------*/
+const messagesEl = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
-const typingIndicator = document.getElementById('typingIndicator');
-const toast = document.getElementById('toast');
+const toastEl = document.getElementById('toast');
+const statusLine = document.getElementById('statusLine');
+const titleEl = document.getElementById('title');
+const backBtn = document.getElementById('backBtn');
+const onlineCountEl = document.getElementById('onlineCount');
 
-let username = localStorage.getItem('guestName') || "";
-let userReports = {};
-let blockedUsers = {};
-let typingTimeout;
+const loginWrap = document.getElementById('loginWrap');
+const nameInput = document.getElementById('nameInput');
+const joinBtn = document.getElementById('joinBtn');
 
-// Toast helper
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.className = "show";
-  setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2000);
+let username = localStorage.getItem('guestName') || '';
+let inPrivate = false;
+let privateWith = null;
+let privatePath = null;
+
+let userReports = {};    // local: which users this client reported
+let blockedUsers = {};   // local blocked mapping
+let currentListeners = []; // to keep track of firebase listeners to detach
+let typingTimer = null;
+
+/* ---------------------------
+  helpers
+----------------------------*/
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(()=> toastEl.classList.remove('show'), 2000);
+}
+function formatTime(ms){
+  const date = new Date(ms);
+  let h = date.getHours();
+  const m = date.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+function scrollToBottomSoon(){
+  setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 80);
+}
+function sortedPairPath(a,b){
+  const arr = [a,b].sort();
+  return `privateChats/${arr[0]}_${arr[1]}`;
+}
+function detachAll(){
+  currentListeners.forEach(r => r.off());
+  currentListeners = [];
 }
 
-// Auto-login
-if(username) startChat();
-
-document.getElementById('loginBtn').onclick = () => {
-  username = document.getElementById('usernameInput').value.trim();
-  if(!username) return;
+/* ---------------------------
+  auth / UI startup
+----------------------------*/
+function showLogin(){
+  loginWrap.style.display = 'flex';
+}
+function hideLogin(){
+  loginWrap.style.display = 'none';
+}
+if(!username){
+  showLogin();
+} else {
+  startAs(username);
+}
+joinBtn.addEventListener('click', ()=>{
+  const v = nameInput.value.trim();
+  if(!v) return showToast('Enter a name');
+  username = v;
   localStorage.setItem('guestName', username);
-  startChat();
-};
+  hideLogin();
+  startAs(username);
+});
 
-function startChat(){
-  loginPage.style.display='none';
-  chatPage.style.display='flex';
-  db.ref('status/'+username).set(true);
-  db.ref('status/'+username).onDisconnect().remove();
-  listenMessages();
-  listenTyping();
-  listenOnline();
+/* ---------------------------
+  presence & online / typing
+----------------------------*/
+function setOnline(){
+  db.ref(`status/${username}`).set(true);
+  db.ref(`status/${username}`).onDisconnect().remove();
+}
+function setTyping(isTyping){
+  if(inPrivate){
+    db.ref(`typing/${privatePath}/${username}`).set(isTyping?true:null);
+    if(isTyping) {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(()=> db.ref(`typing/${privatePath}/${username}`).remove(), 2000);
+    }
+  } else {
+    db.ref(`typing/group/${username}`).set(isTyping?true:null);
+    if(isTyping) {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 2000);
+    }
+  }
 }
 
-function listenMessages(){
-  db.ref('messages').limitToLast(50).on('child_added', snap => {
-    const data = snap.val();
-    if(data.banned || blockedUsers[data.name]) return;
-    renderMessage(data, data.name===username, snap.key);
-    setTimeout(()=>messagesDiv.scrollTop=messagesDiv.scrollHeight,100);
-  });
-}
+messageInput.addEventListener('input', ()=>{
+  setTyping(true);
+});
 
-function renderMessage(data, self, key){
-  const div = document.createElement('div');
-  div.className = 'message' + (self?' self':'');
+/* ---------------------------
+  render message (group or private)
+  - key: firebase key (may be undefined for local-only)
+----------------------------*/
+function renderMessage(msg, key, chatType){
+  // chatType: 'group' or 'private'
+  if(msg.banned) return; // skip banned messages for group
+  if(blockedUsers[msg.name]) return;
 
+  const isSelf = msg.name === username;
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (isSelf ? ' self' : '');
+  if(key) row.dataset.key = key;
+
+  // avatar
   const avatar = document.createElement('div');
-  avatar.className='avatar';
-  avatar.textContent = data.name.charAt(0).toUpperCase();
+  avatar.className = 'avatar';
+  avatar.textContent = msg.name.charAt(0).toUpperCase();
 
-  // Popup menu inside avatar
+  // popup menu (inside avatar)
   const popup = document.createElement('div');
-  popup.className='popup-menu';
+  popup.className = 'popup-menu';
 
-  if(self){
-    const delBtn=document.createElement('button');
-    delBtn.textContent='🗑️';
-    delBtn.onclick=()=>{db.ref('messages/'+key).remove(); div.remove();}
+  // private-chat option
+  if(!isSelf){
+    const privateBtn = document.createElement('button');
+    privateBtn.textContent = '💬 Private Chat';
+    privateBtn.onclick = (e)=>{
+      e.stopPropagation();
+      openPrivateChat(msg.name);
+    };
+    popup.appendChild(privateBtn);
+  }
+
+  if(isSelf){
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑️ Delete';
+    delBtn.onclick = (e)=>{
+      e.stopPropagation();
+      if(chatType === 'group') {
+        if(key) db.ref(`messages/${key}`).remove();
+      } else if(chatType === 'private'){
+        if(key) db.ref(`${privatePath}/${key}`).remove();
+      }
+      row.remove();
+    };
     popup.appendChild(delBtn);
   } else {
-    const reportBtn=document.createElement('button');
-    reportBtn.textContent='🚩';
-    reportBtn.onclick=()=>reportUser(data.name);
-    const blockBtn=document.createElement('button');
-    blockBtn.textContent='🚫';
-    blockBtn.onclick=()=>{blockedUsers[data.name]=true; showToast('Blocked '+data.name); div.remove();}
+    const reportBtn = document.createElement('button');
+    reportBtn.textContent = '🚩 Report';
+    reportBtn.onclick = (e)=>{
+      e.stopPropagation();
+      reportUser(msg.name);
+    };
     popup.appendChild(reportBtn);
+
+    const blockBtn = document.createElement('button');
+    blockBtn.textContent = '🚫 Block';
+    blockBtn.onclick = (e)=>{
+      e.stopPropagation();
+      blockedUsers[msg.name] = true;
+      // persist block in DB under blocks/{user}/{blocked}
+      db.ref(`blocks/${username}/${msg.name}`).set(true).catch(()=>{});
+      showToast(`Blocked ${msg.name}`);
+      // remove their visible messages in the current view
+      row.remove();
+    };
     popup.appendChild(blockBtn);
   }
 
   avatar.appendChild(popup);
 
+  // content
   const content = document.createElement('div');
-  const nameEl = document.createElement('div');
-  nameEl.className='username';
-  nameEl.textContent = data.name;
-  if(data.online) {
-    const onlineEl = document.createElement('span'); 
-    onlineEl.className='status-online'; 
-    onlineEl.textContent='●';
-    nameEl.appendChild(onlineEl);
+  content.style.display = 'flex';
+  content.style.flexDirection = 'column';
+  content.style.maxWidth = 'calc(100% - 56px)';
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = msg.name;
+
+  // online dot if present (for group we get status separately)
+  if(msg.online){
+    const dot = document.createElement('span');
+    dot.className = 'status-online';
+    dot.textContent = ' ●';
+    dot.style.color = '#00ff66';
+    dot.style.fontSize = '11px';
+    dot.style.marginLeft = '6px';
+    meta.appendChild(dot);
   }
 
   const bubble = document.createElement('div');
-  bubble.className='bubble';
-  bubble.textContent=data.text;
+  bubble.className = 'bubble';
+  if(msg.audioUrl){
+    // previously had audio support — keep backwards compatibility
+    const au = document.createElement('audio');
+    au.controls = true;
+    au.src = msg.audioUrl;
+    bubble.appendChild(au);
+  } else {
+    bubble.textContent = msg.text;
+  }
 
-  const timeEl = document.createElement('div');
-  timeEl.className='timestamp';
-  timeEl.textContent=formatTime(data.time);
+  const t = document.createElement('div');
+  t.className = 'time';
+  t.textContent = formatTime(msg.time);
 
-  content.appendChild(nameEl);
+  content.appendChild(meta);
   content.appendChild(bubble);
-  content.appendChild(timeEl);
+  content.appendChild(t);
 
-  div.appendChild(avatar);
-  div.appendChild(content);
-  messagesDiv.appendChild(div);
+  row.appendChild(avatar);
+  row.appendChild(content);
+
+  messagesEl.appendChild(row);
+  scrollToBottomSoon();
 }
 
-sendBtn.onclick = ()=>{
-  const text=messageInput.value.trim();
-  if(!text) return;
-  const msg={name:username,text,time:Date.now(),online:true};
-  db.ref('messages').push(msg);
-  messageInput.value='';
-  cleanupOldMessages();
-  setTimeout(()=>messagesDiv.scrollTop=messagesDiv.scrollHeight,100);
-};
+/* ---------------------------
+  group: listen & cleanup
+----------------------------*/
+function listenGroup(){
+  detachAll();
+  titleEl.textContent = 'Group Chat';
+  backBtn.style.display = 'none';
+  inPrivate = false; privateWith = null; privatePath = null;
 
-messageInput.addEventListener('input',()=>{
-  db.ref('typing/'+username).set(true);
-  clearTimeout(typingTimeout);
-  typingTimeout=setTimeout(()=>db.ref('typing/'+username).remove(),2000);
+  // group messages
+  const ref = db.ref('messages').limitToLast(50);
+  ref.on('child_added', snap => {
+    const data = snap.val();
+    renderMessage(data, snap.key, 'group');
+    scrollToBottomSoon();
+  });
+  currentListeners.push(ref);
+
+  // child_removed -> remove DOM for that key
+  const refRem = db.ref('messages');
+  refRem.on('child_removed', snap => {
+    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
+    if(el) el.remove();
+  });
+  currentListeners.push(refRem);
+}
+
+/* ---------------------------
+  private chat: open & listen
+  - keep only 10 latest messages for the private path
+----------------------------*/
+function openPrivateChat(other){
+  // cannot private chat yourself
+  if(other === username) return;
+  inPrivate = true;
+  privateWith = other;
+  privatePath = sortedPairPath(username, other);
+
+  // update UI
+  titleEl.textContent = `Private Chat with ${other}`;
+  backBtn.style.display = 'inline-block';
+  // clear messages area
+  messagesEl.innerHTML = '';
+
+  detachAll();
+
+  // listen for private messages
+  const pRef = db.ref(privatePath).limitToLast(10);
+  pRef.on('child_added', snap=>{
+    const data = snap.val();
+    renderMessage(data, snap.key, 'private');
+    scrollToBottomSoon();
+  });
+  currentListeners.push(pRef);
+
+  // child_removed for private
+  const pRem = db.ref(privatePath);
+  pRem.on('child_removed', snap=>{
+    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
+    if(el) el.remove();
+  });
+  currentListeners.push(pRem);
+
+  // typing for this private path will be handled by listenTyping
+  listenTypingForCurrent();
+}
+
+/* Back to group */
+backBtn.addEventListener('click', ()=>{
+  messagesEl.innerHTML = '';
+  listenGroup();
+  // remove any private typing key for this user to avoid ghost typing
+  if(privatePath) db.ref(`typing/${privatePath}/${username}`).remove().catch(()=>{});
 });
 
-function cleanupOldMessages(){
-  db.ref('messages').once('value',snap=>{
-    const data = snap.val();
-    if(!data) return;
-    const keys=Object.keys(data);
-    if(keys.length>50){
-      const toDelete=keys.slice(0,keys.length-50);
-      toDelete.forEach(k=>db.ref('messages/'+k).remove());
+/* ---------------------------
+  sending messages (group or private)
+  - private: write to privatePath and enforce 10 msg retention
+  - group: write to messages and enforce 50 retention
+----------------------------*/
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+
+async function sendMessage(){
+  const text = messageInput.value.trim();
+  if(!text) return;
+  if(inPrivate && privateWith){
+    // check if other user has blocked you (blocks/{other}/{you} exists)
+    const blockedSnap = await db.ref(`blocks/${privateWith}/${username}`).once('value');
+    if(blockedSnap.exists()){
+      showToast(`You are blocked by ${privateWith}`);
+      return;
     }
-  });
+    const payload = { name: username, text, time: Date.now(), private: true };
+    const pushRef = await db.ref(privatePath).push(payload);
+    messageInput.value = '';
+    cleanupPrivateMessages(privatePath, 10);
+  } else {
+    const payload = { name: username, text, time: Date.now() };
+    await db.ref('messages').push(payload);
+    messageInput.value = '';
+    cleanupGroupMessages(50);
+  }
+  // remove typing indicator
+  setTyping(false);
 }
 
-function formatTime(ms){
-  const date=new Date(ms);
-  let h=date.getHours();
-  const m=date.getMinutes().toString().padStart(2,'0');
-  const ampm=h>=12?'PM':'AM';
-  h=h%12||12;
-  return h+':'+m+' '+ampm;
+/* ---------------------------
+  cleanup routines
+----------------------------*/
+function cleanupGroupMessages(limit){
+  db.ref('messages').once('value').then(snap=>{
+    const val = snap.val() || {};
+    const keys = Object.keys(val);
+    if(keys.length > limit){
+      // sort by time (oldest first). We'll build array of {k, t}
+      const arr = keys.map(k => ({k, t: val[k].time || 0})).sort((a,b)=>a.t - b.t);
+      const toRemove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      toRemove.forEach(item => updates[`messages/${item.k}`] = null);
+      db.ref().update(updates).catch(()=>{});
+    }
+  }).catch(()=>{});
 }
 
-// REPORT system
+function cleanupPrivateMessages(path, limit){
+  db.ref(path).once('value').then(snap=>{
+    const val = snap.val() || {};
+    const keys = Object.keys(val);
+    if(keys.length > limit){
+      const arr = keys.map(k => ({k, t: val[k].time || 0})).sort((a,b)=>a.t - b.t);
+      const toRemove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      toRemove.forEach(item => updates[`${path}/${item.k}`] = null);
+      db.ref().update(updates).catch(()=>{});
+    }
+  }).catch(()=>{});
+}
+
+/* ---------------------------
+  REPORT system (3 unique reporters -> ban in group)
+----------------------------*/
 function reportUser(user){
-  if(user===username) return showToast("Cannot report yourself!");
-  if(userReports[user]) return showToast("Already reported!");
-  userReports[user]=true;
+  if(user === username) return showToast("Cannot report yourself");
+  if(userReports[user]) return showToast("Already reported");
+  userReports[user] = true;
 
-  db.ref('reports/'+user+'/'+username).set(true).then(()=>{
-    db.ref('reports/'+user).once('value',snap=>{
-      if(snap.numChildren()>=3){
-        db.ref('messages').orderByChild('name').equalTo(user).once('value',ms=>{
-          ms.forEach(m=>m.ref.update({banned:true}));
+  db.ref(`reports/${user}/${username}`).set(true).then(()=>{
+    db.ref(`reports/${user}`).once('value').then(snap=>{
+      const count = snap.numChildren();
+      if(count >= 3){
+        // mark user's group messages as banned (so they won't show)
+        db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{
+          ms.forEach(m => m.ref.update({ banned: true }));
+          // push system notification into group
+          db.ref('messages').push({ name: 'System', text: `${user} has been removed from the group`, time: Date.now() });
         });
-        const notify={name:'System',text:user+' has been removed from the group',time:Date.now()};
-        db.ref('messages').push(notify);
       }
     });
     showToast("User reported successfully!");
+  }).catch(err => {
+    showToast("Report failed");
   });
 }
 
-// TYPING indicator
+/* ---------------------------
+  typing & online listeners
+  - group typing path: 'typing/group'
+  - private typing path: `typing/${privatePath}`
+  - online presence: 'status/{user}' boolean
+----------------------------*/
+function listenTypingForCurrent(){
+  // detach previous typing listener(s)
+  db.ref('typing').off();
+  if(inPrivate && privatePath){
+    const p = db.ref(`typing/${privatePath}`);
+    p.on('value', snap=>{
+      const val = snap.val() || {};
+      // exclude self
+      delete val[username];
+      const who = Object.keys(val);
+      statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+    });
+    currentListeners.push(p);
+  } else {
+    const g = db.ref('typing/group');
+    g.on('value', snap=>{
+      const val = snap.val() || {};
+      delete val[username];
+      const who = Object.keys(val);
+      statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+    });
+    currentListeners.push(g);
+  }
+}
+
 function listenTyping(){
-  db.ref('typing').on('value',snap=>{
-    const val = snap.val() || {};
-    delete val[username];
-    const usersTyping = Object.keys(val);
-    typingIndicator.textContent = usersTyping.length>0 ? usersTyping.join(', ') + ' is typing...' : '';
-  });
+  // call generic function (useful when switching contexts)
+  listenTypingForCurrent();
 }
 
-// ONLINE indicator
+/* online listener */
 function listenOnline(){
-  db.ref('status').on('value',snap=>{
+  db.ref('status').on('value', snap => {
     const val = snap.val() || {};
-    document.querySelectorAll('.message').forEach(msgDiv=>{
-      const nameEl = msgDiv.querySelector('.username');
-      const user = nameEl.textContent.replace('●','').trim();
-      const dot = nameEl.querySelector('.status-online');
-      if(val[user]) {
-        if(!dot){
-          const d = document.createElement('span'); d.className='status-online'; d.textContent='●';
-          nameEl.appendChild(d);
-        }
-      } else if(dot){ dot.remove(); }
+    const onlineUsers = Object.keys(val);
+    onlineCountEl.textContent = `${onlineUsers.length} online`;
+    // update small online dot inside rendered messages names
+    document.querySelectorAll('.msg-row').forEach(row=>{
+      const nameEl = row.querySelector('.meta');
+      if(!nameEl) return;
     });
   });
 }
+
+/* ---------------------------
+  start main chat
+----------------------------*/
+function startAs(name){
+  username = name;
+  // show UI
+  // set online presence and listeners
+  setOnline();
+  listenOnline();
+  listenGroup();
+  listenTyping();
+  // on page load scroll to bottom after messages render
+  setTimeout(()=> messagesEl.scrollTop = messagesEl.scrollHeight, 300);
+}
+
+/* ---------------------------
+  listenGroup wrapper already defined above
+----------------------------*/
+
+/* ---------------------------
+  Expose openPrivateChat for popup buttons
+----------------------------*/
+window.openPrivateChat = (other) => openPrivateChat(other);
+
+/* ---------------------------
+  On load: if user already exists, prefill login input (for convenience)
+----------------------------*/
+if(username){
+  nameInput.value = username;
+} else {
+  // show login overlay
+  loginWrap.style.display = 'flex';
+}
+
+/* ---------------------------
+  ensure typing & online cleanup on unload
+----------------------------*/
+window.addEventListener('beforeunload', ()=>{
+  if(username) {
+    db.ref(`status/${username}`).remove();
+    if(inPrivate && privatePath) db.ref(`typing/${privatePath}/${username}`).remove();
+    else db.ref(`typing/group/${username}`).remove();
+  }
+});
 </script>
 </body>
 </html>
