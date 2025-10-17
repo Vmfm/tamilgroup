@@ -1,34 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Chat Pro</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>WhatsApp-style Group Chat — with Private Chat</title>
 <style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial;display:flex;flex-direction:column;height:100vh}
-#app{max-width:900px;margin:auto;width:100%;display:flex;flex-direction:column;height:100vh}
-#topBar{background:#0b141a;padding:8px 12px;display:flex;align-items:center;gap:12px}
-#title{font-weight:600}
-#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
-.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-.avatar{width:36px;height:36px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;margin:0 8px;cursor:pointer;overflow:hidden;position:relative;border:2px solid transparent}
-.avatar img{width:100%;height:100%;object-fit:cover}
-.avatar.online{border-color:#25d366;box-shadow:0 0 0 0 rgba(37,211,102,.7);animation:pulse 1.5s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.7)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px}
-.msg-row.self .bubble{background:#005c4b}
-.time{font-size:11px;color:var(--muted);margin-top:4px;text-align:right}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;font-size:14px}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:opacity .25s,bottom .25s;z-index:999}
-#toast.show{opacity:1;bottom:40px}
-#loginWrap,#settingsWrap,#privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:1000}
-.card{background:#0b141a;padding:20px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
-.card input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
-.card button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+  body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+  #app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
+  #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
+  #title{font-weight:600}
+  #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+  .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+  .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+  .avatar{
+    width:40px;height:40px;border-radius:50%;background:#000;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;
+    border: 2px solid transparent; transition: border .18s ease-in-out;
+    overflow:hidden;
+  }
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .avatar.online{border-color:#25d366;box-shadow:0 0 0 0 rgba(37,211,102,0.7);animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,0.7)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+  .popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:120px}
+  .avatar:hover .popup-menu{display:flex}
+  .popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
+  .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+  .msg-row.self .bubble{background:#005c4b}
+  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+  #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+  #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
+  #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+  #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
+  #toast.show{opacity:1;bottom:40px}
+  /* login */
+  #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+  #loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
+  #loginCard input, #profilePhotoUrl{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
+  #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  /* profile popup */
+  #profilePopup, #privateModal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.6); z-index:1000; }
+  .card{background:#0b141a;padding:16px;border-radius:12px;min-width:300px; max-width:95%; color:#e9edef}
+  .row{display:flex;gap:8px;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+  #privateMessages{max-height:320px;overflow:auto;padding:8px;background:#071215;border-radius:8px;margin-bottom:8px}
+  .private-msg{padding:6px;border-radius:8px;margin:6px 0;background:#162027}
+  @media(max-width:640px){#app{height:100vh}}
 </style>
 </head>
 <body>
@@ -36,172 +55,519 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial;display:flex;
   <div id="topBar">
     <div id="title">Group Chat</div>
     <div style="flex:1"></div>
-    <button id="settingsBtn" style="background:none;border:0;color:#25d366;cursor:pointer;">⚙️</button>
+    <div id="onlineCount" style="color:var(--muted);font-size:13px"></div>
   </div>
-  <div id="messages"></div>
+
+  <div id="statusLine"></div>
+  <div id="messages" aria-live="polite"></div>
+
   <div id="inputBar">
-    <input id="messageInput" placeholder="Type a message"/>
+    <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
     <button id="sendBtn">✈️</button>
-  </div>
-</div>
-
-<div id="loginWrap">
-  <div class="card">
-    <div style="font-weight:700;">Login / Register</div>
-    <input id="nameInput" placeholder="Username"/>
-    <input id="passInput" placeholder="Password" type="password"/>
-    <label style="font-size:13px;">Profile Photo (optional)</label>
-    <input id="photoInput" type="file" accept="image/*"/>
-    <button id="loginBtn">Continue</button>
-  </div>
-</div>
-
-<div id="settingsWrap">
-  <div class="card">
-    <h3>Profile Settings</h3>
-    <div>
-      <label><input type="checkbox" id="privateChatToggle"/> Private Chat On</label>
-    </div>
-    <button id="closeSettings">Close</button>
-  </div>
-</div>
-
-<div id="privatePopup">
-  <div class="card" style="min-width:300px;">
-    <div id="privateTitle" style="font-weight:600;margin-bottom:6px;"></div>
-    <div id="privateMsgs" style="background:#071215;height:250px;overflow:auto;padding:8px;border-radius:8px;"></div>
-    <div style="display:flex;gap:8px;">
-      <input id="privateInput" placeholder="Type a message" style="flex:1;padding:8px;border-radius:8px;border:0;background:#162027;color:#fff;"/>
-      <button id="privateSend">Send</button>
-    </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- Login / Profile creation -->
+<div id="loginWrap" style="display:none">
+  <div id="loginCard">
+    <div style="font-weight:700;color:#fff">Enter your name</div>
+    <input id="nameInput" placeholder="Your name" />
+    <input id="profilePhotoUrl" placeholder="Photo URL (optional)" />
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="joinBtn">Join</button>
+    </div>
+    <div class="small">If username exists, your profile is loaded. Otherwise a new profile is created.</div>
+  </div>
+</div>
+
+<!-- Profile popup (shows when clicking avatar) -->
+<div id="profilePopup">
+  <div class="card">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div id="ppAvatar" class="avatar" style="width:64px;height:64px;font-size:24px"></div>
+      <div>
+        <div id="ppName" style="font-weight:700"></div>
+        <div id="ppOnline" class="small"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label class="small">Profile Photo URL</label>
+      <input id="ppPhotoInput" placeholder="https://..." />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ppPrivateToggle" /> Private Chat On</label>
+        <button id="ppSaveBtn">Save</button>
+        <button id="ppMessageBtn">Message Privately</button>
+      </div>
+      <div style="margin-top:8px" class="small">Private chat works only when both users enable it.</div>
+    </div>
+    <div style="text-align:right;margin-top:8px"><button id="ppClose">Close</button></div>
+  </div>
+</div>
+
+<!-- Private chat modal -->
+<div id="privateModal">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div><strong id="privateTitle"></strong><div id="privateSubtitle" class="small"></div></div>
+      <div><button id="privateClose">Close</button></div>
+    </div>
+
+    <div id="privateMessages"></div>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="privateInput" placeholder="Type a private message" style="flex:1;padding:8px;border-radius:8px;border:0;background:#162027;color:#fff" />
+      <button id="privateSend">Send</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-const firebaseConfig={apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",authDomain:"tamil-chat-2d54e.firebaseapp.com",databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",projectId:"tamil-chat-2d54e",storageBucket:"tamil-chat-2d54e.appspot.com",messagingSenderId:"804705969240",appId:"1:804705969240:web:658df281dd8360843c162d"};
+/* ---------- Firebase config (your project) ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+};
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-const loginWrap=document.getElementById('loginWrap');
-const settingsWrap=document.getElementById('settingsWrap');
-const nameInput=document.getElementById('nameInput');
-const passInput=document.getElementById('passInput');
-const photoInput=document.getElementById('photoInput');
-const loginBtn=document.getElementById('loginBtn');
-const privateChatToggle=document.getElementById('privateChatToggle');
-const closeSettings=document.getElementById('closeSettings');
-const settingsBtn=document.getElementById('settingsBtn');
-const messagesEl=document.getElementById('messages');
-const input=document.getElementById('messageInput');
-const sendBtn=document.getElementById('sendBtn');
-const toastEl=document.getElementById('toast');
+/* ---------- UI refs & state ---------- */
+const messagesEl = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const statusLine = document.getElementById('statusLine');
+const onlineCountEl = document.getElementById('onlineCount');
+const toastEl = document.getElementById('toast');
 
-let user={},privateWith='',photoData='';
+const loginWrap = document.getElementById('loginWrap');
+const nameInput = document.getElementById('nameInput');
+const joinBtn = document.getElementById('joinBtn');
+const profilePhotoUrl = document.getElementById('profilePhotoUrl');
 
-function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),2000);}
-function scrollDown(el){setTimeout(()=>el.scrollTop=el.scrollHeight,100);}
+const profilePopup = document.getElementById('profilePopup');
+const ppAvatar = document.getElementById('ppAvatar');
+const ppName = document.getElementById('ppName');
+const ppOnline = document.getElementById('ppOnline');
+const ppPhotoInput = document.getElementById('ppPhotoInput');
+const ppPrivateToggle = document.getElementById('ppPrivateToggle');
+const ppSaveBtn = document.getElementById('ppSaveBtn');
+const ppMessageBtn = document.getElementById('ppMessageBtn');
+const ppClose = document.getElementById('ppClose');
 
-photoInput.onchange=e=>{
-  const file=e.target.files[0];if(!file)return;
-  const r=new FileReader();r.onload=()=>photoData=r.result;r.readAsDataURL(file);
-};
+const privateModal = document.getElementById('privateModal');
+const privateTitle = document.getElementById('privateTitle');
+const privateSubtitle = document.getElementById('privateSubtitle');
+const privateMessages = document.getElementById('privateMessages');
+const privateInput = document.getElementById('privateInput');
+const privateSend = document.getElementById('privateSend');
+const privateClose = document.getElementById('privateClose');
 
-loginBtn.onclick=async()=>{
-  const name=nameInput.value.trim(),pass=passInput.value.trim();
-  if(!name||!pass)return toast("Enter username & password");
-  const snap=await db.ref("users/"+name).once("value");
+let username = localStorage.getItem('guestName') || '';
+let myProfile = null; // {name, photo, privateChat: true/false}
+let currentProfileViewed = null; // when profile popup open
+let currentPrivateWith = null; // username of private chat open
+let currentPrivateRef = null;
+let typingTimer = null;
+
+/* ---------- helpers ---------- */
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(()=> toastEl.classList.remove('show'), 1800);
+}
+function formatTime(ms){
+  const date = new Date(ms);
+  let h = date.getHours(), m = date.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM':'AM'; h = h%12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+function scrollToBottomSoon(el){
+  setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 70);
+}
+function chatId(a,b){ return [a,b].sort().join('_'); }
+
+/* ---------- login/join logic ---------- */
+function showLogin(){ loginWrap.style.display = 'flex'; }
+function hideLogin(){ loginWrap.style.display = 'none'; }
+
+async function joinAs(name, photoUrl){
+  if(!name) return showToast('Enter a name');
+  // check profile existence
+  const snap = await db.ref(`profiles/${name}`).once('value');
   if(snap.exists()){
-    const data=snap.val();
-    if(data.password!==pass)return toast("Wrong password");
-    user={name,...data};
-  }else{
-    await db.ref("users/"+name).set({password:pass,photo:photoData||"",privateChat:true});
-    user={name,password:pass,photo:photoData||"",privateChat:true};
+    myProfile = snap.val();
+    myProfile.name = name;
+    // if the user supplied a photo in join field, update it
+    if(photoUrl) {
+      myProfile.photo = photoUrl;
+      db.ref(`profiles/${name}/photo`).set(photoUrl).catch(()=>{});
+    }
+  } else {
+    // create profile
+    myProfile = { name, photo: photoUrl || '', privateChat: true, online: true };
+    await db.ref(`profiles/${name}`).set(myProfile);
   }
-  loginWrap.style.display="none";
-  setOnline();listenGroup();
-};
-
-settingsBtn.onclick=()=>{settingsWrap.style.display='flex';privateChatToggle.checked=user.privateChat;};
-closeSettings.onclick=()=>settingsWrap.style.display='none';
-privateChatToggle.onchange=()=>{user.privateChat=privateChatToggle.checked;db.ref('users/'+user.name+'/privateChat').set(user.privateChat);};
-
-function setOnline(){
-  db.ref('users/'+user.name+'/online').set(true);
-  db.ref('users/'+user.name+'/online').onDisconnect().remove();
+  // persist locally
+  username = name;
+  localStorage.setItem('guestName', name);
+  hideLogin();
+  setPresence();
+  startListeners();
 }
 
-function renderMessage(msg){
-  const self=msg.name===user.name;
-  const row=document.createElement('div');
-  row.className='msg-row'+(self?' self':'');
-  const avatar=document.createElement('div');
-  avatar.className='avatar';
-  avatar.innerHTML=msg.photo?`<img src="${msg.photo}"/>`:msg.name[0].toUpperCase();
-  avatar.onclick=()=>{if(!self)openPrivateChat(msg.name)};
-  const bubble=document.createElement('div');
-  bubble.className='bubble';bubble.textContent=msg.text;
-  row.append(avatar,bubble);
-  messagesEl.append(row);
-  scrollDown(messagesEl);
-}
-
-function listenGroup(){
-  db.ref('messages/group').on('child_added',snap=>{
-    const m=snap.val();
-    renderMessage(m);
+/* show login if no saved username */
+if(!username) {
+  showLogin();
+} else {
+  // try to load profile
+  db.ref(`profiles/${username}`).once('value').then(snap=>{
+    if(snap.exists()){
+      myProfile = snap.val();
+      myProfile.name = username;
+      setPresence();
+      startListeners();
+    } else {
+      // create default profile
+      myProfile = { name: username, photo:'', privateChat:true, online:true };
+      db.ref(`profiles/${username}`).set(myProfile).then(()=>{ setPresence(); startListeners(); });
+    }
   });
 }
 
-sendBtn.onclick=()=>{
-  const text=input.value.trim();if(!text)return;
-  db.ref('messages/group').push({name:user.name,text,photo:user.photo,time:Date.now()});
-  input.value='';
-};
+/* join button */
+joinBtn.addEventListener('click', ()=> joinAs(nameInput.value.trim(), profilePhotoUrl.value.trim()));
 
-// PRIVATE CHAT
-const privatePopup=document.getElementById('privatePopup');
-const privateTitle=document.getElementById('privateTitle');
-const privateMsgs=document.getElementById('privateMsgs');
-const privateInput=document.getElementById('privateInput');
-const privateSend=document.getElementById('privateSend');
+/* ---------- presence & typing ---------- */
+function setPresence(){
+  if(!username) return;
+  db.ref(`status/${username}`).set(true);
+  // also keep in profiles.online for easier profile popup check
+  db.ref(`profiles/${username}/online`).set(true);
+  db.ref(`profiles/${username}/online`).onDisconnect().remove();
+  db.ref(`status/${username}`).onDisconnect().remove();
+}
+function setTyping(isTyping){
+  if(!username) return;
+  db.ref(`typing/group/${username}`).set(isTyping?true:null);
+  if(isTyping){
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 2000);
+  }
+}
+messageInput.addEventListener('input', ()=> setTyping(true));
 
-function openPrivateChat(target){
-  db.ref('users/'+target).once('value').then(s=>{
-    const u=s.val();
-    if(!u.privateChat)return toast("User has disabled private chat");
-    privateWith=target;
-    privateTitle.textContent="Chat with "+target;
-    privateMsgs.innerHTML="";
-    privatePopup.style.display="flex";
-    const path=chatPath(user.name,target);
-    db.ref(path).off();
-    db.ref(path).on('child_added',snap=>{
-      const m=snap.val();
-      const div=document.createElement('div');
-      div.style.margin="4px 0";div.textContent=`${m.from}: ${m.text}`;
-      privateMsgs.append(div);scrollDown(privateMsgs);
+/* ---------- rendering messages ---------- */
+function renderMessage(data, key){
+  if(!data) return;
+  if(data.banned) return;
+  if(!data.name) return;
+  if(data.name && blockedByMe(data.name)) return; // optional block local filter
+  const isSelf = data.name === username;
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (isSelf ? ' self' : '');
+  if(key) row.dataset.key = key;
+
+  // avatar
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.dataset.username = data.name;
+  if(data.photo){
+    const img = document.createElement('img'); img.src = data.photo; avatar.appendChild(img);
+  } else {
+    avatar.textContent = data.name.charAt(0).toUpperCase();
+  }
+  avatar.addEventListener('click', (e)=> openProfile(data.name));
+  // popup menu (on avatar hover)
+  const popup = document.createElement('div'); popup.className='popup-menu';
+  if(data.name === username){
+    const del = document.createElement('button'); del.textContent='🗑️ Delete';
+    del.onclick = ()=> { if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    popup.appendChild(del);
+  } else {
+    const report = document.createElement('button'); report.textContent='🚩 Report';
+    report.onclick = ()=> reportUser(data.name);
+    popup.appendChild(report);
+
+    const blockBtn = document.createElement('button'); blockBtn.textContent='🚫 Block';
+    blockBtn.onclick = ()=> { localBlockUser(data.name); row.remove(); showToast(`Blocked ${data.name}`); };
+    popup.appendChild(blockBtn);
+  }
+  avatar.appendChild(popup);
+
+  // mark online if profiles shows online (we update in listenOnline)
+  // content
+  const content = document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; content.style.maxWidth='calc(100% - 64px)';
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = data.name;
+  const bubble = document.createElement('div'); bubble.className='bubble';
+  if(data.audio){
+    const au = document.createElement('audio'); au.controls = true; au.src = data.audio; bubble.appendChild(au);
+  } else {
+    bubble.textContent = data.text || '';
+  }
+  const t = document.createElement('div'); t.className='time'; t.textContent = formatTime(data.time || Date.now());
+  content.append(meta, bubble, t);
+
+  row.append(avatar, content);
+  messagesEl.appendChild(row);
+  scrollToBottomSoon(messagesEl);
+}
+
+/* ---------- group listeners ---------- */
+let currentGroupRef = null;
+function listenGroup(){
+  if(currentGroupRef) currentGroupRef.off();
+  currentGroupRef = db.ref('messages').limitToLast(50);
+  currentGroupRef.on('child_added', snap => {
+    const data = snap.val();
+    // if message includes name only, enrich with profile photo if present
+    db.ref(`profiles/${data.name}`).once('value').then(ps=>{
+      const prof = ps.val() || {};
+      if(prof.photo) data.photo = prof.photo;
+      renderMessage(data, snap.key);
+    });
+  });
+  currentGroupRef.on('child_removed', snap => {
+    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
+    if(el) el.remove();
+  });
+}
+
+/* ---------- report/block helpers ---------- */
+let localBlocked = {}; // local blocks
+function localBlockUser(u){ localBlocked[u] = true; db.ref(`blocks/${username}/${u}`).set(true).catch(()=>{}); }
+function blockedByMe(u){ return !!localBlocked[u]; }
+
+function reportUser(user){
+  if(user === username) { showToast("Can't report yourself"); return; }
+  db.ref(`reports/${user}/${username}`).set(true).then(()=> {
+    db.ref(`reports/${user}`).once('value').then(snap=>{
+      if(snap.numChildren() >= 3){
+        // mark user's group messages banned
+        db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{
+          ms.forEach(m=> m.ref.update({banned:true}));
+          db.ref('messages').push({name:'System',text:`${user} has been removed from the group`,time:Date.now()});
+        });
+      }
+    });
+    showToast("User reported successfully!");
+  }).catch(()=> showToast("Report failed"));
+}
+
+/* ---------- online & typing listeners ---------- */
+function listenTyping(){
+  db.ref('typing/group').on('value', snap=>{
+    const val = snap.val() || {}; delete val[username];
+    const who = Object.keys(val);
+    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+  });
+}
+function listenOnline(){
+  db.ref('profiles').on('value', snap => {
+    const profiles = snap.val() || {};
+    onlineCountEl.textContent = `${Object.keys(profiles).filter(k=>profiles[k] && profiles[k].online).length} online`;
+    // update avatars already rendered
+    document.querySelectorAll('.avatar').forEach(a=>{
+      const u = a.dataset.username;
+      if(!u) return;
+      const prof = profiles[u];
+      if(prof && prof.online) a.classList.add('online'); else a.classList.remove('online');
+      // if profile has photo and avatar image not set, update
+      if(prof && prof.photo && !a.querySelector('img')){
+        a.innerHTML = ''; const img = document.createElement('img'); img.src = prof.photo; a.appendChild(img);
+      }
     });
   });
 }
 
-function chatPath(a,b){
-  return 'messages/private/'+[a,b].sort().join('_');
+/* ---------- send group message ---------- */
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
+
+function sendMessage(){
+  const text = messageInput.value.trim(); if(!text) return;
+  db.ref('messages').push({ name: username, text, time: Date.now() });
+  messageInput.value = '';
+  // cleanup to last 50 messages
+  cleanupOldMessages(50);
 }
 
-privateSend.onclick=()=>{
-  const text=privateInput.value.trim();if(!text)return;
-  const path=chatPath(user.name,privateWith);
-  db.ref(path).push({from:user.name,to:privateWith,text,time:Date.now()});
-  privateInput.value='';
-};
-privatePopup.onclick=e=>{if(e.target===privatePopup)privatePopup.style.display='none';};
+/* ---------- cleanup old group messages ---------- */
+function cleanupOldMessages(limit){
+  db.ref('messages').once('value').then(snap=>{
+    const data = snap.val() || {};
+    const keys = Object.keys(data);
+    if(keys.length > limit){
+      const arr = keys.map(k => ({k, t: data[k].time || 0})).sort((a,b)=> a.t - b.t);
+      const remove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      remove.forEach(r => updates[`messages/${r.k}`] = null);
+      db.ref().update(updates).catch(()=>{});
+    }
+  });
+}
 
+/* ---------- profile popup & private chat toggle ---------- */
+function openProfile(targetName){
+  currentProfileViewed = targetName;
+  // load profile data
+  db.ref(`profiles/${targetName}`).once('value').then(snap=>{
+    const p = snap.val() || { photo:'', privateChat:true, online:false };
+    ppName.textContent = targetName;
+    ppPhotoInput.value = p.photo || '';
+    ppAvatar.innerHTML = '';
+    if(p.photo){
+      const img = document.createElement('img'); img.src = p.photo; ppAvatar.appendChild(img);
+    } else {
+      ppAvatar.textContent = targetName.charAt(0).toUpperCase();
+    }
+    ppPrivateToggle.checked = p.privateChat !== false; // default true
+    ppOnline.textContent = p.online ? 'Online' : 'Offline';
+    // show / hide message button depending on whether private chat allowed both ways
+    db.ref(`profiles/${username}`).once('value').then(meSnap=>{
+      const me = meSnap.val() || {};
+      // enable message button only if both enabled
+      if(p.privateChat !== false && me.privateChat !== false){
+        ppMessageBtn.disabled = false;
+      } else {
+        ppMessageBtn.disabled = true;
+      }
+      profilePopup.style.display = 'flex';
+    });
+  });
+}
+
+/* profile popup save */
+ppSaveBtn.addEventListener('click', ()=>{
+  const newPhoto = ppPhotoInput.value.trim();
+  const newPrivate = !!ppPrivateToggle.checked;
+  if(!currentProfileViewed) return;
+  db.ref(`profiles/${currentProfileViewed}`).update({ photo: newPhoto, privateChat: newPrivate }).then(()=> {
+    showToast('Profile updated');
+    profilePopup.style.display = 'none';
+  }).catch(()=> showToast('Failed to save'));
+});
+ppClose.addEventListener('click', ()=> profilePopup.style.display = 'none');
+
+/* Private message button opens private chat (if allowed) */
+ppMessageBtn.addEventListener('click', ()=>{
+  if(!currentProfileViewed) return;
+  // check both profiles for privateChat enabled
+  db.ref(`profiles/${currentProfileViewed}`).once('value').then(snap=>{
+    const other = snap.val() || {};
+    db.ref(`profiles/${username}`).once('value').then(msnap=>{
+      const me = msnap.val() || {};
+      if(other.privateChat === false) { showToast('User has private chat off'); return; }
+      if(me.privateChat === false) { showToast('You have private chat off (enable in profile)'); return; }
+      // open private chat
+      profilePopup.style.display = 'none';
+      openPrivateChat(currentProfileViewed);
+    });
+  });
+});
+
+/* ---------- PRIVATE CHAT modal ---------- */
+function openPrivateChat(target){
+  currentPrivateWith = target;
+  privateTitle.textContent = `Chat with ${target}`;
+  privateSubtitle.textContent = '';
+  privateMessages.innerHTML = '';
+  // show modal
+  privateModal.style.display = 'flex';
+  // listen private chat node
+  const id = chatId(username, target);
+  if(currentPrivateRef) currentPrivateRef.off();
+  currentPrivateRef = db.ref(`privateChats/${id}`).limitToLast(10);
+  currentPrivateRef.on('child_added', snap => {
+    const m = snap.val();
+    const d = document.createElement('div');
+    d.className = 'private-msg';
+    d.textContent = `${m.from}: ${m.text}`;
+    privateMessages.appendChild(d);
+    scrollToBottomSoon(privateMessages);
+  });
+  // subtitle: show if other is online & their privateChat status
+  db.ref(`profiles/${target}`).once('value').then(snap=>{
+    const p = snap.val() || {};
+    privateSubtitle.textContent = `${p.online ? 'Online' : 'Offline'} • Private Chat: ${p.privateChat!==false ? 'On' : 'Off'}`;
+  });
+}
+
+privateClose.addEventListener('click', ()=> {
+  privateModal.style.display = 'none';
+  if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
+  currentPrivateWith = null;
+});
+
+privateSend.addEventListener('click', () => {
+  sendPrivateMessage();
+});
+privateInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendPrivateMessage(); });
+
+function sendPrivateMessage(){
+  const text = privateInput.value.trim();
+  if(!text || !currentPrivateWith) return;
+  // ensure both users allow private chat
+  Promise.all([db.ref(`profiles/${username}`).once('value'), db.ref(`profiles/${currentPrivateWith}`).once('value')]).then(([a,b])=>{
+    const me = a.val() || {}; const other = b.val() || {};
+    if(me.privateChat === false) { showToast('Enable private chat in your profile'); return; }
+    if(other.privateChat === false) { showToast('User has private chat turned off'); return; }
+    const id = chatId(username, currentPrivateWith);
+    db.ref(`privateChats/${id}`).push({ from: username, to: currentPrivateWith, text, time: Date.now() }).then(()=>{
+      privateInput.value = '';
+      // cleanup private to last 10 messages
+      cleanupPrivate(id, 10);
+    });
+  });
+}
+
+// cleanup private messages to keep only 'limit' last messages
+function cleanupPrivate(id, limit){
+  db.ref(`privateChats/${id}`).once('value').then(snap=>{
+    const data = snap.val() || {};
+    const keys = Object.keys(data);
+    if(keys.length > limit){
+      const arr = keys.map(k => ({k, t: data[k].time || 0})).sort((a,b)=>a.t - b.t);
+      const toRemove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      toRemove.forEach(i => updates[`privateChats/${id}/${i.k}`] = null);
+      db.ref().update(updates).catch(()=>{});
+    }
+  });
+}
+
+/* ---------- start all listeners ---------- */
+function startListeners(){
+  listenGroup();
+  listenTyping();
+  listenOnline();
+  // if profile created/loaded, ensure profiles/{username} exists with defaults
+  if(myProfile){
+    db.ref(`profiles/${username}`).update({
+      name: username,
+      photo: myProfile.photo || '',
+      privateChat: myProfile.privateChat === false ? false : true,
+      online: true
+    }).catch(()=>{});
+  }
+}
+
+/* ---------- on unload cleanup ---------- */
+window.addEventListener('beforeunload', ()=>{
+  if(username){
+    db.ref(`profiles/${username}/online`).remove();
+    db.ref(`status/${username}`).remove();
+    db.ref(`typing/group/${username}`).remove();
+  }
+});
 </script>
 </body>
 </html>
