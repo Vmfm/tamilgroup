@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Group + Private Chat (with notifications toggle)</title>
+<title>WhatsApp-style Group + Private Chat (with notifications)</title>
 <style>
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
@@ -38,7 +38,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* private popup */
 #privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
 .card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
-#privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px;position:relative}
+#privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
 .private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%}
 .private-row.self{align-self:flex-end}
@@ -46,14 +46,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
 #privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
 #typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
-
-/* toggle switch */
-#settingsBtn{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--accent);cursor:pointer;font-size:18px;}
-#settingsPopup{position:absolute;top:36px;right:16px;background:#162027;color:#fff;padding:12px;border-radius:8px;display:none;z-index:1001;font-size:13px;}
-#settingsPopup label{display:flex;align-items:center;gap:8px;cursor:pointer;}
-#settingsPopup input[type="checkbox"]{opacity:0;width:0;height:0;}
-#notifSlider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;border-radius:20px;transition:.4s;}
-#notifCircle{position:absolute;top:2px;left:2px;width:16px;height:16px;background:white;border-radius:50%;transition:.4s;}
+@media(max-width:640px){ .card{height:92vh;padding:10px} }
 </style>
 </head>
 <body>
@@ -95,21 +88,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
       <div style="font-weight:700" id="privateTitle">Private Chat</div>
       <div style="flex:1"></div>
       <div id="privateOnline" style="color:var(--muted);font-size:13px"></div>
-      <button id="settingsBtn">⚙️</button>
-    </div>
-
-    <div id="settingsPopup">
-      <label>
-        Notifications
-        <div style="position:relative;width:40px;height:20px">
-          <input type="checkbox" id="notifToggle"/>
-          <span id="notifSlider"></span>
-          <span id="notifCircle"></span>
-        </div>
-      </label>
     </div>
 
     <div id="privateMessages"></div>
+
     <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
       <div id="typingPrivate" class="small"></div>
     </div>
@@ -123,12 +105,13 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <!-- ding sound -->
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
+<!-- tiny blank wav; you can replace with any short ding URL -->
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-// Firebase config
+/* Firebase config (your project) */
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -141,7 +124,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// DOM refs
+/* DOM refs */
 const messagesEl = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -165,64 +148,408 @@ const closePrivate = document.getElementById('closePrivate');
 const privateOnline = document.getElementById('privateOnline');
 const typingPrivate = document.getElementById('typingPrivate');
 
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsPopup = document.getElementById('settingsPopup');
-const notifToggle = document.getElementById('notifToggle');
-const notifSlider = document.getElementById('notifSlider');
-const notifCircle = document.getElementById('notifCircle');
-
 let username = localStorage.getItem('guestName') || '';
+let currentGroupRef = null;
 let currentPrivateRef = null;
 let privateChatWith = null;
 let typingTimer = null;
 let privateTypingTimer = null;
 
+/* Private listeners map to avoid duplicate listeners */
 const privateListeners = new Map();
 
-// helpers
+/* helpers */
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const ampm = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${ampm}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-// toggle settings popup
-settingsBtn.onclick = () => { settingsPopup.style.display = settingsPopup.style.display==='flex'?'none':'flex'; }
+/* login / start */
+function showLogin(){ loginWrap.style.display = 'flex'; }
+function hideLogin(){ loginWrap.style.display = 'none'; }
 
-// toggle visual
-function updateToggleVisual(state){
-  if(state){
-    notifSlider.style.background = '#25d366';
-    notifCircle.style.transform = 'translateX(20px)';
+async function startAs(name){
+  username = name;
+  localStorage.setItem('guestName', name);
+  hideLogin();
+  setPresence();
+  startGroupListeners();
+  listenTypingGroup();
+  listenPresence();
+  watchPrivateChats(); // start watching private chats for incoming notification/messages
+}
+
+if(!username) showLogin();
+else startAs(username);
+
+joinBtn.addEventListener('click', ()=> {
+  const n = nameInput.value.trim();
+  if(!n) return showToast('Enter a name');
+  startAs(n);
+});
+
+/* presence */
+function setPresence(){
+  if(!username) return;
+  db.ref(`status/${username}`).set(true);
+  db.ref(`status/${username}`).onDisconnect().remove();
+  db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
+  db.ref(`profiles/${username}/online`).onDisconnect().remove();
+}
+
+/* group messages */
+function startGroupListeners(){
+  if(currentGroupRef) currentGroupRef.off();
+  messagesEl.innerHTML = '';
+  currentGroupRef = db.ref('messages').limitToLast(50);
+  currentGroupRef.on('child_added', snap => {
+    const data = snap.val();
+    renderGroupMessage(data, snap.key);
+  });
+  currentGroupRef.on('child_removed', snap => {
+    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
+    if(el) el.remove();
+  });
+}
+
+function renderGroupMessage(data, key){
+  if(!data) return;
+  if(data.banned) return;
+  const isSelf = data.name === username;
+  const row = document.createElement('div'); row.className = 'msg-row' + (isSelf ? ' self' : '');
+  if(key) row.dataset.key = key;
+
+  const avatar = document.createElement('div'); avatar.className = 'avatar';
+  avatar.textContent = data.name.charAt(0).toUpperCase();
+  avatar.dataset.username = data.name;
+  avatar.addEventListener('click', ()=> { if(data.name !== username) openPrivatePopup(data.name); });
+
+  const popup = document.createElement('div'); popup.className = 'popup-menu';
+  if(isSelf){
+    const del = document.createElement('button'); del.textContent = '🗑️ Delete';
+    del.onclick = ()=> { if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    popup.appendChild(del);
   } else {
-    notifSlider.style.background = '#555';
-    notifCircle.style.transform = 'translateX(0)';
+    const report = document.createElement('button'); report.textContent = '🚩 Report';
+    report.onclick = ()=> reportUser(data.name);
+    popup.appendChild(report);
+    const block = document.createElement('button'); block.textContent = '🚫 Block';
+    block.onclick = ()=> { db.ref(`blocks/${username}/${data.name}`).set(true); row.remove(); showToast('Blocked'); };
+    popup.appendChild(block);
+  }
+  avatar.appendChild(popup);
+
+  const content = document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = data.name;
+  const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent = data.text || '';
+  const t = document.createElement('div'); t.className='time'; t.textContent = formatTime(data.time || Date.now());
+  content.append(meta, bubble, t);
+
+  row.append(avatar, content);
+  messagesEl.appendChild(row);
+  scrollToBottomSoon(messagesEl);
+}
+
+/* send group */
+sendBtn.addEventListener('click', sendGroupMessage);
+messageInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendGroupMessage(); });
+
+function sendGroupMessage(){
+  const text = messageInput.value.trim();
+  if(!text) return;
+  db.ref('messages').push({ name: username, text, time: Date.now() });
+  messageInput.value = '';
+  db.ref(`typing/group/${username}`).remove();
+  cleanupGroup(50);
+}
+
+/* cleanup group */
+function cleanupGroup(limit){
+  db.ref('messages').once('value').then(snap => {
+    const val = snap.val() || {};
+    const keys = Object.keys(val);
+    if(keys.length > limit){
+      const arr = keys.map(k => ({ k, t: val[k].time || 0 })).sort((a,b)=>a.t - b.t);
+      const remove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      remove.forEach(r => updates[`messages/${r.k}`] = null);
+      db.ref().update(updates).catch(()=>{});
+    }
+  });
+}
+
+/* typing indicator (group) */
+function listenTypingGroup(){
+  db.ref('typing/group').on('value', snap => {
+    const obj = snap.val() || {}; delete obj[username];
+    const who = Object.keys(obj);
+    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+  });
+
+  messageInput.addEventListener('input', ()=> {
+    db.ref(`typing/group/${username}`).set(true);
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
+  });
+}
+
+/* presence */
+function listenPresence(){
+  db.ref('status').on('value', snap => {
+    const val = snap.val() || {};
+    onlineCountEl.textContent = `${Object.keys(val).length} online`;
+    document.querySelectorAll('.avatar').forEach(a => {
+      const u = a.dataset.username;
+      if(!u) return;
+      if(val[u]) a.classList.add('online'); else a.classList.remove('online');
+    });
+  });
+}
+
+/* report user */
+function reportUser(user){
+  if(user === username) { showToast("Can't report yourself"); return; }
+  db.ref(`reports/${user}/${username}`).set(true).then(()=>{
+    db.ref(`reports/${user}`).once('value').then(snap=>{
+      if(snap.numChildren() >= 3){
+        db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{
+          ms.forEach(m => m.ref.update({ banned: true }));
+          db.ref('messages').push({ name: 'System', text: `${user} has been removed from the group`, time: Date.now() });
+        });
+      }
+    });
+    showToast('User reported successfully!');
+  }).catch(()=> showToast('Report failed'));
+}
+
+/* ---------- PRIVATE CHAT & NOTIFICATION WATCHER ---------- */
+
+/* Watch the privateChats node for any chat that includes this username.
+   For each chat (key like A_B) we attach a child_added listener (limitToLast(1)).
+   When a message arrives:
+    - if it's from me, ignore notification
+    - if private popup for that chat is open, render directly
+    - otherwise show a temporary notification with ding
+*/
+function watchPrivateChats(){
+  const root = db.ref('privateChats');
+
+  // For any existing or new chat path:
+  root.on('child_added', chatSnap => {
+    const chatKey = chatSnap.key; // "Alice_Bob"
+    if(!chatKey.includes(username)) return;
+    attachPrivateListener(chatKey);
+  });
+
+  // Also handle chats that may already be present (child_added will fire for existing too),
+  // but to be safe also iterate once:
+  root.once('value').then(all=>{
+    all.forEach(chatSnap=>{
+      const chatKey = chatSnap.key;
+      if(chatKey.includes(username)){
+        if(!privateListeners.has(chatKey)) attachPrivateListener(chatKey);
+      }
+    });
+  });
+}
+
+function attachPrivateListener(chatKey){
+  if(privateListeners.has(chatKey)) return;
+  const chatRef = db.ref(`privateChats/${chatKey}`);
+  // listen to new messages (limitToLast 1 ensures we get newly added ones)
+  const q = chatRef.limitToLast(1);
+  const handler = q.on('child_added', msgSnap => {
+    const msg = msgSnap.val();
+    if(!msg) return;
+    if(msg.name === username) return; // our own outgoing msg — no notification
+    // determine other participant
+    const parts = chatKey.split('_');
+    const other = parts[0] === username ? parts[1] : parts[0];
+    // if private popup is open with this user, render incoming directly there
+    if(privateChatWith === other && privatePopup.style.display === 'flex'){
+      renderPrivateMessage(msg); // show inside open popup
+    } else {
+      // show temporary top notification and play ding
+      showPrivateNotification(other, msg.name);
+    }
+  });
+  privateListeners.set(chatKey, { ref: q, handler });
+}
+
+/* show notification (auto-hide after few seconds). Clicking opens the private popup */
+let notifTimeout = null;
+function showPrivateNotification(otherUser, fromName){
+  notifBar.textContent = `New private message from ${fromName}`;
+  notifBar.style.display = 'inline-block';
+  // click opens private chat
+  notifBar.onclick = () => {
+    notifBar.style.display = 'none';
+    if(notifTimeout){ clearTimeout(notifTimeout); notifTimeout = null; }
+    openPrivatePopup(otherUser);
+  };
+  // play ding
+  try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){}
+  // auto-hide after 4 seconds
+  if(notifTimeout) clearTimeout(notifTimeout);
+  notifTimeout = setTimeout(()=> {
+    notifBar.style.display = 'none';
+    notifTimeout = null;
+  }, 4000);
+}
+
+/* open private popup and attach listener for that chat */
+function openPrivatePopup(otherUser){
+  privateChatWith = otherUser;
+  privateTitle.textContent = `Private Chat with ${otherUser}`;
+  privateMessages.innerHTML = '';
+  typingPrivate.textContent = '';
+  privatePopup.style.display = 'flex';
+
+  // show online status
+  db.ref(`profiles/${otherUser}/online`).once('value').then(snap => {
+    privateOnline.textContent = snap.exists() && snap.val() ? 'Online' : 'Offline';
+  });
+
+  // attach listener for this chat (it will already exist in privateListeners map)
+  const key = chatId(username, otherUser);
+  if(privateListeners.has(key)){
+    // already listening; but ensure we render last 10 (we'll also listen on child_added already)
+    if(currentPrivateRef) currentPrivateRef.off();
+    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
+    currentPrivateRef.on('child_added', snap => {
+      const m = snap.val();
+      renderPrivateMessage(m);
+    });
+  } else {
+    // attach now
+    attachPrivateListener(key);
+    if(currentPrivateRef) currentPrivateRef.off();
+    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
+    currentPrivateRef.on('child_added', snap => {
+      const m = snap.val();
+      renderPrivateMessage(m);
+    });
   }
 }
 
-// load saved per-chat setting
-function loadPrivateSettings(chatUser){
-  const key = `notif_${chatId(username, chatUser)}`;
-  const saved = localStorage.getItem(key);
-  const state = saved === null ? true : saved === 'true';
-  notifToggle.checked = state;
-  updateToggleVisual(state);
+/* render private message in open popup */
+function renderPrivateMessage(m){
+  if(!m) return;
+  const row = document.createElement('div');
+  row.className = 'private-row ' + (m.name === username ? 'self' : '');
+  const b = document.createElement('div'); b.className='private-bubble'; b.textContent = m.text;
+  const t = document.createElement('div'); t.className='time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.textContent = formatTime(m.time || Date.now());
+  row.append(b, t);
+  privateMessages.appendChild(row);
+  scrollToBottomSoon(privateMessages);
 }
 
-// save toggle change
-notifToggle.addEventListener('change', ()=>{
-  if(privateChatWith){
-    const key = `notif_${chatId(username, privateChatWith)}`;
-    const state = notifToggle.checked;
-    localStorage.setItem(key, state);
-    updateToggleVisual(state);
+/* send private message */
+privateSend.addEventListener('click', sendPrivate);
+privateInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendPrivate(); });
+
+function sendPrivate(){
+  const text = privateInput.value.trim();
+  if(!text || !privateChatWith) return;
+  const path = `privateChats/${chatId(username, privateChatWith)}`;
+  db.ref(path).push({ name: username, text, time: Date.now() }).then(()=>{
+    privateInput.value = '';
+    db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
+    cleanupPrivate(path, 10);
+  }).catch(()=> showToast('Failed to send'));
+}
+
+/* private typing indicator */
+privateInput.addEventListener('input', ()=>{
+  if(!privateChatWith) return;
+  const path = `typing/private/${chatId(username, privateChatWith)}`;
+  db.ref(`${path}/${username}`).set(true);
+  clearTimeout(privateTypingTimer);
+  privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
+});
+
+/* close private */
+closePrivate.addEventListener('click', ()=>{
+  privatePopup.style.display = 'none';
+  if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
+  if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
+  privateChatWith = null;
+});
+
+/* cleanup private messages to last N */
+function cleanupPrivate(path, limit){
+  db.ref(path).once('value').then(snap => {
+    const val = snap.val() || {};
+    const keys = Object.keys(val);
+    if(keys.length > limit){
+      const arr = keys.map(k => ({ k, t: val[k].time || 0 })).sort((a,b)=>a.t - b.t);
+      const remove = arr.slice(0, arr.length - limit);
+      const updates = {};
+      remove.forEach(r => updates[`${r.k}`] = null);
+      db.ref(path).update(updates).catch(()=>{});
+    }
+  });
+}
+
+/* utility chatId used elsewhere */
+function chatId(a,b){ return [a,b].sort().join('_'); }
+
+/* start watchers */
+function listenPresence(){ /* presence already set & listened inside startGroupListeners below */ }
+function watchInitial(){
+  // ensure profiles node exists for this user
+  if(username){
+    db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
+  }
+  startGroupListeners();
+  listenTypingGroup();
+  listenPresence();
+  watchPrivateChats();
+}
+
+/* initial start if already logged in */
+if(username){
+  hideLogin();
+  setPresence();
+  watchInitial();
+}
+
+// basic presence & typing listeners used earlier
+function listenPresence(){
+  db.ref('status').on('value', snap => {
+    const val = snap.val() || {};
+    onlineCountEl.textContent = `${Object.keys(val).length} online`;
+    document.querySelectorAll('.avatar').forEach(a => {
+      const u = a.dataset.username;
+      if(!u) return;
+      if(val[u]) a.classList.add('online'); else a.classList.remove('online');
+    });
+  });
+}
+function listenTypingGroup(){
+  db.ref('typing/group').on('value', snap => {
+    const obj = snap.val() || {}; delete obj[username];
+    const who = Object.keys(obj);
+    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+  });
+}
+
+/* message input typing for group */
+messageInput.addEventListener('input', ()=>{
+  db.ref(`typing/group/${username}`).set(true);
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
+});
+
+/* unload cleanup */
+window.addEventListener('beforeunload', ()=>{
+  if(username){
+    db.ref(`status/${username}`).remove();
+    db.ref(`profiles/${username}/online`).remove();
+    db.ref(`typing/group/${username}`).remove();
+    if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
   }
 });
-notifSlider.onclick = () => { notifToggle.checked = !notifToggle.checked; notifToggle.dispatchEvent(new Event('change')); };
-notifCircle.onclick = () => { notifToggle.checked = !notifToggle.checked; notifToggle.dispatchEvent(new Event('change')); };
-
-// rest of your private message, group chat, presence, typing, send, render logic goes here...
-// You can reuse your existing code and add calls to loadPrivateSettings(privateChatWith) when opening a private chat.
-// Also, when showing notification, check localStorage key `notif_${chatId(username, otherUser)}` to decide whether to play ding or show toast.
 </script>
 </body>
 </html>
