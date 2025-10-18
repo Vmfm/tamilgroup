@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Group + Private Chat (with notifications)</title>
+<title>WhatsApp-style Group + Private Chat (with persistent notifications)</title>
 <style>
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
@@ -69,7 +69,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="toast"></div>
 
-<div id="loginWrap" style="display:none">
+<div id="loginWrap">
   <div id="loginCard">
     <div style="font-weight:700;color:#fff">Enter your name</div>
     <input id="nameInput" placeholder="Your name" />
@@ -105,13 +105,11 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <!-- ding sound -->
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
-<!-- tiny blank wav; you can replace with any short ding URL -->
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* Firebase config (your project) */
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -154,11 +152,8 @@ let currentPrivateRef = null;
 let privateChatWith = null;
 let typingTimer = null;
 let privateTypingTimer = null;
-
-/* Private listeners map to avoid duplicate listeners */
 const privateListeners = new Map();
 
-/* helpers */
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const ampm = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${ampm}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
@@ -176,7 +171,7 @@ async function startAs(name){
   startGroupListeners();
   listenTypingGroup();
   listenPresence();
-  watchPrivateChats(); // start watching private chats for incoming notification/messages
+  watchPrivateChats();
 }
 
 if(!username) showLogin();
@@ -202,10 +197,7 @@ function startGroupListeners(){
   if(currentGroupRef) currentGroupRef.off();
   messagesEl.innerHTML = '';
   currentGroupRef = db.ref('messages').limitToLast(50);
-  currentGroupRef.on('child_added', snap => {
-    const data = snap.val();
-    renderGroupMessage(data, snap.key);
-  });
+  currentGroupRef.on('child_added', snap => renderGroupMessage(snap.val(), snap.key));
   currentGroupRef.on('child_removed', snap => {
     const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
     if(el) el.remove();
@@ -213,341 +205,134 @@ function startGroupListeners(){
 }
 
 function renderGroupMessage(data, key){
-  if(!data) return;
-  if(data.banned) return;
-  const isSelf = data.name === username;
-  const row = document.createElement('div'); row.className = 'msg-row' + (isSelf ? ' self' : '');
-  if(key) row.dataset.key = key;
-
-  const avatar = document.createElement('div'); avatar.className = 'avatar';
-  avatar.textContent = data.name.charAt(0).toUpperCase();
-  avatar.dataset.username = data.name;
-  avatar.addEventListener('click', ()=> { if(data.name !== username) openPrivatePopup(data.name); });
-
-  const popup = document.createElement('div'); popup.className = 'popup-menu';
+  if(!data || data.banned) return;
+  const isSelf = data.name===username;
+  const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); if(key) row.dataset.key=key;
+  const avatar=document.createElement('div'); avatar.className='avatar'; avatar.textContent=data.name.charAt(0).toUpperCase(); avatar.dataset.username=data.name;
+  avatar.addEventListener('click', ()=>{ if(data.name!==username) openPrivatePopup(data.name); });
+  const popup=document.createElement('div'); popup.className='popup-menu';
   if(isSelf){
-    const del = document.createElement('button'); del.textContent = '🗑️ Delete';
-    del.onclick = ()=> { if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
+    const del=document.createElement('button'); del.textContent='🗑️ Delete';
+    del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); };
     popup.appendChild(del);
   } else {
-    const report = document.createElement('button'); report.textContent = '🚩 Report';
-    report.onclick = ()=> reportUser(data.name);
-    popup.appendChild(report);
-    const block = document.createElement('button'); block.textContent = '🚫 Block';
-    block.onclick = ()=> { db.ref(`blocks/${username}/${data.name}`).set(true); row.remove(); showToast('Blocked'); };
-    popup.appendChild(block);
+    const report=document.createElement('button'); report.textContent='🚩 Report'; report.onclick=()=>reportUser(data.name); popup.appendChild(report);
+    const block=document.createElement('button'); block.textContent='🚫 Block'; block.onclick=()=>{ db.ref(`blocks/${username}/${data.name}`).set(true); row.remove(); showToast('Blocked'); }; popup.appendChild(block);
   }
   avatar.appendChild(popup);
-
-  const content = document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
-  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = data.name;
-  const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent = data.text || '';
-  const t = document.createElement('div'); t.className='time'; t.textContent = formatTime(data.time || Date.now());
-  content.append(meta, bubble, t);
-
-  row.append(avatar, content);
-  messagesEl.appendChild(row);
-  scrollToBottomSoon(messagesEl);
+  const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
+  const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name;
+  const bubble=document.createElement('div'); bubble.className='bubble'; bubble.textContent=data.text||'';
+  const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time||Date.now());
+  content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
 }
 
 /* send group */
 sendBtn.addEventListener('click', sendGroupMessage);
-messageInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendGroupMessage(); });
+messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter') sendGroupMessage(); });
 
 function sendGroupMessage(){
-  const text = messageInput.value.trim();
-  if(!text) return;
-  db.ref('messages').push({ name: username, text, time: Date.now() });
-  messageInput.value = '';
-  db.ref(`typing/group/${username}`).remove();
-  cleanupGroup(50);
+  const text=messageInput.value.trim(); if(!text) return;
+  db.ref('messages').push({ name: username, text, time: Date.now() }); messageInput.value='';
+  db.ref(`typing/group/${username}`).remove(); cleanupGroup(50);
 }
+function cleanupGroup(limit){ db.ref('messages').once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`messages/${r.k}`]=null); db.ref().update(updates).catch(()=>{}); } }); }
 
-/* cleanup group */
-function cleanupGroup(limit){
-  db.ref('messages').once('value').then(snap => {
-    const val = snap.val() || {};
-    const keys = Object.keys(val);
-    if(keys.length > limit){
-      const arr = keys.map(k => ({ k, t: val[k].time || 0 })).sort((a,b)=>a.t - b.t);
-      const remove = arr.slice(0, arr.length - limit);
-      const updates = {};
-      remove.forEach(r => updates[`messages/${r.k}`] = null);
-      db.ref().update(updates).catch(()=>{});
-    }
-  });
-}
-
-/* typing indicator (group) */
+/* typing indicator */
 function listenTypingGroup(){
-  db.ref('typing/group').on('value', snap => {
-    const obj = snap.val() || {}; delete obj[username];
-    const who = Object.keys(obj);
-    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-  });
-
-  messageInput.addEventListener('input', ()=> {
-    db.ref(`typing/group/${username}`).set(true);
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
-  });
+  db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; });
+  messageInput.addEventListener('input', ()=>{ db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(()=>db.ref(`typing/group/${username}`).remove(),1500); });
 }
 
 /* presence */
 function listenPresence(){
-  db.ref('status').on('value', snap => {
-    const val = snap.val() || {};
-    onlineCountEl.textContent = `${Object.keys(val).length} online`;
-    document.querySelectorAll('.avatar').forEach(a => {
-      const u = a.dataset.username;
-      if(!u) return;
-      if(val[u]) a.classList.add('online'); else a.classList.remove('online');
-    });
-  });
+  db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; if(!u) return; val[u]?a.classList.add('online'):a.classList.remove('online'); }); });
 }
 
 /* report user */
-function reportUser(user){
-  if(user === username) { showToast("Can't report yourself"); return; }
-  db.ref(`reports/${user}/${username}`).set(true).then(()=>{
-    db.ref(`reports/${user}`).once('value').then(snap=>{
-      if(snap.numChildren() >= 3){
-        db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{
-          ms.forEach(m => m.ref.update({ banned: true }));
-          db.ref('messages').push({ name: 'System', text: `${user} has been removed from the group`, time: Date.now() });
-        });
-      }
-    });
-    showToast('User reported successfully!');
-  }).catch(()=> showToast('Report failed'));
-}
+function reportUser(user){ if(user===username){ showToast("Can't report yourself"); return; } db.ref(`reports/${user}/${username}`).set(true).then(()=>{ db.ref(`reports/${user}`).once('value').then(snap=>{ if(snap.numChildren()>=3){ db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{ ms.forEach(m=>m.ref.update({banned:true})); db.ref('messages').push({name:'System',text:`${user} has been removed from the group`,time:Date.now()}); }); } }); showToast('User reported successfully!'); }).catch(()=>showToast('Report failed')); }
 
-/* ---------- PRIVATE CHAT & NOTIFICATION WATCHER ---------- */
-
-/* Watch the privateChats node for any chat that includes this username.
-   For each chat (key like A_B) we attach a child_added listener (limitToLast(1)).
-   When a message arrives:
-    - if it's from me, ignore notification
-    - if private popup for that chat is open, render directly
-    - otherwise show a temporary notification with ding
-*/
+/* ---------- PRIVATE CHAT ---------- */
 function watchPrivateChats(){
-  const root = db.ref('privateChats');
-
-  // For any existing or new chat path:
-  root.on('child_added', chatSnap => {
-    const chatKey = chatSnap.key; // "Alice_Bob"
-    if(!chatKey.includes(username)) return;
-    attachPrivateListener(chatKey);
-  });
-
-  // Also handle chats that may already be present (child_added will fire for existing too),
-  // but to be safe also iterate once:
-  root.once('value').then(all=>{
-    all.forEach(chatSnap=>{
-      const chatKey = chatSnap.key;
-      if(chatKey.includes(username)){
-        if(!privateListeners.has(chatKey)) attachPrivateListener(chatKey);
-      }
-    });
-  });
+  const root=db.ref('privateChats');
+  root.on('child_added', snap=>{ const key=snap.key; if(key.includes(username)) attachPrivateListener(key); });
+  root.once('value').then(all=>{ all.forEach(snap=>{ const key=snap.key; if(key.includes(username)) attachPrivateListener(key); }); });
 }
 
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
-  const chatRef = db.ref(`privateChats/${chatKey}`);
-  // listen to new messages (limitToLast 1 ensures we get newly added ones)
-  const q = chatRef.limitToLast(1);
-  const handler = q.on('child_added', msgSnap => {
-    const msg = msgSnap.val();
-    if(!msg) return;
-    if(msg.name === username) return; // our own outgoing msg — no notification
-    // determine other participant
-    const parts = chatKey.split('_');
-    const other = parts[0] === username ? parts[1] : parts[0];
-    // if private popup is open with this user, render incoming directly there
-    if(privateChatWith === other && privatePopup.style.display === 'flex'){
-      renderPrivateMessage(msg); // show inside open popup
-    } else {
-      // show temporary top notification and play ding
-      showPrivateNotification(other, msg.name);
-    }
+  const chatRef=db.ref(`privateChats/${chatKey}`).limitToLast(1);
+  const handler=chatRef.on('child_added', snap=>{
+    const msg=snap.val(); if(!msg) return; if(msg.name===username) return;
+    const parts=chatKey.split('_'); const other=parts[0]===username?parts[1]:parts[0];
+    if(privateChatWith===other && privatePopup.style.display==='flex') renderPrivateMessage(msg);
+    else showPrivateNotification(other,msg.name);
   });
-  privateListeners.set(chatKey, { ref: q, handler });
+  privateListeners.set(chatKey,{ref:chatRef,handler});
 }
 
-/* show notification (auto-hide after few seconds). Clicking opens the private popup */
-let notifTimeout = null;
 function showPrivateNotification(otherUser, fromName){
-  notifBar.textContent = `New private message from ${fromName}`;
-  notifBar.style.display = 'inline-block';
-  // click opens private chat
-  notifBar.onclick = () => {
-    notifBar.style.display = 'none';
-    if(notifTimeout){ clearTimeout(notifTimeout); notifTimeout = null; }
-    openPrivatePopup(otherUser);
-  };
-  // play ding
-  try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){}
-  // auto-hide after 4 seconds
-  if(notifTimeout) clearTimeout(notifTimeout);
-  notifTimeout = setTimeout(()=> {
-    notifBar.style.display = 'none';
-    notifTimeout = null;
-  }, 4000);
+  notifBar.textContent=`New private message from ${fromName}`;
+  notifBar.style.display='inline-block';
+  notifBar.onclick=()=>{ notifBar.style.display='none'; openPrivatePopup(otherUser); };
+  try{ dingAudio.currentTime=0; dingAudio.play().catch(()=>{}); } catch(e){}
 }
 
-/* open private popup and attach listener for that chat */
 function openPrivatePopup(otherUser){
-  privateChatWith = otherUser;
-  privateTitle.textContent = `Private Chat with ${otherUser}`;
-  privateMessages.innerHTML = '';
-  typingPrivate.textContent = '';
-  privatePopup.style.display = 'flex';
+  privateChatWith=otherUser;
+  privateTitle.textContent=`Private Chat with ${otherUser}`;
+  privateMessages.innerHTML=''; typingPrivate.textContent=''; privatePopup.style.display='flex';
 
-  // show online status
-  db.ref(`profiles/${otherUser}/online`).once('value').then(snap => {
-    privateOnline.textContent = snap.exists() && snap.val() ? 'Online' : 'Offline';
-  });
+  db.ref(`profiles/${otherUser}/online`).once('value').then(snap=>{ privateOnline.textContent=(snap.val()? 'Online':'Offline'); });
 
-  // attach listener for this chat (it will already exist in privateListeners map)
-  const key = chatId(username, otherUser);
+  const key=chatId(username,otherUser);
   if(privateListeners.has(key)){
-    // already listening; but ensure we render last 10 (we'll also listen on child_added already)
     if(currentPrivateRef) currentPrivateRef.off();
-    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
-    currentPrivateRef.on('child_added', snap => {
-      const m = snap.val();
-      renderPrivateMessage(m);
-    });
-  } else {
-    // attach now
-    attachPrivateListener(key);
-    if(currentPrivateRef) currentPrivateRef.off();
-    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
-    currentPrivateRef.on('child_added', snap => {
-      const m = snap.val();
-      renderPrivateMessage(m);
-    });
-  }
+    currentPrivateRef=db.ref(`privateChats/${key}`).limitToLast(10);
+    currentPrivateRef.on('child_added', snap=>renderPrivateMessage(snap.val()));
+  } else attachPrivateListener(key);
 }
 
-/* render private message in open popup */
 function renderPrivateMessage(m){
   if(!m) return;
-  const row = document.createElement('div');
-  row.className = 'private-row ' + (m.name === username ? 'self' : '');
-  const b = document.createElement('div'); b.className='private-bubble'; b.textContent = m.text;
-  const t = document.createElement('div'); t.className='time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.textContent = formatTime(m.time || Date.now());
-  row.append(b, t);
-  privateMessages.appendChild(row);
-  scrollToBottomSoon(privateMessages);
+  const row=document.createElement('div'); row.className='private-row '+(m.name===username?'self':'');
+  const b=document.createElement('div'); b.className='private-bubble'; b.textContent=m.text;
+  const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(m.time||Date.now());
+  row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
-/* send private message */
 privateSend.addEventListener('click', sendPrivate);
-privateInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendPrivate(); });
+privateInput.addEventListener('keypress', e=>{ if(e.key==='Enter') sendPrivate(); });
 
 function sendPrivate(){
-  const text = privateInput.value.trim();
-  if(!text || !privateChatWith) return;
-  const path = `privateChats/${chatId(username, privateChatWith)}`;
-  db.ref(path).push({ name: username, text, time: Date.now() }).then(()=>{
-    privateInput.value = '';
-    db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
-    cleanupPrivate(path, 10);
-  }).catch(()=> showToast('Failed to send'));
+  const text=privateInput.value.trim(); if(!text||!privateChatWith) return;
+  const path=`privateChats/${chatId(username,privateChatWith)}`;
+  db.ref(path).push({ name:username, text, time:Date.now() }).then(()=>{ privateInput.value=''; db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{}); cleanupPrivate(path,10); }).catch(()=>showToast('Failed to send'));
 }
 
-/* private typing indicator */
 privateInput.addEventListener('input', ()=>{
   if(!privateChatWith) return;
-  const path = `typing/private/${chatId(username, privateChatWith)}`;
+  const path=`typing/private/${chatId(username,privateChatWith)}`;
   db.ref(`${path}/${username}`).set(true);
   clearTimeout(privateTypingTimer);
-  privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
+  privateTypingTimer=setTimeout(()=> db.ref(`${path}/${username}`).remove(),1500);
 });
 
-/* close private */
 closePrivate.addEventListener('click', ()=>{
-  privatePopup.style.display = 'none';
-  if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
-  if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
-  privateChatWith = null;
+  privatePopup.style.display='none';
+  if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef=null; }
+  if(privateChatWith) db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
+  privateChatWith=null;
 });
 
-/* cleanup private messages to last N */
-function cleanupPrivate(path, limit){
-  db.ref(path).once('value').then(snap => {
-    const val = snap.val() || {};
-    const keys = Object.keys(val);
-    if(keys.length > limit){
-      const arr = keys.map(k => ({ k, t: val[k].time || 0 })).sort((a,b)=>a.t - b.t);
-      const remove = arr.slice(0, arr.length - limit);
-      const updates = {};
-      remove.forEach(r => updates[`${r.k}`] = null);
-      db.ref(path).update(updates).catch(()=>{});
-    }
-  });
-}
+function cleanupPrivate(path,limit){ db.ref(path).once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
 
-/* utility chatId used elsewhere */
-function chatId(a,b){ return [a,b].sort().join('_'); }
-
-/* start watchers */
-function listenPresence(){ /* presence already set & listened inside startGroupListeners below */ }
-function watchInitial(){
-  // ensure profiles node exists for this user
-  if(username){
-    db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
-  }
-  startGroupListeners();
-  listenTypingGroup();
-  listenPresence();
-  watchPrivateChats();
-}
-
-/* initial start if already logged in */
-if(username){
-  hideLogin();
-  setPresence();
-  watchInitial();
-}
-
-// basic presence & typing listeners used earlier
-function listenPresence(){
-  db.ref('status').on('value', snap => {
-    const val = snap.val() || {};
-    onlineCountEl.textContent = `${Object.keys(val).length} online`;
-    document.querySelectorAll('.avatar').forEach(a => {
-      const u = a.dataset.username;
-      if(!u) return;
-      if(val[u]) a.classList.add('online'); else a.classList.remove('online');
-    });
-  });
-}
-function listenTypingGroup(){
-  db.ref('typing/group').on('value', snap => {
-    const obj = snap.val() || {}; delete obj[username];
-    const who = Object.keys(obj);
-    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-  });
-}
-
-/* message input typing for group */
-messageInput.addEventListener('input', ()=>{
-  db.ref(`typing/group/${username}`).set(true);
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
-});
-
-/* unload cleanup */
 window.addEventListener('beforeunload', ()=>{
   if(username){
     db.ref(`status/${username}`).remove();
     db.ref(`profiles/${username}/online`).remove();
     db.ref(`typing/group/${username}`).remove();
-    if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
+    if(privateChatWith) db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
   }
 });
 </script>
