@@ -1,54 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>WhatsApp-style Group + Private Chat</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp-style Group + Private Chat (with notifications)</title>
 <style>
-  :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
-  body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-  #app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
-  #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
-  #title{font-weight:600}
-  #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-  .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
-  .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-  .avatar{
-    width:36px;height:36px;border-radius:50%;background:#000;color:#fff;
-    display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;
-    border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden;
-  }
-  .avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-  .popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
-  .avatar:hover .popup-menu{display:flex}
-  .popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
-  .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
-  .msg-row.self .bubble{background:#005c4b}
-  .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-  .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
-  #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-  #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
-  #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-  #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
-  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
-  #toast.show{opacity:1;bottom:40px}
-  #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
-  #loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
-  #loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
-  #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-  /* private popup */
-  #privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
-  .card{background:#0b141a;padding:12px;border-radius:12px;max-width:640px;width:96%;display:flex;flex-direction:column;max-height:92%}
-  #privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-  #privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-  .private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%}
-  .private-row.self{align-self:flex-end}
-  #privateInputBar{display:flex;gap:8px;margin-top:8px}
-  #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
-  #privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-  #typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
-  @media(max-width:640px){ .card{height:92vh;padding:10px} }
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+#app{max-width:900px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column}
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px}
+#title{font-weight:600}
+#notifBar{display:none;background:#21302b;color:#e6ffef;padding:8px 12px;border-radius:6px;margin-left:12px;cursor:pointer}
+#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
+.avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+.popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
+.avatar:hover .popup-menu{display:flex}
+.popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+.msg-row.self .bubble{background:#005c4b}
+.meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
+#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+#statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
+#toast.show{opacity:1;bottom:40px}
+#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+#loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:260px}
+#loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
+#loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+
+/* private popup */
+#privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
+.card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
+#privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
+.private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%}
+.private-row.self{align-self:flex-end}
+#privateInputBar{display:flex;gap:8px;margin-top:8px}
+#privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
+#privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+#typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
+@media(max-width:640px){ .card{height:92vh;padding:10px} }
 </style>
 </head>
 <body>
@@ -56,7 +54,8 @@
   <div id="topBar">
     <div id="title">Group Chat</div>
     <div style="flex:1"></div>
-    <div id="onlineCount" style="color:var(--muted);font-size:13px"></div>
+    <div id="notifBar">New message</div>
+    <div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div>
   </div>
 
   <div id="statusLine"></div>
@@ -70,7 +69,6 @@
 
 <div id="toast"></div>
 
-<!-- Login modal -->
 <div id="loginWrap" style="display:none">
   <div id="loginCard">
     <div style="font-weight:700;color:#fff">Enter your name</div>
@@ -82,7 +80,7 @@
   </div>
 </div>
 
-<!-- Private chat popup -->
+<!-- Private chat modal -->
 <div id="privatePopup">
   <div class="card">
     <div id="privateHeader">
@@ -105,11 +103,15 @@
   </div>
 </div>
 
+<!-- ding sound -->
+<audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
+<!-- tiny blank wav; you can replace with any short ding URL -->
+
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ---------- Firebase config (your project) ---------- */
+/* Firebase config (your project) */
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -122,7 +124,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------- DOM ---------- */
+/* DOM refs */
 const messagesEl = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -133,6 +135,9 @@ const toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap');
 const nameInput = document.getElementById('nameInput');
 const joinBtn = document.getElementById('joinBtn');
+
+const notifBar = document.getElementById('notifBar');
+const dingAudio = document.getElementById('dingAudio');
 
 const privatePopup = document.getElementById('privatePopup');
 const privateTitle = document.getElementById('privateTitle');
@@ -150,13 +155,16 @@ let privateChatWith = null;
 let typingTimer = null;
 let privateTypingTimer = null;
 
-/* ---------- helpers ---------- */
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1800); }
+/* Private listeners map to avoid duplicate listeners */
+const privateListeners = new Map();
+
+/* helpers */
+function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const ampm = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${ampm}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-/* ---------- login / start ---------- */
+/* login / start */
 function showLogin(){ loginWrap.style.display = 'flex'; }
 function hideLogin(){ loginWrap.style.display = 'none'; }
 
@@ -168,32 +176,30 @@ async function startAs(name){
   startGroupListeners();
   listenTypingGroup();
   listenPresence();
+  watchPrivateChats(); // start watching private chats for incoming notification/messages
 }
 
-if(!username){ showLogin(); } else { startAs(username); }
+if(!username) showLogin();
+else startAs(username);
 
 joinBtn.addEventListener('click', ()=> {
-  const v = nameInput.value.trim();
-  if(!v) return showToast('Enter a name');
-  startAs(v);
+  const n = nameInput.value.trim();
+  if(!n) return showToast('Enter a name');
+  startAs(n);
 });
 
-/* ---------- presence / online ---------- */
+/* presence */
 function setPresence(){
   if(!username) return;
   db.ref(`status/${username}`).set(true);
   db.ref(`status/${username}`).onDisconnect().remove();
-
-  // also store minimal profile info to detect online in private popup
-  db.ref(`profiles/${username}`).update({ online: true });
+  db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
 }
 
-/* ---------- group messages ---------- */
+/* group messages */
 function startGroupListeners(){
-  // detach previous
   if(currentGroupRef) currentGroupRef.off();
-
   messagesEl.innerHTML = '';
   currentGroupRef = db.ref('messages').limitToLast(50);
   currentGroupRef.on('child_added', snap => {
@@ -218,7 +224,6 @@ function renderGroupMessage(data, key){
   avatar.dataset.username = data.name;
   avatar.addEventListener('click', ()=> { if(data.name !== username) openPrivatePopup(data.name); });
 
-  // popup menu (report/block/delete)
   const popup = document.createElement('div'); popup.className = 'popup-menu';
   if(isSelf){
     const del = document.createElement('button'); del.textContent = '🗑️ Delete';
@@ -234,7 +239,6 @@ function renderGroupMessage(data, key){
   }
   avatar.appendChild(popup);
 
-  // content
   const content = document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
   const meta = document.createElement('div'); meta.className='meta'; meta.textContent = data.name;
   const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent = data.text || '';
@@ -246,7 +250,7 @@ function renderGroupMessage(data, key){
   scrollToBottomSoon(messagesEl);
 }
 
-/* ---------- send group ---------- */
+/* send group */
 sendBtn.addEventListener('click', sendGroupMessage);
 messageInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendGroupMessage(); });
 
@@ -255,11 +259,11 @@ function sendGroupMessage(){
   if(!text) return;
   db.ref('messages').push({ name: username, text, time: Date.now() });
   messageInput.value = '';
-  db.ref(`typing/group/${username}`).remove(); // clear typing
+  db.ref(`typing/group/${username}`).remove();
   cleanupGroup(50);
 }
 
-/* ---------- cleanup group ---------- */
+/* cleanup group */
 function cleanupGroup(limit){
   db.ref('messages').once('value').then(snap => {
     const val = snap.val() || {};
@@ -274,7 +278,7 @@ function cleanupGroup(limit){
   });
 }
 
-/* ---------- typing indicator (group) ---------- */
+/* typing indicator (group) */
 function listenTypingGroup(){
   db.ref('typing/group').on('value', snap => {
     const obj = snap.val() || {}; delete obj[username];
@@ -285,17 +289,15 @@ function listenTypingGroup(){
   messageInput.addEventListener('input', ()=> {
     db.ref(`typing/group/${username}`).set(true);
     clearTimeout(typingTimer);
-    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 2000);
+    typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
   });
 }
 
-/* ---------- presence / online ---------- */
+/* presence */
 function listenPresence(){
   db.ref('status').on('value', snap => {
     const val = snap.val() || {};
-    const online = Object.keys(val).length;
-    onlineCountEl.textContent = `${online} online`;
-    // update avatar rings already rendered
+    onlineCountEl.textContent = `${Object.keys(val).length} online`;
     document.querySelectorAll('.avatar').forEach(a => {
       const u = a.dataset.username;
       if(!u) return;
@@ -304,9 +306,9 @@ function listenPresence(){
   });
 }
 
-/* ---------- report ---------- */
+/* report user */
 function reportUser(user){
-  if(user === username) return showToast("Can't report yourself");
+  if(user === username) { showToast("Can't report yourself"); return; }
   db.ref(`reports/${user}/${username}`).set(true).then(()=>{
     db.ref(`reports/${user}`).once('value').then(snap=>{
       if(snap.numChildren() >= 3){
@@ -320,40 +322,117 @@ function reportUser(user){
   }).catch(()=> showToast('Report failed'));
 }
 
-/* ---------- PRIVATE CHAT popup ---------- */
+/* ---------- PRIVATE CHAT & NOTIFICATION WATCHER ---------- */
+
+/* Watch the privateChats node for any chat that includes this username.
+   For each chat (key like A_B) we attach a child_added listener (limitToLast(1)).
+   When a message arrives:
+    - if it's from me, ignore notification
+    - if private popup for that chat is open, render directly
+    - otherwise show a temporary notification with ding
+*/
+function watchPrivateChats(){
+  const root = db.ref('privateChats');
+
+  // For any existing or new chat path:
+  root.on('child_added', chatSnap => {
+    const chatKey = chatSnap.key; // "Alice_Bob"
+    if(!chatKey.includes(username)) return;
+    attachPrivateListener(chatKey);
+  });
+
+  // Also handle chats that may already be present (child_added will fire for existing too),
+  // but to be safe also iterate once:
+  root.once('value').then(all=>{
+    all.forEach(chatSnap=>{
+      const chatKey = chatSnap.key;
+      if(chatKey.includes(username)){
+        if(!privateListeners.has(chatKey)) attachPrivateListener(chatKey);
+      }
+    });
+  });
+}
+
+function attachPrivateListener(chatKey){
+  if(privateListeners.has(chatKey)) return;
+  const chatRef = db.ref(`privateChats/${chatKey}`);
+  // listen to new messages (limitToLast 1 ensures we get newly added ones)
+  const q = chatRef.limitToLast(1);
+  const handler = q.on('child_added', msgSnap => {
+    const msg = msgSnap.val();
+    if(!msg) return;
+    if(msg.name === username) return; // our own outgoing msg — no notification
+    // determine other participant
+    const parts = chatKey.split('_');
+    const other = parts[0] === username ? parts[1] : parts[0];
+    // if private popup is open with this user, render incoming directly there
+    if(privateChatWith === other && privatePopup.style.display === 'flex'){
+      renderPrivateMessage(msg); // show inside open popup
+    } else {
+      // show temporary top notification and play ding
+      showPrivateNotification(other, msg.name);
+    }
+  });
+  privateListeners.set(chatKey, { ref: q, handler });
+}
+
+/* show notification (auto-hide after few seconds). Clicking opens the private popup */
+let notifTimeout = null;
+function showPrivateNotification(otherUser, fromName){
+  notifBar.textContent = `New private message from ${fromName}`;
+  notifBar.style.display = 'inline-block';
+  // click opens private chat
+  notifBar.onclick = () => {
+    notifBar.style.display = 'none';
+    if(notifTimeout){ clearTimeout(notifTimeout); notifTimeout = null; }
+    openPrivatePopup(otherUser);
+  };
+  // play ding
+  try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){}
+  // auto-hide after 4 seconds
+  if(notifTimeout) clearTimeout(notifTimeout);
+  notifTimeout = setTimeout(()=> {
+    notifBar.style.display = 'none';
+    notifTimeout = null;
+  }, 4000);
+}
+
+/* open private popup and attach listener for that chat */
 function openPrivatePopup(otherUser){
-  // set context
   privateChatWith = otherUser;
   privateTitle.textContent = `Private Chat with ${otherUser}`;
   privateMessages.innerHTML = '';
   typingPrivate.textContent = '';
-  // show online status for other user
+  privatePopup.style.display = 'flex';
+
+  // show online status
   db.ref(`profiles/${otherUser}/online`).once('value').then(snap => {
     privateOnline.textContent = snap.exists() && snap.val() ? 'Online' : 'Offline';
   });
-  // show popup
-  privatePopup.style.display = 'flex';
 
-  // listen private typing
-  db.ref(`typing/private/${chatId(username, otherUser)}`).on('value', snap => {
-    const val = snap.val() || {};
-    // remove my key
-    delete val[username];
-    const who = Object.keys(val);
-    typingPrivate.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-  });
-
-  // listen private messages (single shared path)
-  const path = `privateChats/${chatId(username, otherUser)}`;
-  if(currentPrivateRef) currentPrivateRef.off();
-  currentPrivateRef = db.ref(path).limitToLast(10);
-  currentPrivateRef.on('child_added', snap => {
-    const m = snap.val();
-    renderPrivateMessage(m);
-  });
+  // attach listener for this chat (it will already exist in privateListeners map)
+  const key = chatId(username, otherUser);
+  if(privateListeners.has(key)){
+    // already listening; but ensure we render last 10 (we'll also listen on child_added already)
+    if(currentPrivateRef) currentPrivateRef.off();
+    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
+    currentPrivateRef.on('child_added', snap => {
+      const m = snap.val();
+      renderPrivateMessage(m);
+    });
+  } else {
+    // attach now
+    attachPrivateListener(key);
+    if(currentPrivateRef) currentPrivateRef.off();
+    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
+    currentPrivateRef.on('child_added', snap => {
+      const m = snap.val();
+      renderPrivateMessage(m);
+    });
+  }
 }
 
-/* render private message */
+/* render private message in open popup */
 function renderPrivateMessage(m){
   if(!m) return;
   const row = document.createElement('div');
@@ -375,13 +454,12 @@ function sendPrivate(){
   const path = `privateChats/${chatId(username, privateChatWith)}`;
   db.ref(path).push({ name: username, text, time: Date.now() }).then(()=>{
     privateInput.value = '';
-    // remove typing key
     db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
     cleanupPrivate(path, 10);
   }).catch(()=> showToast('Failed to send'));
 }
 
-/* private typing indicator (in private input) */
+/* private typing indicator */
 privateInput.addEventListener('input', ()=>{
   if(!privateChatWith) return;
   const path = `typing/private/${chatId(username, privateChatWith)}`;
@@ -390,11 +468,10 @@ privateInput.addEventListener('input', ()=>{
   privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
 });
 
-/* close private popup */
-closePrivate.addEventListener('click', ()=> {
+/* close private */
+closePrivate.addEventListener('click', ()=>{
   privatePopup.style.display = 'none';
   if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
-  // clear private typing presence
   if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove().catch(()=>{});
   privateChatWith = null;
 });
@@ -414,42 +491,34 @@ function cleanupPrivate(path, limit){
   });
 }
 
-/* ---------- start listeners (group typing & presence) ---------- */
-function listenTypingGroup(){ /* already wired in startGroupListeners via helper below */ }
-function listenPresence(){ /* already called by start */ }
+/* utility chatId used elsewhere */
+function chatId(a,b){ return [a,b].sort().join('_'); }
 
-/* ---------- start on load ---------- */
-function startEverything(){
-  setPresence();
+/* start watchers */
+function listenPresence(){ /* presence already set & listened inside startGroupListeners below */ }
+function watchInitial(){
+  // ensure profiles node exists for this user
+  if(username){
+    db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
+  }
   startGroupListeners();
   listenTypingGroup();
   listenPresence();
+  watchPrivateChats();
 }
 
-/* entry */
-function startGroupListeners(){
-  // attach group listeners
-  if(currentGroupRef) currentGroupRef.off();
-  messagesEl.innerHTML = '';
-  currentGroupRef = db.ref('messages').limitToLast(50);
-  currentGroupRef.on('child_added', snap => renderGroupMessage(snap.val(), snap.key));
-  currentGroupRef.on('child_removed', snap => {
-    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
-    if(el) el.remove();
-  });
+/* initial start if already logged in */
+if(username){
+  hideLogin();
+  setPresence();
+  watchInitial();
+}
 
-  // typing group listener (for status)
-  db.ref('typing/group').on('value', snap => {
-    const obj = snap.val() || {}; delete obj[username];
-    const who = Object.keys(obj);
-    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
-  });
-
-  // presence (online)
+// basic presence & typing listeners used earlier
+function listenPresence(){
   db.ref('status').on('value', snap => {
     const val = snap.val() || {};
     onlineCountEl.textContent = `${Object.keys(val).length} online`;
-    // update rings for avatars already rendered
     document.querySelectorAll('.avatar').forEach(a => {
       const u = a.dataset.username;
       if(!u) return;
@@ -457,43 +526,24 @@ function startGroupListeners(){
     });
   });
 }
+function listenTypingGroup(){
+  db.ref('typing/group').on('value', snap => {
+    const obj = snap.val() || {}; delete obj[username];
+    const who = Object.keys(obj);
+    statusLine.textContent = who.length ? `${who.join(', ')} is typing...` : '';
+  });
+}
 
-/* attach message input typing for group */
+/* message input typing for group */
 messageInput.addEventListener('input', ()=>{
   db.ref(`typing/group/${username}`).set(true);
   clearTimeout(typingTimer);
   typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1500);
 });
 
-/* start when username known */
-if(username){
-  // ensure profile exists (minimal)
-  db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
-  startAsExisting();
-} else {
-  // show login UI — handled above
-}
-
-function startAsExisting(){
-  hideLogin();
-  setPresence();
-  startGroupListeners();
-}
-
-/* join button - when user supplies name */
-joinBtn.addEventListener('click', ()=> {
-  const n = nameInput.value.trim();
-  if(!n) return showToast('Enter a name');
-  username = n;
-  localStorage.setItem('guestName', username);
-  // create minimal profile
-  db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
-  startAsExisting();
-});
-
-/* cleanup on unload */
+/* unload cleanup */
 window.addEventListener('beforeunload', ()=>{
-  if(username) {
+  if(username){
     db.ref(`status/${username}`).remove();
     db.ref(`profiles/${username}/online`).remove();
     db.ref(`typing/group/${username}`).remove();
