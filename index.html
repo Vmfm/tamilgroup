@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Group + Private Chat (push panel)</title>
+<title>WhatsApp-style Group + Private Chat (with calls)</title>
 <style>
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 *{box-sizing:border-box}
@@ -24,6 +24,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .panelItem:hover{background:rgba(255,255,255,.02)}
 .panelItem .who{flex:1}
 .panelItem .count{background:#ff3b30;color:#fff;border-radius:12px;padding:2px 8px;font-size:12px}
+
+/* main chat */
 #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
 .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
 .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
@@ -59,35 +61,70 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
 #privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
 #typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
-@media(max-width:900px){
-  #panel{width:310px}
-  #app{max-width:100%}
-}
+
+/* settings pop */
+#settingsWrap{position:relative}
+#settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
+#settingsPanel{position:absolute;right:12px;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.03);padding:10px;border-radius:8px;display:none;z-index:30}
+.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px}
+.toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
+.toggleKnob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s}
+
+/* call overlay (Full screen incoming) */
+#callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;color:#fff}
+.callCard{background:#071215;padding:32px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:320px}
+.callName{font-size:20px;font-weight:700}
+.callBtns{display:flex;gap:16px}
+.btnCall{padding:12px 18px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+.btnAccept{background:var(--accent);color:#071215}
+.btnDecline{background:#ff3b30;color:#fff}
+#callTimer{font-size:14px;color:var(--muted)}
+
+/* in-call small bar */
+#inCallBar{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:rgba(0,0,0,.6);padding:8px 12px;border-radius:20px;color:#fff;display:none;z-index:10001;align-items:center;gap:10px}
+#endCallBtn{background:#ff3b30;border:0;color:#fff;padding:8px 12px;border-radius:12px;cursor:pointer}
+
+@media(max-width:900px){ #panel{width:310px} #app{max-width:100%} }
 </style>
 </head>
 <body>
+<!-- Right-side panel -->
 <div id="panel" aria-hidden="true">
   <div class="panelHeader">
     <div class="panelTitle">Private Messages</div>
     <button id="panelClose" class="panelClose">✕</button>
   </div>
-  <div class="panelList" id="panelList">
-    <!-- items appended here -->
-  </div>
+  <div class="panelList" id="panelList"></div>
 </div>
 
+<!-- App -->
 <div id="app">
   <div id="topBar">
     <div id="title">
-      <div>Group Chat</div>
+      <div id="titleText">Group Chat</div>
     </div>
 
     <div style="flex:1"></div>
 
     <div id="notifWrap">
-      <div class="bell" id="bellBtn" title="Private messages">
-        🔔
+      <!-- Bell badge -->
+      <div class="bell" id="bellBtn" title="Private messages">🔔
         <div class="badge" id="bellBadge" style="display:none">0</div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settingsWrap">
+        <button id="settingsBtn">⚙️</button>
+        <div id="settingsPanel" role="dialog" aria-label="Settings">
+          <div class="settingRow">
+            <div>Audio Call</div>
+            <div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div>
+          </div>
+          <div class="settingRow">
+            <div>Private Chat</div>
+            <div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -105,6 +142,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="toast"></div>
 
+<!-- Login -->
 <div id="loginWrap">
   <div id="loginCard">
     <div style="font-weight:700;color:#fff">Enter your name</div>
@@ -123,7 +161,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
       <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
       <div style="font-weight:700" id="privateTitle">Private Chat</div>
       <div style="flex:1"></div>
-      <div id="privateOnline" style="color:var(--muted);font-size:13px"></div>
+
+      <!-- Call button + toggles appear inside header -->
+      <button id="callBtn" title="Audio Call" style="background:none;border:0;color:var(--accent);cursor:pointer;font-weight:700">📞</button>
     </div>
 
     <div id="privateMessages"></div>
@@ -139,14 +179,38 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
   </div>
 </div>
 
-<!-- ding sound (tiny placeholder) -->
+<!-- Full-screen incoming call overlay (Option A) -->
+<div id="callOverlay" role="dialog" aria-live="assertive">
+  <div class="callCard">
+    <div style="font-size:12px;color:var(--muted)">Incoming call</div>
+    <div class="callName" id="callFrom">Caller</div>
+    <div id="callTimer">Ringing...</div>
+    <div class="callBtns">
+      <button class="btnCall btnDecline" id="declineCallBtn">Decline</button>
+      <button class="btnCall btnAccept" id="acceptCallBtn">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- Small floating in-call bar -->
+<div id="inCallBar">
+  <div id="inCallLabel">Call with <span id="inCallWith"></span></div>
+  <div id="inCallElapsed">00:00</div>
+  <button id="endCallBtn">End</button>
+</div>
+
+<!-- Audio elements -->
+<!-- Ringtone (loop) - small placeholder; replace with real ringtone URL if wanted -->
+<audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
+<!-- Ding for new message -->
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ---------- Firebase config: keep same or replace ---------- */
+/* ----------------- Firebase config (same as yours) ----------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -159,8 +223,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------- DOM references ---------- */
-const appEl = document.getElementById('app');
+/* ----------------- DOM refs ----------------- */
 const panelEl = document.getElementById('panel');
 const panelListEl = document.getElementById('panelList');
 const panelCloseBtn = document.getElementById('panelClose');
@@ -184,11 +247,30 @@ const privateMessages = document.getElementById('privateMessages');
 const privateInput = document.getElementById('privateInput');
 const privateSend = document.getElementById('privateSend');
 const closePrivate = document.getElementById('closePrivate');
-const privateOnline = document.getElementById('privateOnline');
-const typingPrivate = document.getElementById('typingPrivate');
+const callBtn = document.getElementById('callBtn');
+
+const callOverlay = document.getElementById('callOverlay');
+const callFrom = document.getElementById('callFrom');
+const acceptCallBtn = document.getElementById('acceptCallBtn');
+const declineCallBtn = document.getElementById('declineCallBtn');
+const ringtone = document.getElementById('ringtone');
+const inCallBar = document.getElementById('inCallBar');
+const inCallWith = document.getElementById('inCallWith');
+const inCallElapsed = document.getElementById('inCallElapsed');
+const endCallBtn = document.getElementById('endCallBtn');
+
 const dingAudio = document.getElementById('dingAudio');
 
-/* ---------- State ---------- */
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const toggleCall = document.getElementById('toggleCall');
+const toggleCallKnob = document.getElementById('toggleCallKnob');
+const togglePrivate = document.getElementById('togglePrivate');
+const togglePrivateKnob = document.getElementById('togglePrivateKnob');
+
+const bellBadgeEl = bellBadge;
+
+/* ----------------- state ----------------- */
 let username = localStorage.getItem('guestName') || '';
 let currentGroupRef = null;
 let currentPrivateRef = null;
@@ -196,14 +278,27 @@ let privateChatWith = null;
 let typingTimer = null;
 let privateTypingTimer = null;
 const privateListeners = new Map();
+/* dedupe set per chat for message keys rendered */
+const renderedPrivateMsgIds = new Map();
 
-/* ---------- helpers ---------- */
+/* call state */
+let activeCall = null; // { callId, from, to, status, startedAt, answeredAt }
+let callTimerInterval = null;
+
+/* settings */
+const SETTINGS_KEY = 'chat_settings_v1';
+let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
+if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
+applySettingsToUI();
+
+/* ----------------- helpers ----------------- */
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-/* ---------- Login / Start ---------- */
+/* ----------------- Login / start ----------------- */
 function showLogin(){ loginWrap.style.display = 'flex'; }
 function hideLogin(){ loginWrap.style.display = 'none'; }
 
@@ -215,8 +310,8 @@ async function startAs(name){
   startGroupListeners();
   listenTypingGroup();
   listenPresence();
-  watchPrivateChats(); // watch private chats notifications & unread
-  listenUnreadForMe(); // listen unread counters for bell badge and panel
+  watchPrivateChatsInitial();
+  listenUnreadAndPanel();
 }
 
 if(!username) showLogin();
@@ -228,7 +323,40 @@ joinBtn.addEventListener('click', ()=> {
   startAs(n);
 });
 
-/* ---------- Presence ---------- */
+/* ----------------- Settings UI ----------------- */
+settingsBtn.addEventListener('click', ()=> {
+  settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+});
+document.addEventListener('click', (e)=> {
+  if(!settingsPanel.contains(e.target) && e.target !== settingsBtn) settingsPanel.style.display = 'none';
+});
+function applySettingsToUI(){
+  // audioCall toggle
+  if(settings.audioCall){
+    toggleCall.style.background = '#25d366';
+    toggleCallKnob.style.left = '23px';
+  } else {
+    toggleCall.style.background = '#2a3942';
+    toggleCallKnob.style.left = '3px';
+  }
+  // privateChat toggle
+  if(settings.privateChat){
+    togglePrivate.style.background = '#25d366';
+    togglePrivateKnob.style.left = '23px';
+  } else {
+    togglePrivate.style.background = '#2a3942';
+    togglePrivateKnob.style.left = '3px';
+  }
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+toggleCall.addEventListener('click', ()=> {
+  settings.audioCall = !settings.audioCall; applySettingsToUI();
+});
+togglePrivate.addEventListener('click', ()=> {
+  settings.privateChat = !settings.privateChat; applySettingsToUI();
+});
+
+/* ----------------- Presence & Group ----------------- */
 function setPresence(){
   if(!username) return;
   db.ref(`status/${username}`).set(true);
@@ -237,7 +365,6 @@ function setPresence(){
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
 }
 
-/* ---------- Group messages ---------- */
 function startGroupListeners(){
   if(currentGroupRef) currentGroupRef.off();
   messagesEl.innerHTML = '';
@@ -269,7 +396,7 @@ function renderGroupMessage(data, key){
 
 /* send group */
 sendBtn.addEventListener('click', sendGroupMessage);
-messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter') sendGroupMessage(); });
+messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendGroupMessage(); }});
 
 function sendGroupMessage(){
   const text=messageInput.value.trim(); if(!text) return;
@@ -292,60 +419,37 @@ function listenPresence(){
 /* report user */
 function reportUser(user){ if(user===username){ showToast("Can't report yourself"); return; } db.ref(`reports/${user}/${username}`).set(true).then(()=>{ db.ref(`reports/${user}`).once('value').then(snap=>{ if(snap.numChildren()>=3){ db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{ ms.forEach(m=>m.ref.update({banned:true})); db.ref('messages').push({name:'System',text:`${user} has been removed from the group`,time:Date.now()}); }); } }); showToast('User reported successfully!'); }).catch(()=>showToast('Report failed')); }
 
-/* ---------- PRIVATE CHAT & UNREAD handling ---------- */
-
-/*
-  unread structure:
-    unread/{recipient}/{other} = number
-  private chats stored under:
-    privateChats/{chatKey}/  (chatKey = sorted usernames joined by _)
-  On sendPrivate: push message to privateChats/{key}; increment unread/{recipient}/{sender} by 1
-  When recipient opens that private chat: set unread/{recipient}/{other} = 0
-  Bell badge: listens to unread/{username} aggregate
-  Panel list: built from privateChats keys + unread counts
-*/
-
+/* ----------------- UNREAD & PANEL ----------------- */
 function watchPrivateChats(){
   const root = db.ref('privateChats');
   root.on('child_added', snap=>{ const key = snap.key; if(!key.includes(username)) return; attachPrivateListener(key); });
-  // ensure existing chats are attached
   root.once('value').then(all=>{ all.forEach(snap=>{ const key = snap.key; if(key.includes(username)) attachPrivateListener(key); }); });
 }
-
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
   const chatRef = db.ref(`privateChats/${chatKey}`).limitToLast(1);
   const handler = chatRef.on('child_added', snap=>{
     const msg = snap.val(); if(!msg) return;
-    if(msg.name === username) return; // ignore own messages for notifications
-    // determine other participant
+    if(msg.name === username) return;
     const parts = chatKey.split('_'); const other = parts[0] === username ? parts[1] : parts[0];
-    // if private popup open and it's the same, render; else show unread (we increment unread on send)
     if(privateChatWith === other && privatePopup.style.display === 'flex'){
-      renderPrivateMessage(msg);
+      renderPrivateMessageWithId(chatKey, snap.key, msg);
     } else {
-      // we leave unread counter to be incremented by sender (sendPrivate increments it)
-      // Optionally, we can flash the bell (no auto-hide) — panel shows total unread
       bellFlash();
     }
-    // update panel list (in case a new chat was created)
     refreshPanelList();
   });
   privateListeners.set(chatKey, { ref: chatRef, handler });
 }
-
-/* Listen unread counts for this user and update bell + panel list */
 function listenUnreadForMe(){
   const uRef = db.ref(`unread/${username}`);
   uRef.on('value', snap=>{
     const val = snap.val() || {};
     const totals = Object.values(val).reduce((s,n)=> s + (Number(n)||0), 0);
     updateBellBadge(totals);
-    refreshPanelList(); // ensure panel counts updated
+    refreshPanelList();
   });
 }
-
-/* Update bell UI */
 function updateBellBadge(total){
   if(total && total > 0){
     bellBadge.style.display = 'flex';
@@ -354,54 +458,39 @@ function updateBellBadge(total){
     bellBadge.style.display = 'none';
   }
 }
-
-/* Refresh right-side panel list of private chats
-   We list: otherUsername + unread count (from unread/{username}/{other})
-   Also include chats even if unread is 0 (if privateChats has that key)
-*/
 async function refreshPanelList(){
   panelListEl.innerHTML = '';
-  // gather privateChats keys that include this user
   const all = await db.ref('privateChats').once('value').then(s=> s.val() || {});
   const unreadForMe = await db.ref(`unread/${username}`).once('value').then(s=> s.val() || {});
-  // create map other -> latest time for sorting
   const map = [];
   Object.keys(all).forEach(key=>{
     if(!key.includes(username)) return;
     const parts = key.split('_'); const other = parts[0] === username ? parts[1] : parts[0];
-    // unread count
     const ucount = Number((unreadForMe && unreadForMe[other]) || 0);
-    // find latest msg time (optional)
     const msgs = all[key] || {};
     const times = Object.values(msgs).map(m=> m.time || 0);
     const latest = times.length ? Math.max(...times) : 0;
     map.push({ other, key, ucount, latest });
   });
-  // If there are no chats yet, show nothing
-  // Sort by latest desc
   map.sort((a,b)=> b.latest - a.latest);
-  // render items
   map.forEach(item=>{
-    const el = document.createElement('div'); el.className = 'panelItem';
-    el.dataset.other = item.other;
+    const el = document.createElement('div'); el.className = 'panelItem'; el.dataset.other = item.other;
     const who = document.createElement('div'); who.className = 'who'; who.textContent = item.other;
     const count = document.createElement('div'); count.className = 'count'; count.textContent = item.ucount;
     if(item.ucount === 0) count.style.display = 'none';
     el.append(who, count);
     el.addEventListener('click', ()=> {
-      // open private popup and reset unread for this chat
       openPrivatePopup(item.other);
       db.ref(`unread/${username}/${item.other}`).set(0).catch(()=>{});
     });
     panelListEl.appendChild(el);
   });
-  // Also list users who have unread entries but may not have privateChats keys yet
+  // also show unread-only entries not in privateChats
   const unreadKeys = Object.keys(unreadForMe || {}).filter(x=> x && !(map.find(m=>m.other===x)));
   unreadKeys.forEach(other=>{
     const ucount = Number(unreadForMe[other] || 0);
     if(ucount <= 0) return;
-    const el = document.createElement('div'); el.className = 'panelItem';
-    el.dataset.other = other;
+    const el = document.createElement('div'); el.className = 'panelItem'; el.dataset.other = other;
     const who = document.createElement('div'); who.className = 'who'; who.textContent = other;
     const count = document.createElement('div'); count.className = 'count'; count.textContent = ucount;
     el.append(who,count);
@@ -412,97 +501,77 @@ async function refreshPanelList(){
     panelListEl.appendChild(el);
   });
 }
-
-/* Bell click opens panel and pushes content */
-function openPanel(){
-  panelEl.classList.add('open');
-  panelEl.setAttribute('aria-hidden','false');
-  // push main content left by panel width
-  const w = panelEl.getBoundingClientRect().width;
-  appEl.style.transform = `translateX(-${w}px)`;
-  // refresh panel contents
-  refreshPanelList();
-}
-function closePanel(){
-  panelEl.classList.remove('open');
-  panelEl.setAttribute('aria-hidden','true');
-  appEl.style.transform = '';
-}
+function openPanel(){ panelEl.classList.add('open'); panelEl.setAttribute('aria-hidden','false'); const w = panelEl.getBoundingClientRect().width; document.getElementById('app').style.transform = `translateX(-${w}px)`; refreshPanelList(); }
+function closePanel(){ panelEl.classList.remove('open'); panelEl.setAttribute('aria-hidden','true'); document.getElementById('app').style.transform = ''; }
 panelCloseBtn.addEventListener('click', closePanel);
-bellBtn.addEventListener('click', ()=> {
-  if(panelEl.classList.contains('open')) closePanel();
-  else openPanel();
-});
+bellBtn.addEventListener('click', ()=> { if(panelEl.classList.contains('open')) closePanel(); else openPanel(); });
+function bellFlash(){ bellBtn.animate([{ transform: 'translateY(0)' },{ transform: 'translateY(-4px)' },{ transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){} }
 
-/* small bell flash animation when new private message arrives */
-function bellFlash(){
-  bellBtn.animate([
-    { transform: 'translateY(0)' },
-    { transform: 'translateY(-4px)' },
-    { transform: 'translateY(0)' }
-  ], { duration: 260, easing: 'ease-out' });
-  try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){}
-}
-
-/* ---------- Private chat open/render/send ---------- */
+/* ----------------- Private Chat open/render/send (dedupe fixed) ----------------- */
 function openPrivatePopup(otherUser){
+  if(!settings.privateChat){ showToast('Private chat is turned OFF in settings'); return; }
   privateChatWith = otherUser;
   privateTitle.textContent = `Private Chat with ${otherUser}`;
   privateMessages.innerHTML = '';
   typingPrivate.textContent = '';
   privatePopup.style.display = 'flex';
-
-  // set online label
-  db.ref(`profiles/${otherUser}/online`).once('value').then(snap=>{ privateOnline.textContent = snap.val()? 'Online':'Offline'; });
-
-  // 0 out unread for this chat for me
+  db.ref(`profiles/${otherUser}/online`).once('value').then(snap=>{ /* show online if you like */ });
   db.ref(`unread/${username}/${otherUser}`).set(0).catch(()=>{});
-
-  // attach listener for last 10 messages
   const key = chatId(username, otherUser);
   if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
-  currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(10);
+  currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(50);
+  // clear dedupe map for this chat and re-init
+  renderedPrivateMsgIds.set(key, new Set());
   currentPrivateRef.on('child_added', snap => {
-    renderPrivateMessage(snap.val());
+    renderPrivateMessageWithId(key, snap.key, snap.val());
   });
-
-  // if panel open, close it (user opened from the right panel)
+  // close panel if open
   closePanel();
-  // refresh the panel list (since unread changed)
   refreshPanelList();
 }
 
-function renderPrivateMessage(m){
-  if(!m) return;
-  const row = document.createElement('div'); row.className = 'private-row ' + (m.name===username ? 'self' : '');
-  const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = m.text;
-  const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.textContent = formatTime(m.time||Date.now());
+/* render private message but guard duplicates by id */
+function renderPrivateMessageWithId(chatKey, msgId, msg){
+  if(!msg) return;
+  let set = renderedPrivateMsgIds.get(chatKey);
+  if(!set){ set = new Set(); renderedPrivateMsgIds.set(chatKey, set); }
+  if(set.has(msgId)) return; // already rendered
+  set.add(msgId);
+  const row = document.createElement('div'); row.className = 'private-row ' + (msg.name===username ? 'self' : '');
+  const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = msg.text;
+  const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.textContent = formatTime(msg.time||Date.now());
   row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
-/* send private: push message and increment unread for recipient */
+/* send private: disable send button to avoid double push & increment unread */
 privateSend.addEventListener('click', sendPrivate);
-privateInput.addEventListener('keypress', e=>{ if(e.key === 'Enter') sendPrivate(); });
+privateInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendPrivate(); }});
 
+let privateSendLocked = false;
 function sendPrivate(){
+  if(!settings.privateChat){ showToast('Private chat is turned OFF'); return; }
   const text = privateInput.value.trim();
   if(!text || !privateChatWith) return;
+  if(privateSendLocked) return; // protect double-click
+  privateSendLocked = true;
+  privateSend.disabled = true;
   const key = chatId(username, privateChatWith);
   const path = `privateChats/${key}`;
-  db.ref(path).push({ name: username, text, time: Date.now() }).then(()=>{
-    // increment unread for recipient under unread/{recipient}/{sender}
+  db.ref(path).push({ name: username, text, time: Date.now() }).then(ref=>{
+    // increment unread for recipient
     const recipient = privateChatWith;
     const sender = username;
     db.ref(`unread/${recipient}/${sender}`).transaction(curr => (Number(curr) || 0) + 1).catch(()=>{});
     privateInput.value = '';
     db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
-    cleanupPrivate(path, 10);
-    // also update panel list
+    cleanupPrivate(path, 50);
     refreshPanelList();
-  }).catch(()=> showToast('Failed to send'));
+  }).catch(()=> showToast('Failed to send')).finally(()=>{
+    // small timeout even if fast — prevents duplicate UI pushes
+    setTimeout(()=>{ privateSendLocked = false; privateSend.disabled = false; }, 300);
+  });
 }
 
-/* private typing indicator */
 privateInput.addEventListener('input', ()=>{
   if(!privateChatWith) return;
   const path = `typing/private/${chatId(username, privateChatWith)}`;
@@ -511,33 +580,212 @@ privateInput.addEventListener('input', ()=>{
   privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
 });
 
-/* close private */
 closePrivate.addEventListener('click', ()=>{
   privatePopup.style.display = 'none';
-  if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
+  if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef = null; }
   if(privateChatWith) db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
   privateChatWith = null;
 });
 
-/* cleanup private */
-function cleanupPrivate(path, limit){ db.ref(path).once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
+/* ----------------- CALL SIGNALING ----------------- */
+/*
+  Call structure:
+    calls/{callId} = { from, to, status: 'ringing'|'answered'|'declined'|'ended', startedAt, answeredAt }
+  Caller creates call node and listens for changes.
+  Recipient listens to calls child_added where to===username and status==='ringing'
+*/
 
-/* attach listeners & initial watchers */
-function watchPrivateChatsInitial(){
-  watchPrivateChats();
-  // When any private chat message arrives (for any chat containing me) we also ensure panel updates:
-  db.ref('privateChats').on('child_changed', ()=> refreshPanelList());
-  db.ref('privateChats').on('child_added', ()=> refreshPanelList());
+function watchCallsForMe(){
+  db.ref('calls').on('child_added', snap=>{
+    const call = snap.val(); const callId = snap.key;
+    if(!call) return;
+    if(call.to !== username) return;
+    // only respond to ringing calls
+    if(call.status === 'ringing'){
+      // if audio call disabled, auto-decline
+      if(!settings.audioCall){
+        db.ref(`calls/${callId}/status`).set('declined').catch(()=>{});
+        return;
+      }
+      incomingCallReceived(callId, call);
+    }
+  });
+  // also listen for updates to calls that might be for us (e.g. answered/ended)
+  db.ref('calls').on('child_changed', snap=>{
+    const call = snap.val(); const callId = snap.key;
+    if(!call) return;
+    // if this call was initiated by me or for me, handle status updates
+    if(call.from === username || call.to === username){
+      handleCallStatusUpdate(callId, call);
+    }
+  });
 }
 
-/* Listen unread totals for me (already above) and update panel badge */
+/* caller initiates call */
+callBtn.addEventListener('click', ()=> {
+  if(!settings.audioCall){ showToast('Audio calls are turned OFF in settings'); return; }
+  if(!privateChatWith){ showToast('Open a private chat first'); return; }
+  initiateCallTo(privateChatWith);
+});
+
+function initiateCallTo(other){
+  const callId = `${chatId(username,other)}_${Date.now()}`;
+  const payload = { from: username, to: other, status: 'ringing', startedAt: Date.now() };
+  db.ref(`calls/${callId}`).set(payload).then(()=>{
+    // set local active call and show "ringing" UI for caller
+    activeCall = { callId, ...payload };
+    showOutgoingRingingUI(other);
+    // listen for call updates via watchCallsForMe which is global
+  }).catch(()=> showToast('Failed to start call'));
+}
+
+/* outgoing ringing UI (caller) */
+function showOutgoingRingingUI(other){
+  callOverlay.style.display = 'flex';
+  callFrom.textContent = `Calling ${other}...`;
+  document.getElementById('callTimer').textContent = 'Ringing...';
+  ringtone.play().catch(()=>{});
+  acceptCallBtn.style.display = 'none';
+  declineCallBtn.style.display = 'inline-block';
+  // if call gets answered, handleCallStatusUpdate will switch to in-call
+}
+
+/* incoming call handler (recipient) */
+let incomingCallLocal = null;
+function incomingCallReceived(callId, call){
+  // if already on a call, auto-decline
+  if(activeCall && activeCall.status === 'answered'){
+    db.ref(`calls/${callId}/status`).set('declined').catch(()=>{});
+    return;
+  }
+  incomingCallLocal = { callId, ...call };
+  callOverlay.style.display = 'flex';
+  callFrom.textContent = `${call.from}`;
+  document.getElementById('callTimer').textContent = 'Ringing...';
+  ringtone.play().catch(()=>{});
+  acceptCallBtn.style.display = 'inline-block';
+  declineCallBtn.style.display = 'inline-block';
+}
+
+/* when accept (recipient) */
+acceptCallBtn.addEventListener('click', ()=> {
+  if(!incomingCallLocal) return;
+  const callId = incomingCallLocal.callId;
+  db.ref(`calls/${callId}`).update({ status: 'answered', answeredAt: Date.now() }).catch(()=>{});
+});
+
+/* when decline (recipient) */
+declineCallBtn.addEventListener('click', ()=> {
+  if(incomingCallLocal){
+    db.ref(`calls/${incomingCallLocal.callId}/status`).set('declined').catch(()=>{});
+    hideCallOverlay();
+    incomingCallLocal = null;
+  } else if(activeCall){
+    // caller cancelling outgoing ring
+    db.ref(`calls/${activeCall.callId}/status`).set('ended').catch(()=>{});
+    cleanupActiveCall();
+  } else {
+    hideCallOverlay();
+  }
+});
+
+/* handle call status updates (both sides) */
+function handleCallStatusUpdate(callId, call){
+  // if call was declined/ended while overlay shown
+  if(call.status === 'declined'){
+    if(activeCall && activeCall.callId === callId){
+      showToast('Call declined');
+      cleanupActiveCall();
+    }
+    if(incomingCallLocal && incomingCallLocal.callId === callId){
+      ringtone.pause(); ringtone.currentTime = 0;
+      hideCallOverlay();
+      showToast('Call declined');
+      incomingCallLocal = null;
+    }
+  } else if(call.status === 'answered'){
+    // someone answered -> both sides show in-call timer
+    activeCall = { callId, ...call };
+    startInCallUI(call);
+    // stop ringtone
+    ringtone.pause(); ringtone.currentTime = 0;
+    // clear incomingCallLocal if present
+    if(incomingCallLocal && incomingCallLocal.callId === callId) incomingCallLocal = null;
+  } else if(call.status === 'ended'){
+    // end call for both sides
+    if(activeCall && activeCall.callId === callId){
+      showToast('Call ended');
+      cleanupActiveCall();
+    }
+    if(incomingCallLocal && incomingCallLocal.callId === callId){
+      ringtone.pause(); ringtone.currentTime = 0;
+      hideCallOverlay();
+      incomingCallLocal = null;
+    }
+  }
+}
+
+/* start in-call UI and timer */
+function startInCallUI(call){
+  // call param includes answeredAt (recipient) and startedAt
+  const other = (call.from === username) ? call.to : call.from;
+  inCallWith.textContent = other;
+  inCallElapsed.textContent = '00:00';
+  inCallBar.style.display = 'flex';
+  document.getElementById('callOverlay').style.display = 'none';
+  // start timer
+  const startedAt = call.answeredAt || Date.now();
+  let start = startedAt;
+  clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(()=>{
+    const diff = Date.now() - start;
+    const mm = String(Math.floor(diff/60000)).padStart(2,'0');
+    const ss = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    inCallElapsed.textContent = `${mm}:${ss}`;
+  }, 1000);
+}
+
+/* end call behavior */
+endCallBtn.addEventListener('click', ()=> {
+  if(!activeCall) return;
+  db.ref(`calls/${activeCall.callId}/status`).set('ended').catch(()=>{});
+  cleanupActiveCall();
+});
+
+function cleanupActiveCall(){
+  activeCall = null;
+  inCallBar.style.display = 'none';
+  document.getElementById('callOverlay').style.display = 'none';
+  clearInterval(callTimerInterval);
+  callTimerInterval = null;
+  ringtone.pause(); ringtone.currentTime = 0;
+}
+
+/* hide overlay */
+function hideCallOverlay(){
+  callOverlay.style.display = 'none';
+  ringtone.pause(); ringtone.currentTime = 0;
+}
+
+/* ----------------- init watchers ----------------- */
+function watchPrivateChatsInitial(){
+  watchPrivateChats();
+  db.ref('privateChats').on('child_changed', ()=> refreshPanelList());
+  db.ref('privateChats').on('child_added', ()=> refreshPanelList());
+  // call watchers for incoming calls & updates
+  watchCallsForMe();
+}
+
+/* listen and display unread & panel */
 function listenUnreadAndPanel(){
   listenUnreadForMe();
-  // initial panel fill
   refreshPanelList();
 }
 
-/* start watchers if logged in */
+/* ----------------- cleanup private messages limit ----------------- */
+function cleanupPrivate(path, limit){ db.ref(path).once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
+
+/* ----------------- start if logged in ----------------- */
 if(username){
   hideLogin();
   setPresence();
@@ -548,7 +796,7 @@ if(username){
   listenUnreadAndPanel();
 }
 
-/* unload cleanup */
+/* ----------------- unload cleanup ----------------- */
 window.addEventListener('beforeunload', ()=>{
   if(username){
     db.ref(`status/${username}`).remove();
