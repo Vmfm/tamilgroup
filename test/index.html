@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tamil VM — Group & Private Chat (clean, no-calls)</title>
+  <style>
+    :root{--bg:#0f1416;--panel:#152025;--accent:#25d366;--muted:#98a2a8;--card:#0b1419}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Arial,system-ui,sans-serif;background:var(--bg);color:#ecf0f1}
+    .app{max-width:1200px;margin:0 auto;height:100vh;display:grid;grid-template-columns:260px 1fr 320px;gap:12px;padding:12px}
+    .sidebar{background:var(--card);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#25d366,#00a884);display:flex;align-items:center;justify-content:center;font-weight:800;color:#042922}
+    .title{font-weight:700}
+    .menu{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .menu a{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;text-decoration:none;color:inherit;background:transparent}
+    .menu a:hover{background:rgba(255,255,255,0.02)}
+    .play-btn{display:inline-flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:#0a3b1f;color:#dff7ea;text-decoration:none}
+
+    .center{display:flex;flex-direction:column;background:linear-gradient(180deg,#071215,#071215);border-radius:12px;padding:12px}
+    .topbar{display:flex;align-items:center;gap:12px;padding:8px}
+    .comp-title{font-weight:700;font-size:18px}
+    .tools{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .search{padding:8px;border-radius:10px;border:0;background:#0e1a20;color:#fff;min-width:220px}
+
+    .messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+    .msg-row{display:flex;align-items:flex-start;gap:10px;max-width:78%}
+    .msg-row.self{margin-left:auto;flex-direction:row-reverse}
+    .avatar{width:40px;height:40px;border-radius:50%;background:#0b1113;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .bubble{background:var(--panel);padding:10px 12px;border-radius:12px;font-size:14px}
+    .bubble.self{background:#005c4b}
+    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+
+    .composer{display:flex;gap:8px;padding:10px;background:var(--card);border-radius:10px}
+    .composer input{flex:1;padding:10px;border-radius:22px;border:0;background:#122228;color:#fff}
+    .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#071215;cursor:pointer}
+
+    .panel{background:var(--card);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
+    .panel h4{margin:0}
+    .panelList{display:flex;flex-direction:column;gap:8px;overflow:auto}
+    .panelItem{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
+    .panelItem:hover{background:rgba(255,255,255,0.02)}
+    .count{background:#ff3b30;color:#fff;padding:4px 8px;border-radius:10px;font-size:12px}
+
+    .loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50}
+    .loginCard{background:#071215;padding:18px;border-radius:12px;min-width:320px}
+
+    /* private popup (modal) */
+    .privateModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:60}
+    .privateCard{background:var(--card);padding:12px;border-radius:12px;min-width:360px;max-width:720px;display:flex;flex-direction:column;gap:8px}
+    .privateHeader{display:flex;align-items:center;gap:8px}
+    .privateMessages{max-height:360px;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
+    .privateRow.self{align-self:flex-end}
+
+    .small{font-size:12px;color:var(--muted)}
+
+    /* responsive */
+    @media(max-width:980px){
+      .app{grid-template-columns:1fr;grid-auto-rows:1fr;gap:8px;padding:8px}
+      .sidebar{order:3}
+      .panel{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Left: Side menu with Play Store, Privacy, Terms -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">VM</div>
+        <div>
+          <div class="title">Tamil VM Chat</div>
+          <div class="small">Lightweight group + private chat</div>
+        </div>
+      </div>
+
+      <div class="menu">
+        <a class="play-btn" href="https://play.google.com/store/apps/details?id=vm.chat" target="_blank" rel="noreferrer">
+          ▶ Play Store
+        </a>
+        <a href="#privacy" id="privacyLink">🔒 Privacy Policy</a>
+        <a href="#terms" id="termsLink">📜 Terms & Conditions</a>
+        <a href="#about" id="aboutLink">❔ About</a>
+      </div>
+
+      <div style="margin-top:auto;font-size:12px;color:var(--muted)">Made for Tamil-speaking users • Local device name saved</div>
+    </aside>
+
+    <!-- Center: Group chat -->
+    <main class="center" aria-live="polite">
+      <div class="topbar">
+        <div class="comp-title">Group Chat</div>
+        <div class="tools">
+          <input class="search" id="searchUsers" placeholder="Search users" />
+        </div>
+      </div>
+
+      <div id="statusLine" class="small"></div>
+
+      <div id="messages" class="messages" role="log"></div>
+
+      <div class="composer">
+        <input id="messageInput" placeholder="Type a message" autocomplete="off" />
+        <button id="sendBtn" class="btn">Send</button>
+      </div>
+    </main>
+
+    <!-- Right: Panel (private chats + online list) -->
+    <aside class="panel">
+      <div style="display:flex;align-items:center;gap:8px">
+        <h4 style="flex:1;margin:0">Private Messages</h4>
+        <div id="bellWrap" style="display:flex;gap:8px;align-items:center">
+          <div id="bellBtn" title="Open panel" style="cursor:pointer">🔔</div>
+          <div id="onlineCount" class="small"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="filterInput" placeholder="Filter" style="flex:1;padding:8px;border-radius:8px;border:0;background:#0e1b20;color:#fff" />
+        <button id="openPanelBtn" class="btn">Open</button>
+      </div>
+
+      <div>
+        <div class="small" style="margin-bottom:6px">Unread conversations</div>
+        <div id="panelList" class="panelList"></div>
+      </div>
+
+      <div>
+        <div class="small" style="margin-bottom:6px">Online users</div>
+        <div id="onlineList" class="panelList" style="max-height:160px"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Login overlay -->
+  <div id="loginWrap" class="loginOverlay" style="display:none">
+    <div class="loginCard">
+      <div style="font-weight:700">Enter display name</div>
+      <input id="nameInput" placeholder="Your name" style="width:100%;padding:10px;border-radius:8px;border:0;margin-top:8px;background:#071215;color:#fff" />
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:8px">
+        <button id="joinBtn" class="btn">Join</button>
+      </div>
+      <div class="small" style="margin-top:8px">Name is saved to this device.</div>
+    </div>
+  </div>
+
+  <!-- Private modal -->
+  <div id="privatePopup" class="privateModal">
+    <div class="privateCard">
+      <div class="privateHeader">
+        <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer">⬅</button>
+        <div style="font-weight:700" id="privateTitle">Private Chat</div>
+        <div style="flex:1"></div>
+        <button id="blockBtn" style="background:none;border:0;color:#ff7b7b;cursor:pointer">Block</button>
+      </div>
+
+      <div id="privateMessages" class="privateMessages"></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="typingPrivate" class="small"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="privateInput" placeholder="Type a private message" style="flex:1;padding:10px;border-radius:22px;border:0;background:#122228;color:#fff" />
+        <button id="privateSend" class="btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- small toast -->
+  <div id="toast" style="position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#122228;padding:10px 12px;border-radius:10px;display:none;z-index:70"></div>
+
+  <!-- sounds (tiny silent data URIs as placeholders) -->
+  <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
+
+  <!-- firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+  // --- CONFIG (kept from your existing app) ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+    authDomain: "tamil-chat-2d54e.firebaseapp.com",
+    databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+    projectId: "tamil-chat-2d54e",
+    storageBucket: "tamil-chat-2d54e.appspot.com",
+    messagingSenderId: "804705969240",
+    appId: "1:804705969240:web:658df281dd8360843c162d"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ---- DOM refs ----
+  const loginWrap = document.getElementById('loginWrap');
+  const nameInput = document.getElementById('nameInput');
+  const joinBtn = document.getElementById('joinBtn');
+  const messagesEl = document.getElementById('messages');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const statusLine = document.getElementById('statusLine');
+  const onlineCountEl = document.getElementById('onlineCount');
+  const onlineListEl = document.getElementById('onlineList');
+  const panelListEl = document.getElementById('panelList');
+  const bellBtn = document.getElementById('bellBtn');
+  const filterInput = document.getElementById('filterInput');
+  const openPanelBtn = document.getElementById('openPanelBtn');
+  const privatePopup = document.getElementById('privatePopup');
+  const privateTitle = document.getElementById('privateTitle');
+  const privateMessages = document.getElementById('privateMessages');
+  const privateInput = document.getElementById('privateInput');
+  const privateSend = document.getElementById('privateSend');
+  const closePrivate = document.getElementById('closePrivate');
+  const blockBtn = document.getElementById('blockBtn');
+  const typingPrivate = document.getElementById('typingPrivate');
+  const searchUsers = document.getElementById('searchUsers');
+  const dingAudio = document.getElementById('dingAudio');
+  const toastEl = document.getElementById('toast');
+
+  // ---- state ----
+  let username = localStorage.getItem('guestName') || '';
+  let privateChatWith = null;
+  let currentGroupRef = null;
+  let currentPrivateRef = null;
+  const renderedPrivateMsgIds = new Map();
+  const privateListeners = new Map();
+  let typingTimer = null;
+  let privateTypingTimer = null;
+
+  // ---- helpers ----
+  function showToast(msg){ toastEl.textContent = msg; toastEl.style.display='block'; setTimeout(()=>toastEl.style.display='none',1600); }
+  function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0'); const am=h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}` }
+  function scrollToBottomSoon(el){ setTimeout(()=>{ el.scrollTop = el.scrollHeight; },80); }
+  function chatId(a,b){ return [a,b].sort().join('_'); }
+
+  // ---- login/start ----
+  function showLogin(){ loginWrap.style.display='flex'; }
+  function hideLogin(){ loginWrap.style.display='none'; }
+  function startAs(name){ username = name; localStorage.setItem('guestName', name); hideLogin(); setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenUnreadAndPanel(); }
+
+  if(!username) showLogin(); else startAs(username);
+
+  joinBtn.addEventListener('click', ()=>{ const n=nameInput.value.trim(); if(!n) return showToast('Enter a name'); startAs(n); });
+
+  // ---- presence ----
+  function setPresence(){ if(!username) return; db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{}); db.ref(`profiles/${username}/online`).onDisconnect().remove(); }
+
+  function listenPresence(){ db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent = `${Object.keys(val).length} online`; onlineListEl.innerHTML=''; Object.keys(val).forEach(u=>{ const el=document.createElement('div'); el.className='panelItem'; el.textContent=u; el.addEventListener('click', ()=> openPrivatePopup(u)); onlineListEl.appendChild(el); }); document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; if(!u) return; val[u]?a.classList.add('online'):a.classList.remove('online'); }); }); }
+
+  // ---- group listeners & messages ----
+  function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML=''; currentGroupRef = db.ref('messages').limitToLast(80); currentGroupRef.on('child_added', snap=> renderGroupMessage(snap.val(), snap.key)); currentGroupRef.on('child_removed', snap=>{ const el = messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
+
+  function renderGroupMessage(data, key){ if(!data || data.banned) return; const isSelf = data.name===username; const row=document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); if(key) row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.textContent = (data.name||'?').charAt(0).toUpperCase(); avatar.dataset.username = data.name; avatar.addEventListener('click', ()=>{ if(data.name!==username) openPrivatePopup(data.name); }); const content=document.createElement('div'); const meta=document.createElement('div'); meta.className='meta'; meta.textContent = data.name; const bubble=document.createElement('div'); bubble.className='bubble '+(isSelf?'self':''); bubble.textContent = data.text||''; const t=document.createElement('div'); t.className='time'; t.textContent = formatTime(data.time||Date.now()); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
+
+  sendBtn.addEventListener('click', sendGroupMessage);
+  messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendGroupMessage(); }});
+
+  function sendGroupMessage(){ const text = messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); cleanupGroup(80); }
+
+  function cleanupGroup(limit){ db.ref('messages').once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`messages/${r.k}`]=null); db.ref().update(updates).catch(()=>{}); } }); }
+
+  // typing indicator for group
+  function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length? `${who.join(', ')} is typing...` : ''; }); messageInput.addEventListener('input', ()=>{ db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer = setTimeout(()=> db.ref(`typing/group/${username}`).remove(), 1400); }); }
+
+  // ---- private chats (unread + panel) ----
+  function watchPrivateChatsInitial(){ watchPrivateChats(); db.ref('privateChats').on('child_changed', ()=> refreshPanelList()); db.ref('privateChats').on('child_added', ()=> refreshPanelList()); }
+
+  function watchPrivateChats(){ const root = db.ref('privateChats'); root.on('child_added', snap=>{ const key = snap.key; if(!key.includes(username)) return; attachPrivateListener(key); }); root.once('value').then(all=>{ all.forEach(snap=>{ const key = snap.key; if(key.includes(username)) attachPrivateListener(key); }); }); }
+
+  function attachPrivateListener(chatKey){ if(privateListeners.has(chatKey)) return; const chatRef = db.ref(`privateChats/${chatKey}`).limitToLast(1); const handler = chatRef.on('child_added', snap=>{ const msg = snap.val(); if(!msg) return; if(msg.name === username) return; const parts = chatKey.split('_'); const other = parts[0] === username ? parts[1] : parts[0]; if(privateChatWith === other && privatePopup.style.display === 'flex'){ renderPrivateMessageWithId(chatKey, snap.key, msg); } else { bellFlash(); } refreshPanelList(); }); privateListeners.set(chatKey,{ref:chatRef,handler}); }
+
+  function listenUnreadAndPanel(){ listenUnreadForMe(); refreshPanelList(); }
+  function listenUnreadForMe(){ const uRef = db.ref(`unread/${username}`); uRef.on('value', snap=>{ const val = snap.val() || {}; const totals = Object.values(val).reduce((s,n)=> s + (Number(n)||0), 0); updateBellBadge(totals); refreshPanelList(); }); }
+
+  function updateBellBadge(total){ const el = document.getElementById('bellBtn'); if(total && total>0){ el.textContent = `🔔 ${total>99?'99+':total}`; } else el.textContent='🔔'; }
+
+  async function refreshPanelList(){ panelListEl.innerHTML=''; const all = await db.ref('privateChats').once('value').then(s=> s.val() || {}); const unreadForMe = await db.ref(`unread/${username}`).once('value').then(s=> s.val() || {});
+    const map = [];
+    Object.keys(all).forEach(key=>{ if(!key.includes(username)) return; const parts = key.split('_'); const other = parts[0] === username ? parts[1] : parts[0]; const ucount = Number((unreadForMe && unreadForMe[other]) || 0); const msgs = all[key] || {}; const times = Object.values(msgs).map(m=>m.time||0); const latest = times.length ? Math.max(...times) : 0; map.push({other,key,ucount,latest}); });
+    map.sort((a,b)=> b.latest - a.latest);
+    map.forEach(item=>{ const el=document.createElement('div'); el.className='panelItem'; el.dataset.other=item.other; const who=document.createElement('div'); who.className='who'; who.textContent=item.other; const count=document.createElement('div'); count.className='count'; count.textContent=item.ucount; if(item.ucount===0) count.style.display='none'; el.append(who,count); el.addEventListener('click', ()=>{ openPrivatePopup(item.other); db.ref(`unread/${username}/${item.other}`).set(0).catch(()=>{}); }); panelListEl.appendChild(el); });
+    // also show unread-only entries not in privateChats
+    const unreadKeys = Object.keys(unreadForMe || {}).filter(x=> x && !(map.find(m=>m.other===x)));
+    unreadKeys.forEach(other=>{ const ucount = Number(unreadForMe[other] || 0); if(ucount<=0) return; const el=document.createElement('div'); el.className='panelItem'; el.dataset.other=other; const who=document.createElement('div'); who.className='who'; who.textContent=other; const count=document.createElement('div'); count.className='count'; count.textContent=ucount; el.append(who,count); el.addEventListener('click', ()=>{ openPrivatePopup(other); db.ref(`unread/${username}/${other}`).set(0).catch(()=>{}); }); panelListEl.appendChild(el); });
+  }
+
+  function bellFlash(){ const el=document.getElementById('bellBtn'); el.animate([{transform:'translateY(0)'},{transform:'translateY(-6px)'},{transform:'translateY(0)'}],{duration:260,easing:'ease-out'}); try{ dingAudio.currentTime=0; dingAudio.play().catch(()=>{}); }catch(e){} }
+
+  // ---- private popup open/render/send (dedupe) ----
+  function openPrivatePopup(otherUser){ // settings: private chats always enabled here
+    privateChatWith = otherUser; privateTitle.textContent = `Private: ${otherUser}`; privateMessages.innerHTML = ''; typingPrivate.textContent=''; privatePopup.style.display = 'flex'; db.ref(`unread/${username}/${otherUser}`).set(0).catch(()=>{});
+    const key = chatId(username, otherUser);
+    if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef = null; }
+    currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(200);
+    renderedPrivateMsgIds.set(key, new Set());
+    currentPrivateRef.on('child_added', snap=> renderPrivateMessageWithId(key, snap.key, snap.val()));
+    refreshPanelList();
+  }
+
+  function renderPrivateMessageWithId(chatKey, msgId, msg){ if(!msg) return; let set = renderedPrivateMsgIds.get(chatKey); if(!set){ set = new Set(); renderedPrivateMsgIds.set(chatKey,set); } if(set.has(msgId)) return; set.add(msgId); const row=document.createElement('div'); row.className = 'privateRow ' + (msg.name===username ? 'self' : ''); const b=document.createElement('div'); b.className='bubble'; if(msg.name===username) b.classList.add('self'); b.textContent = msg.text; const t=document.createElement('div'); t.className='time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.textContent = formatTime(msg.time||Date.now()); row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); }
+
+  // send private
+  let privateSendLocked=false;
+  privateSend.addEventListener('click', sendPrivate);
+  privateInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendPrivate(); }});
+  function sendPrivate(){ const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(privateSendLocked) return; privateSendLocked=true; privateSend.disabled=true; const key = chatId(username, privateChatWith); const path = `privateChats/${key}`; db.ref(path).push({ name: username, text, time: Date.now() }).then(()=>{ const recipient = privateChatWith; const sender = username; db.ref(`unread/${recipient}/${sender}`).transaction(curr => (Number(curr) || 0) + 1).catch(()=>{}); privateInput.value=''; db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{}); cleanupPrivate(path,200); refreshPanelList(); }).catch(()=> showToast('Failed to send')).finally(()=>{ setTimeout(()=>{ privateSendLocked=false; privateSend.disabled=false; },260); }); }
+
+  privateInput.addEventListener('input', ()=>{ if(!privateChatWith) return; const path = `typing/private/${chatId(username,privateChatWith)}`; db.ref(`${path}/${username}`).set(true); clearTimeout(privateTypingTimer); privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1400); });
+
+  closePrivate.addEventListener('click', ()=>{ privatePopup.style.display='none'; if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef=null; } if(privateChatWith) db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{}); privateChatWith=null; });
+
+  // block / unblock
+  function isBlocked(me,other){ return db.ref(`blocks/${me}/${other}`).once('value').then(s=> !!s.val()); }
+  blockBtn.addEventListener('click', async ()=>{ if(!privateChatWith) return; const blocked = await isBlocked(username, privateChatWith); if(blocked){ db.ref(`blocks/${username}/${privateChatWith}`).remove().then(()=> showToast('Unblocked')); blockBtn.textContent='Block'; } else { db.ref(`blocks/${username}/${privateChatWith}`).set(true).then(()=>{ showToast('User blocked'); blockBtn.textContent='Unblock'; // close
+      privatePopup.style.display='none'; if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef=null; } privateChatWith=null;
+    }); } });
+
+  // receive typing in private chat
+  function listenTypingPrivate(){ db.ref('typing/private').on('value', snap=>{ const val = snap.val() || {}; if(!privateChatWith) return; const key=chatId(username,privateChatWith); const obj = val[key] || {}; const who = Object.keys(obj).filter(u=> u !== username); typingPrivate.textContent = who.length? `${who.join(', ')} is typing...` : ''; }); }
+
+  // cleanup private history limit
+  function cleanupPrivate(path, limit){ db.ref(path).once('value').then(snap=>{ const val = snap.val()||{}; const keys = Object.keys(val); if(keys.length>limit){ const arr = keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove = arr.slice(0,arr.length-limit); const updates = {}; remove.forEach(r=> updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
+
+  // watch/unwatch private root
+  function attachExistingPrivateKeys(){ db.ref('privateChats').once('value').then(all=>{ (all.val()||{}); }); }
+
+  // ---- call-free initialization ----
+  if(username){ hideLogin(); setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenTypingPrivate(); listenUnreadAndPanel(); }
+
+  // on unload cleanup
+  window.addEventListener('beforeunload', ()=>{ if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); if(privateChatWith) db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{}); } });
+
+  // misc UI helpers
+  filterInput.addEventListener('input', ()=>{ const q = filterInput.value.toLowerCase(); Array.from(panelListEl.children).forEach(c=>{ const name = (c.dataset.other||'').toLowerCase(); c.style.display = name.includes(q)?'flex':'none'; }); });
+  openPanelBtn.addEventListener('click', ()=>{ panelListEl.scrollIntoView({behavior:'smooth'}); });
+  searchUsers.addEventListener('input', ()=>{ const q = searchUsers.value.trim().toLowerCase(); Array.from(onlineListEl.children).forEach(c=>{ c.style.display = c.textContent.toLowerCase().includes(q)?'flex':'none'; }); });
+
+  // privacy & terms anchors (open new small tab/window with placeholder content)
+  document.getElementById('privacyLink').addEventListener('click', (e)=>{ e.preventDefault(); const w = window.open('', '_blank'); w.document.write('<h2>Privacy Policy</h2><p>Replace this page with your real Privacy Policy.</p>'); });
+  document.getElementById('termsLink').addEventListener('click', (e)=>{ e.preventDefault(); const w = window.open('', '_blank'); w.document.write('<h2>Terms & Conditions</h2><p>Replace this page with your real Terms & Conditions.</p>'); });
+  document.getElementById('aboutLink').addEventListener('click', (e)=>{ e.preventDefault(); const w = window.open('', '_blank'); w.document.write('<h2>About Tamil VM Chat</h2><p>App: Tamil VM Chat (Android). Play Store link in the side menu.</p>'); });
+
+  </script>
+</body>
+</html>
