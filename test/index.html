@@ -5,64 +5,131 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tamil VM — Group & Private Chat (clean, no-calls)</title>
   <style>
-    :root{--bg:#0f1416;--panel:#152025;--accent:#25d366;--muted:#98a2a8;--card:#0b1419}
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,Arial,system-ui,sans-serif;background:var(--bg);color:#ecf0f1}
-    .app{max-width:1200px;margin:0 auto;height:100vh;display:grid;grid-template-columns:260px 1fr 320px;gap:12px;padding:12px}
-    .sidebar{background:var(--card);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
-    .brand{display:flex;gap:10px;align-items:center}
-    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#25d366,#00a884);display:flex;align-items:center;justify-content:center;font-weight:800;color:#042922}
-    .title{font-weight:700}
-    .menu{display:flex;flex-direction:column;gap:8px;margin-top:6px}
-    .menu a{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;text-decoration:none;color:inherit;background:transparent}
-    .menu a:hover{background:rgba(255,255,255,0.02)}
-    .play-btn{display:inline-flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:#0a3b1f;color:#dff7ea;text-decoration:none}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-    .center{display:flex;flex-direction:column;background:linear-gradient(180deg,#071215,#071215);border-radius:12px;padding:12px}
-    .topbar{display:flex;align-items:center;gap:12px;padding:8px}
-    .comp-title{font-weight:700;font-size:18px}
-    .tools{margin-left:auto;display:flex;gap:8px;align-items:center}
-    .search{padding:8px;border-radius:10px;border:0;background:#0e1a20;color:#fff;min-width:220px}
+  body {
+    font-family: sans-serif;
+    background: #111;
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-    .messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
-    .msg-row{display:flex;align-items:flex-start;gap:10px;max-width:78%}
-    .msg-row.self{margin-left:auto;flex-direction:row-reverse}
-    .avatar{width:40px;height:40px;border-radius:50%;background:#0b1113;display:flex;align-items:center;justify-content:center;font-weight:700}
-    .bubble{background:var(--panel);padding:10px 12px;border-radius:12px;font-size:14px}
-    .bubble.self{background:#005c4b}
-    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+  /* Main layout */
+  .app-wrapper {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-    .composer{display:flex;gap:8px;padding:10px;background:var(--card);border-radius:10px}
-    .composer input{flex:1;padding:10px;border-radius:22px;border:0;background:#122228;color:#fff}
-    .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#071215;cursor:pointer}
+  /* Left Column (Chats List) */
+  .sidebar {
+    width: 320px;
+    background: #1c1c1c;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+  }
 
-    .panel{background:var(--card);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
-    .panel h4{margin:0}
-    .panelList{display:flex;flex-direction:column;gap:8px;overflow:auto}
-    .panelItem{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}
-    .panelItem:hover{background:rgba(255,255,255,0.02)}
-    .count{background:#ff3b30;color:#fff;padding:4px 8px;border-radius:10px;font-size:12px}
+  /* Chat list scroll */
+  .chat-list {
+    flex: 1;
+    overflow-y: auto;
+  }
 
-    .loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50}
-    .loginCard{background:#071215;padding:18px;border-radius:12px;min-width:320px}
+  /* Right Column (Chat Window) */
+  .chat-window {
+    flex: 1;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+  }
 
-    /* private popup (modal) */
-    .privateModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:60}
-    .privateCard{background:var(--card);padding:12px;border-radius:12px;min-width:360px;max-width:720px;display:flex;flex-direction:column;gap:8px}
-    .privateHeader{display:flex;align-items:center;gap:8px}
-    .privateMessages{max-height:360px;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-    .privateRow.self{align-self:flex-end}
+  /* Message Area */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+  }
 
-    .small{font-size:12px;color:var(--muted)}
+  /* Input Row */
+  .input-row {
+    display: flex;
+    padding: 10px;
+    background: #1c1c1c;
+  }
 
-    /* responsive */
-    @media(max-width:980px){
-      .app{grid-template-columns:1fr;grid-auto-rows:1fr;gap:8px;padding:8px}
-      .sidebar{order:3}
-      .panel{order:2}
+  .input-row input {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    outline: none;
+    background: #333;
+    color: #fff;
+  }
+
+  .input-row button {
+    margin-left: 10px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #0084ff;
+    color: white;
+    cursor: pointer;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 100%;
+      max-width: none;
     }
-  </style>
+
+    .app-wrapper {
+      flex-direction: column;
+    }
+
+    .chat-window {
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      height: 60px;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .chat-list .chat-item {
+      min-width: 120px;
+      padding: 10px;
+      border-bottom: none;
+      border-right: 1px solid #333;
+    }
+
+    .messages {
+      padding: 10px;
+    }
+
+    .input-row input {
+      padding: 10px;
+    }
+  }
+</style>
 </head>
 <body>
   <div class="app">
