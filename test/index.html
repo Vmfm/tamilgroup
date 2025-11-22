@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Group + Private Chat (no calls, block/unblock)</title>
+<title>WhatsApp-style Group + Private Chat (no calls, block/unblock) — Option A</title>
 <style>
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 *{box-sizing:border-box}
@@ -231,12 +231,13 @@ const bellBadgeEl = bellBadge;
 /* ----------------- state ----------------- */
 let username = localStorage.getItem('guestName') || '';
 let currentGroupRef = null;
-let currentPrivateRef = null;
+let currentPrivateRefA = null; // /private/you/them
+let currentPrivateRefB = null; // /private/them/you
 let privateChatWith = null;
 let typingTimer = null;
 let privateTypingTimer = null;
 const privateListeners = new Map();
-/* dedupe set per chat for message keys rendered */
+/* dedupe set per chat for message keys rendered (ids are prefixed with path to avoid collision) */
 const renderedPrivateMsgIds = new Map();
 
 /* settings */
@@ -249,7 +250,7 @@ applySettingsToUI();
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
-function chatId(a,b){ return [a,b].sort().join('_'); }
+function chatId(a,b){ return `${a}_${b}`; } // For Option A we use directional paths: /private/{from}_{to}
 
 /* ----------------- Login / start ----------------- */
 function showLogin(){ loginWrap.style.display = 'flex'; }
@@ -362,26 +363,43 @@ function reportUser(user){ if(user===username){ showToast("Can't report yourself
 
 /* ----------------- UNREAD & PANEL ----------------- */
 function watchPrivateChats(){
-  const root = db.ref('privateChats');
-  root.on('child_added', snap=>{ const key = snap.key; if(!key.includes(username)) return; attachPrivateListener(key); });
-  root.once('value').then(all=>{ all.forEach(snap=>{ const key = snap.key; if(key.includes(username)) attachPrivateListener(key); }); });
+  const root = db.ref('private'); // top-level for Option A we will inspect children under /private
+  root.on('child_added', snap=>{
+    // any new 'from' user path might include chats directed to us
+    const fromKey = snap.key; // e.g. "Alice_Bob" (sender_receiver)
+    if(!fromKey) return;
+    // we will attach listeners per chat path in attachPrivateListener when relevant
+    attachPrivateListenerFromNode(fromKey);
+  });
+  root.once('value').then(all=>{ all.forEach(snap=>{ attachPrivateListenerFromNode(snap.key); }); });
 }
-function attachPrivateListener(chatKey){
-  if(privateListeners.has(chatKey)) return;
-  const chatRef = db.ref(`privateChats/${chatKey}`).limitToLast(1);
+function attachPrivateListenerFromNode(fromKey){
+  // fromKey is in format "sender_recipient"
+  // we only care if either sender or recipient is our username
+  if(!fromKey) return;
+  // find if this path involves current user
+  if(!fromKey.includes(username)) return;
+  const path = `private/${fromKey}`;
+  if(privateListeners.has(path)) return;
+  const chatRef = db.ref(path).limitToLast(1);
   const handler = chatRef.on('child_added', snap=>{
     const msg = snap.val(); if(!msg) return;
-    if(msg.name === username) return;
-    const parts = chatKey.split('_'); const other = parts[0] === username ? parts[1] : parts[0];
+    // ignore our own messages for unread but show notification if it's not from us
+    if(msg.from === username) return;
+    // find the other user
+    const [sender,recipient] = fromKey.split('_');
+    const other = sender === username ? recipient : sender;
     if(privateChatWith === other && privatePopup.style.display === 'flex'){
-      renderPrivateMessageWithId(chatKey, snap.key, msg);
+      // we are viewing this conversation; render incoming
+      renderPrivateMessageWithId(path, snap.key, msg);
     } else {
       bellFlash();
     }
     refreshPanelList();
   });
-  privateListeners.set(chatKey, { ref: chatRef, handler });
+  privateListeners.set(path, { ref: chatRef, handler });
 }
+
 function listenUnreadForMe(){
   const uRef = db.ref(`unread/${username}`);
   uRef.on('value', snap=>{
@@ -401,20 +419,38 @@ function updateBellBadge(total){
 }
 async function refreshPanelList(){
   panelListEl.innerHTML = '';
-  const all = await db.ref('privateChats').once('value').then(s=> s.val() || {});
+  // load unread map and private map
+  const allPrivate = await db.ref('private').once('value').then(s=> s.val() || {});
   const unreadForMe = await db.ref(`unread/${username}`).once('value').then(s=> s.val() || {});
-  const map = [];
-  Object.keys(all).forEach(key=>{
-    if(!key.includes(username)) return;
-    const parts = key.split('_'); const other = parts[0] === username ? parts[1] : parts[0];
-    const ucount = Number((unreadForMe && unreadForMe[other]) || 0);
-    const msgs = all[key] || {};
-    const times = Object.values(msgs).map(m=> m.time || 0);
-    const latest = times.length ? Math.max(...times) : 0;
-    map.push({ other, key, ucount, latest });
+  const map = {};
+  // allPrivate keys like "Alice_Bob" (from_to)
+  Object.keys(allPrivate).forEach(key=>{
+    const [from,to] = key.split('_');
+    if(from === username) { // chats where I sent messages
+      const other = to;
+      map[other] = map[other] || { other, latest:0, ucount:0 };
+      // find latest time among messages under this node
+      const msgs = allPrivate[key] || {};
+      const times = Object.values(msgs).map(m=> m.time || 0);
+      if(times.length) map[other].latest = Math.max(map[other].latest, Math.max(...times));
+    } else if(to === username){ // chats where I am recipient
+      const other = from;
+      map[other] = map[other] || { other, latest:0, ucount:0 };
+      const msgs = allPrivate[key] || {};
+      const times = Object.values(msgs).map(m=> m.time || 0);
+      if(times.length) map[other].latest = Math.max(map[other].latest, Math.max(...times));
+    }
   });
-  map.sort((a,b)=> b.latest - a.latest);
-  map.forEach(item=>{
+  // add unread counts
+  Object.keys(map).forEach(k=>{
+    map[k].ucount = Number((unreadForMe && unreadForMe[k]) || 0);
+  });
+  // add any unread-only
+  Object.keys(unreadForMe || {}).forEach(other=>{
+    if(!map[other]) map[other] = { other, latest:0, ucount: Number(unreadForMe[other] || 0) };
+  });
+  const arr = Object.values(map).sort((a,b)=> b.latest - a.latest);
+  arr.forEach(item=>{
     const el = document.createElement('div'); el.className = 'panelItem'; el.dataset.other = item.other;
     const who = document.createElement('div'); who.className = 'who'; who.textContent = item.other;
     const count = document.createElement('div'); count.className = 'count'; count.textContent = item.ucount;
@@ -426,21 +462,6 @@ async function refreshPanelList(){
     });
     panelListEl.appendChild(el);
   });
-  // also show unread-only entries not in privateChats
-  const unreadKeys = Object.keys(unreadForMe || {}).filter(x=> x && !(map.find(m=>m.other===x)));
-  unreadKeys.forEach(other=>{
-    const ucount = Number(unreadForMe[other] || 0);
-    if(ucount <= 0) return;
-    const el = document.createElement('div'); el.className = 'panelItem'; el.dataset.other = other;
-    const who = document.createElement('div'); who.className = 'who'; who.textContent = other;
-    const count = document.createElement('div'); count.className = 'count'; count.textContent = ucount;
-    el.append(who,count);
-    el.addEventListener('click', ()=> {
-      openPrivatePopup(other);
-      db.ref(`unread/${username}/${other}`).set(0).catch(()=>{});
-    });
-    panelListEl.appendChild(el);
-  });
 }
 function openPanel(){ panelEl.classList.add('open'); panelEl.setAttribute('aria-hidden','false'); const w = panelEl.getBoundingClientRect().width; document.getElementById('app').style.transform = `translateX(-${w}px)`; refreshPanelList(); }
 function closePanel(){ panelEl.classList.remove('open'); panelEl.setAttribute('aria-hidden','true'); document.getElementById('app').style.transform = ''; }
@@ -448,7 +469,15 @@ panelCloseBtn.addEventListener('click', closePanel);
 bellBtn.addEventListener('click', ()=> { if(panelEl.classList.contains('open')) closePanel(); else openPanel(); });
 function bellFlash(){ bellBtn.animate([{ transform: 'translateY(0)' },{ transform: 'translateY(-4px)' },{ transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){} }
 
-/* ----------------- Private Chat open/render/send (dedupe fixed) ----------------- */
+/* ----------------- Private Chat open/render/send (Option A) -----------------
+   Data layout:
+     private/{from}_{to}/{pushId} = { from, to, text, time }
+   When opening private chat between A and B:
+     - load /private/A_B (my->them) and /private/B_A (them->me)
+     - merge results by timestamp and render latest 50 combined
+     - attach child_added listeners to both paths for live updates
+-------------------------------------------------------------------------- */
+
 function openPrivatePopup(otherUser){
   if(!settings.privateChat){ showToast('Private chat is turned OFF in settings'); return; }
   privateChatWith = otherUser;
@@ -459,36 +488,82 @@ function openPrivatePopup(otherUser){
   privatePopup.style.display = 'flex';
   privatePopup.setAttribute('aria-hidden','false');
 
-  // show online label if needed (not displayed visually here)
-  db.ref(`profiles/${otherUser}/online`).once('value').then(snap=>{ /* optional */ });
-
   // 0 out unread for this chat for me
   db.ref(`unread/${username}/${otherUser}`).set(0).catch(()=>{});
 
-  // attach listener for last 50 messages
-  const key = chatId(username, otherUser);
-  if(currentPrivateRef) { currentPrivateRef.off(); currentPrivateRef = null; }
-  currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(50);
+  // prepare paths
+  const pathA = `private/${chatId(username, otherUser)}`; // messages I sent: from=username,to=otherUser
+  const pathB = `private/${chatId(otherUser, username)}`; // messages they sent
 
-  // clear dedupe map for this chat and re-init
-  renderedPrivateMsgIds.set(key, new Set());
-  currentPrivateRef.on('child_added', snap => {
-    renderPrivateMessageWithId(key, snap.key, snap.val());
-  });
+  // remove previous listeners if any
+  if(currentPrivateRefA){ currentPrivateRefA.off(); currentPrivateRefA = null; }
+  if(currentPrivateRefB){ currentPrivateRefB.off(); currentPrivateRefB = null; }
 
-  // listen typing for this chat
-  const typingPath = `typing/private/${key}`;
-  db.ref(typingPath).on('value', snap=>{
-    const obj = snap.val() || {};
-    // remove our own presence
-    delete obj[username];
+  // first load both sets once, merge and render sorted by time (last 50)
+  Promise.all([
+    db.ref(pathA).once('value').then(s=> s.val() || {}),
+    db.ref(pathB).once('value').then(s=> s.val() || {})
+  ]).then(([aVals, bVals])=>{
+    const combined = [];
+    Object.entries(aVals).forEach(([k,v])=> combined.push({ id: pathA + '::' + k, key: k, path: pathA, ...v }));
+    Object.entries(bVals).forEach(([k,v])=> combined.push({ id: pathB + '::' + k, key: k, path: pathB, ...v }));
+    combined.sort((x,y)=> (x.time||0) - (y.time||0));
+    // keep last 50
+    const last = combined.slice(Math.max(0, combined.length-50));
+    // clear dedupe set for this conversation
+    const dedupeKey = `${username}_${otherUser}`;
+    renderedPrivateMsgIds.set(dedupeKey, new Set());
+    last.forEach(item=>{
+      renderPrivateMessageIdObject(dedupeKey, item);
+    });
+    scrollToBottomSoon(privateMessages);
+  }).catch(()=>{ /* ignore */ });
+
+  // attach live child_added for both paths (limitToLast(1) to catch new)
+  currentPrivateRefA = db.ref(pathA);
+  currentPrivateRefB = db.ref(pathB);
+  const dedupeKey = `${username}_${otherUser}`;
+
+  // handler helper
+  const handleAdded = (path) => (snap) => {
+    const msg = snap.val();
+    if(!msg) return;
+    const id = path + '::' + snap.key;
+    // dedupe per conversation
+    let set = renderedPrivateMsgIds.get(dedupeKey);
+    if(!set){ set = new Set(); renderedPrivateMsgIds.set(dedupeKey, set); }
+    if(set.has(id)) return;
+    set.add(id);
+    // append
+    const row = document.createElement('div'); row.className = 'private-row ' + (msg.from===username ? 'self' : '');
+    const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = msg.text;
+    const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.style.color = '#97a4ab';
+    t.textContent = formatTime(msg.time||Date.now());
+    row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
+  };
+
+  // attach listeners
+  currentPrivateRefA.limitToLast(1).on('child_added', handleAdded(pathA));
+  currentPrivateRefB.limitToLast(1).on('child_added', handleAdded(pathB));
+
+  // typing indicator for this private chat
+  const typingPath = `typing/private/${chatId(username, otherUser)}__${chatId(otherUser,username)}`; // unique key to avoid collisions
+  // We'll monitor typing keys individually: typing/private/{from}_{to}/{user}
+  const typingRefA = db.ref(`typing/private/${chatId(username,otherUser)}`);
+  const typingRefB = db.ref(`typing/private/${chatId(otherUser,username)}`);
+  // listen to both typing nodes
+  typingRefA.on('value', snap => {
+    const obj = snap.val() || {}; delete obj[username]; // exclude me
     const who = Object.keys(obj);
-    if(who.length){
-      typingPrivateEl.textContent = `${who.join(', ')} is typing...`;
-    } else typingPrivateEl.textContent = '';
+    if(who.length) typingPrivateEl.textContent = `${who.join(', ')} is typing...`; else typingPrivateEl.textContent = '';
+  });
+  typingRefB.on('value', snap => {
+    const obj = snap.val() || {}; delete obj[username];
+    const who = Object.keys(obj);
+    if(who.length) typingPrivateEl.textContent = `${who.join(', ')} is typing...`; else if(!typingPrivateEl.textContent) typingPrivateEl.textContent = '';
   });
 
-  // check block status and set block button state
+  // check block status and update UI
   updateBlockButtonUI(otherUser);
 
   // close panel if open
@@ -496,27 +571,27 @@ function openPrivatePopup(otherUser){
   refreshPanelList();
 }
 
-/* render private message but guard duplicates by id */
-function renderPrivateMessageWithId(chatKey, msgId, msg){
-  if(!msg) return;
-  let set = renderedPrivateMsgIds.get(chatKey);
-  if(!set){ set = new Set(); renderedPrivateMsgIds.set(chatKey, set); }
-  if(set.has(msgId)) return; // already rendered
-  set.add(msgId);
-  const row = document.createElement('div'); row.className = 'private-row ' + (msg.name===username ? 'self' : '');
-  const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = msg.text;
+// helper used when loading initial combined messages
+function renderPrivateMessageIdObject(dedupeKey, item){
+  const id = item.path + '::' + item.key;
+  let set = renderedPrivateMsgIds.get(dedupeKey);
+  if(!set){ set = new Set(); renderedPrivateMsgIds.set(dedupeKey, set); }
+  if(set.has(id)) return;
+  set.add(id);
+  const row = document.createElement('div'); row.className = 'private-row ' + (item.from===username ? 'self' : '');
+  const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = item.text;
   const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.style.color = '#97a4ab';
-  t.textContent = formatTime(msg.time||Date.now());
-  row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
+  t.textContent = formatTime(item.time||Date.now());
+  row.append(b,t); privateMessages.appendChild(row);
 }
 
-/* send private: protect double-send, but also respect block rules */
+/* send private - write to directional path /private/{from}_{to}/ */
 privateSend.addEventListener('click', sendPrivate);
 privateInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendPrivate(); }});
 
 let privateSendLocked = false;
 async function sendPrivate(){
-  if(!settings.privateChat){ showToast('Private chat is turned OFF'); return; }
+  if(!settings.privateChat){ showToast('Private chat is turned OFF in settings'); return; }
   const text = privateInput.value.trim();
   if(!text || !privateChatWith) return;
   // check if other has blocked me
@@ -532,44 +607,46 @@ async function sendPrivate(){
     return;
   }
 
-  if(privateSendLocked) return; // protect double-click
+  if(privateSendLocked) return;
   privateSendLocked = true;
   privateSend.disabled = true;
-  const key = chatId(username, privateChatWith);
-  const path = `privateChats/${key}`;
-  db.ref(path).push({ name: username, text, time: Date.now() }).then(ref=>{
-    // increment unread for recipient
-    const recipient = privateChatWith;
-    const sender = username;
-    db.ref(`unread/${recipient}/${sender}`).transaction(curr => (Number(curr) || 0) + 1).catch(()=>{});
+  const path = `private/${chatId(username, privateChatWith)}`; // directional write
+  const payload = { from: username, to: privateChatWith, text, time: Date.now() };
+  db.ref(path).push(payload).then(ref=>{
+    // increment unread for recipient (keyed by sender)
+    db.ref(`unread/${privateChatWith}/${username}`).transaction(curr => (Number(curr) || 0) + 1).catch(()=>{});
     privateInput.value = '';
-    db.ref(`typing/private/${key}/${username}`).remove().catch(()=>{});
+    // remove our typing presence
+    db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
+    // cleanup both directional nodes combined to keep combined length under 50 approx
+    // We'll cleanup per-directional node (simple)
     cleanupPrivate(path, 50);
     refreshPanelList();
   }).catch(()=> showToast('Failed to send')).finally(()=>{
-    // small timeout to prevent duplicate UI pushes
     setTimeout(()=>{ privateSendLocked = false; privateSend.disabled = false; }, 300);
   });
 }
 
-/* typing indicator (private) - we set our typing presence while typing */
+/* typing indicator for private - set under typing/private/{from}_{to}/{user} */
 privateInput.addEventListener('input', ()=>{
   if(!privateChatWith) return;
-  const key = chatId(username, privateChatWith);
-  const path = `typing/private/${key}`;
+  const myKey = chatId(username, privateChatWith);
+  const path = `typing/private/${myKey}`;
   db.ref(`${path}/${username}`).set(true);
   clearTimeout(privateTypingTimer);
   privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
 });
 
-/* close private */
+/* close private popup */
 closePrivate.addEventListener('click', ()=>{
   privatePopup.style.display = 'none';
   privatePopup.setAttribute('aria-hidden','true');
-  if(currentPrivateRef){ currentPrivateRef.off(); currentPrivateRef = null; }
+  // remove listeners we attached
+  if(currentPrivateRefA){ currentPrivateRefA.off(); currentPrivateRefA = null; }
+  if(currentPrivateRefB){ currentPrivateRefB.off(); currentPrivateRefB = null; }
+  // remove typing presence
   if(privateChatWith) {
-    const key = chatId(username, privateChatWith);
-    db.ref(`typing/private/${key}/${username}`).remove().catch(()=>{});
+    db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
   }
   privateChatWith = null;
   typingPrivateEl.textContent = '';
@@ -587,7 +664,6 @@ async function updateBlockButtonUI(other){
     privateSend.disabled = true;
   } else {
     blockBtn.textContent = 'Block';
-    // if other blocked me, show notice and disable input
     if(otherBlockedMe){
       blockedNotice.textContent = 'You are blocked by this user — messages disabled.';
       privateInput.disabled = true;
@@ -598,38 +674,34 @@ async function updateBlockButtonUI(other){
       privateSend.disabled = false;
     }
   }
-  // show/hide block button if no privateChatWith
   blockBtn.style.display = privateChatWith ? 'inline-block' : 'none';
 }
 
-/* handle click */
 blockBtn.addEventListener('click', async ()=>{
   if(!privateChatWith) return;
   const other = privateChatWith;
   const iBlocked = await db.ref(`blocks/${username}/${other}`).once('value').then(s=> s.val());
   if(iBlocked){
-    // unblock
     db.ref(`blocks/${username}/${other}`).remove().then(()=> {
       showToast('User unblocked');
       updateBlockButtonUI(other);
     }).catch(()=> showToast('Failed to unblock'));
   } else {
-    // block
-    db.ref(`blocks/${username}/${other}`).set(true).then(()=>{
+    db.ref(`blocks/${username}/${other}`).set(true).then(()=> {
       showToast('User blocked');
       updateBlockButtonUI(other);
     }).catch(()=> showToast('Failed to block'));
   }
 });
 
-/* ----------------- cleanup private messages limit ----------------- */
+/* ----------------- cleanup private messages limit (directional) ----------------- */
 function cleanupPrivate(path, limit){ db.ref(path).once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
 
 /* ----------------- init watchers ----------------- */
 function watchPrivateChatsInitial(){
   watchPrivateChats();
-  db.ref('privateChats').on('child_changed', ()=> refreshPanelList());
-  db.ref('privateChats').on('child_added', ()=> refreshPanelList());
+  db.ref('private').on('child_changed', ()=> refreshPanelList());
+  db.ref('private').on('child_added', ()=> refreshPanelList());
 }
 
 /* listen and display unread & panel */
@@ -645,8 +717,7 @@ window.addEventListener('beforeunload', ()=>{
     db.ref(`profiles/${username}/online`).remove();
     db.ref(`typing/group/${username}`).remove();
     if(privateChatWith) {
-      const key = chatId(username, privateChatWith);
-      db.ref(`typing/private/${key}/${username}`).remove().catch(()=>{});
+      db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
     }
   }
 });
@@ -662,8 +733,9 @@ if(username){
   listenUnreadAndPanel();
 }
 
-/* expose a tiny debug helper (optional) */
-// window._db = db;
+/* Some optional debug helpers:
+   window._db = db;
+*/
 </script>
 </body>
 </html>
