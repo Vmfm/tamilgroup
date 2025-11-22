@@ -1,183 +1,367 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp-style Group + Private Chat (no calls, block/unblock) — Option A</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Group Chat</title>
+
 <style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
-#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
-#title{font-weight:600;display:flex;align-items:center;gap:10px}
-#notifWrap{display:flex;align-items:center;gap:8px}
-.bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
-.badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
-#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
-#panel.open{transform:translateX(0)}
-.panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
-.panelTitle{font-weight:700}
-.panelClose{margin-left:auto;background:none;border:0;color:var(--accent);cursor:pointer;font-size:18px}
-.panelList{padding:8px;overflow:auto;flex:1}
-.panelItem{padding:10px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.panelItem:hover{background:rgba(255,255,255,.02)}
-.panelItem .who{flex:1}
-.panelItem .count{background:#ff3b30;color:#fff;border-radius:12px;padding:2px 8px;font-size:12px}
+/* ---------- COLORS ---------- */
+:root{
+  --bg:#111b21;
+  --panel:#202c33;
+  --accent:#25d366;
+  --muted:#97a4ab;
+}
 
-/* main chat */
-#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
-.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
-.avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-.popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
-.avatar:hover .popup-menu{display:flex}
-.popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
-.msg-row.self .bubble{background:#005c4b}
-.meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-#statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
-#toast.show{opacity:1;bottom:40px}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
-#loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:300px}
-#loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
-#loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+/* ---------- BASE ---------- */
+body{
+  margin:0;
+  background:var(--bg);
+  color:#e9edef;
+  font-family:Arial,system-ui;
+  height:100vh;
+  overflow:hidden;
+}
 
-/* private popup - BLACK window (user requested) */
-#privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
-.card{background:#000;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
-#privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:#fff}
-#privateMessages{flex:1;overflow:auto;padding:8px;background:#000;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-.private-bubble{background:#111;padding:8px 10px;border-radius:10px;max-width:80%;color:#fff}
-.private-row.self .private-bubble{background:#052f24}
-.private-row.self{align-self:flex-end}
-#privateInputBar{display:flex;gap:8px;margin-top:8px}
-#privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#111;color:#fff}
-#privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
-#typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
+#app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  max-width:900px;
+  margin:0 auto;
+}
 
-/* block/unblock button */
-#blockBtn{background:none;border:1px solid rgba(255,255,255,.06);color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer}
+/* ---------- TOP BAR ---------- */
+#topBar{
+  padding:10px;
+  background:#0b141a;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
 
-/* settings pop (only private chat toggle) */
-#settingsWrap{position:relative}
-#settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
-#settingsPanel{position:absolute;right:12px;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.03);padding:10px;border-radius:8px;display:none;z-index:30}
-.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px}
-.toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
-.toggleKnob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s}
+#title{
+  font-size:18px;
+  font-weight:700;
+}
 
-/* small helpers */
-.hidden{display:none}
+#unreadTotal{
+  margin-left:8px;
+  font-size:14px;
+  color:#ff5555;
+}
 
-@media(max-width:900px){ #panel{width:310px} #app{max-width:100%} }
+/* ---------- MESSAGES ---------- */
+#messages{
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:#071215;
+}
+
+.msg-row{
+  display:flex;
+  align-items:flex-end;
+  max-width:80%;
+}
+
+.msg-row.self{
+  align-self:flex-end;
+  flex-direction:row-reverse;
+}
+
+.avatar{
+  width:35px;
+  height:35px;
+  background:#000;
+  color:#fff;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  margin:0 8px;
+  cursor:pointer;
+  position:relative;
+  border:2px solid transparent;
+}
+
+/* ---------- AVATAR POPUP ---------- */
+.popup-menu{
+  display:none;
+  position:absolute;
+  top:-80px;
+  left:0;
+  background:var(--panel);
+  border-radius:8px;
+  padding:6px;
+  flex-direction:column;
+  min-width:120px;
+  z-index:999;
+}
+
+.avatar:active .popup-menu,
+.avatar:hover .popup-menu{
+  display:flex;
+}
+
+.popup-menu button{
+  background:none;
+  color:#fff;
+  border:0;
+  padding:6px;
+  text-align:left;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+/* ---------- CHAT BUBBLES ---------- */
+.bubble{
+  background:var(--panel);
+  padding:8px 12px;
+  border-radius:10px;
+  font-size:14px;
+}
+
+.msg-row.self .bubble{
+  background:#005c4b;
+}
+
+.time{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:6px;
+  text-align:right;
+}
+
+.meta{
+  font-size:12px;
+  color:#53bdeb;
+  margin-bottom:4px;
+}
+
+/* ---------- INPUT BAR ---------- */
+#inputBar{
+  display:flex;
+  padding:10px;
+  background:var(--panel);
+  gap:8px;
+}
+
+#messageInput{
+  flex:1;
+  padding:10px;
+  background:#2a3942;
+  border:0;
+  border-radius:20px;
+  color:#fff;
+  font-size:14px;
+}
+
+#sendBtn{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  border:0;
+  background:var(--accent);
+  color:#fff;
+  font-size:18px;
+}
+
+/* ---------- STATUS ---------- */
+#statusLine{
+  font-size:13px;
+  color:var(--muted);
+  padding:4px 12px;
+}
+
+/* ---------- TOAST ---------- */
+#toast{
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#2a3942;
+  color:#fff;
+  padding:10px 16px;
+  border-radius:10px;
+  opacity:0;
+  transition:.25s;
+  z-index:9999;
+}
+
+#toast.show{
+  opacity:1;
+  bottom:40px;
+}
+
+/* ---------- PRIVATE CHAT PANEL ---------- */
+#privatePanel{
+  position:fixed;
+  top:0;
+  right:-100%;
+  width:80%;
+  max-width:420px;
+  height:100%;
+  background:#000;
+  display:flex;
+  flex-direction:column;
+  transition:right .35s ease;
+  z-index:9000;
+}
+
+#privateHeader{
+  padding:12px;
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+#privateTitle{
+  font-size:17px;
+  font-weight:700;
+}
+
+#unblockBtn{
+  background:#ff4444;
+  color:#fff;
+  border:0;
+  padding:6px 10px;
+  border-radius:6px;
+  font-size:13px;
+}
+
+/* ---------- PRIVATE MESSAGES ---------- */
+#privateMessages{
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+#privateInputBar{
+  display:flex;
+  padding:10px;
+  background:#111;
+  gap:6px;
+}
+
+#privateInput{
+  flex:1;
+  padding:8px;
+  border:0;
+  border-radius:10px;
+  background:#222;
+  color:#fff;
+}
+
+#privateSendBtn{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:var(--accent);
+  border:0;
+  color:#fff;
+}
+
+#privateTyping{
+  color:#aaa;
+  font-size:13px;
+  padding-left:10px;
+}
+
+/* ---------- SETTINGS PANEL ---------- */
+#settingsPanel{
+  position:fixed;
+  left:-70%;
+  top:0;
+  width:70%;
+  max-width:320px;
+  height:100%;
+  background:#111;
+  padding:20px;
+  transition:left .35s ease;
+  z-index:9500;
+}
+
+.settingRow{
+  background:#222;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:10px;
+}
 </style>
 </head>
 <body>
-<!-- Right-side panel -->
-<div id="panel" aria-hidden="true">
-  <div class="panelHeader">
-    <div class="panelTitle">Private Messages</div>
-    <button id="panelClose" class="panelClose">✕</button>
-  </div>
-  <div class="panelList" id="panelList"></div>
-</div>
 
-<!-- App -->
 <div id="app">
+
+  <!-- TOP BAR -->
   <div id="topBar">
-    <div id="title">
-      <div id="titleText">Group Chat</div>
-    </div>
+    <button id="settingsBtn" style="background:none;border:0;color:#fff;font-size:20px;">⚙️</button>
 
-    <div style="flex:1"></div>
+    <div id="title">Group Chat</div>
+    <div id="unreadTotal"></div>
 
-    <div id="notifWrap">
-      <!-- Bell badge -->
-      <div class="bell" id="bellBtn" title="Private messages">🔔
-        <div class="badge" id="bellBadge" style="display:none">0</div>
-      </div>
-
-      <!-- Settings (only private chat toggle now) -->
-      <div id="settingsWrap">
-        <button id="settingsBtn">⚙️</button>
-        <div id="settingsPanel" role="dialog" aria-label="Settings">
-          <div class="settingRow">
-            <div>Private Chat</div>
-            <div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div>
+    <button id="privateToggle" style="margin-left:auto;background:none;border:0;color:#fff;font-size:20px;">💬</button>
   </div>
 
   <div id="statusLine"></div>
-  <div id="messages" aria-live="polite"></div>
 
+  <div id="messages"></div>
+
+  <!-- INPUT BAR -->
   <div id="inputBar">
-    <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
+    <input id="messageInput" placeholder="Type a message…" />
     <button id="sendBtn">✈️</button>
+  </div>
+</div>
+
+<!-- PRIVATE CHAT PANEL -->
+<div id="privatePanel">
+  <div id="privateHeader">
+    <div id="privateTitle">Private Chat</div>
+    <button id="unblockBtn" style="display:none">Unblock</button>
+  </div>
+
+  <div id="privateTyping"></div>
+
+  <div id="privateMessages"></div>
+
+  <div id="privateInputBar">
+    <input id="privateInput" placeholder="Type privately…" />
+    <button id="privateSendBtn">✈️</button>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel">
+  <div class="settingRow">
+    <label>
+      <input type="checkbox" id="togglePrivate" checked/>
+      Enable Private Chat
+    </label>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<!-- Login -->
-<div id="loginWrap">
-  <div id="loginCard">
-    <div style="font-weight:700;color:#fff">Enter your name</div>
-    <input id="nameInput" placeholder="Your name" />
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button id="joinBtn">Join</button>
-    </div>
-    <div style="font-size:12px;color:var(--muted)">Name is saved to this device.</div>
-  </div>
-</div>
-
-<!-- Private chat modal (BLACK) -->
-<div id="privatePopup" aria-hidden="true">
-  <div class="card">
-    <div id="privateHeader">
-      <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
-      <div style="font-weight:700" id="privateTitle">Private Chat</div>
-      <div style="flex:1"></div>
-
-      <!-- BLOCK / UNBLOCK button (replaces call) -->
-      <button id="blockBtn" title="Block or Unblock user">Block</button>
-    </div>
-
-    <div id="privateMessages" role="log" aria-live="polite"></div>
-
-    <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-      <div id="typingPrivate" class="small"></div>
-      <div id="blockedNotice" style="color:#ff6b6b;font-size:13px;margin-left:6px"></div>
-    </div>
-
-    <div id="privateInputBar">
-      <input id="privateInput" placeholder="Type a private message" autocomplete="off"/>
-      <button id="privateSend">✈️</button>
-    </div>
-  </div>
-</div>
-
-<!-- Audio: small ding only -->
-<audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
-
-<!-- Firebase -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ----------------- Firebase config (same as yours) ----------------- */
+
+// ----------------------------------------------------
+// FIREBASE CONFIG (YOUR DETAILS)
+// ----------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -187,555 +371,175 @@ const firebaseConfig = {
   messagingSenderId: "804705969240",
   appId: "1:804705969240:web:658df281dd8360843c162d"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ----------------- DOM refs ----------------- */
-const panelEl = document.getElementById('panel');
-const panelListEl = document.getElementById('panelList');
-const panelCloseBtn = document.getElementById('panelClose');
-const bellBtn = document.getElementById('bellBtn');
-const bellBadge = document.getElementById('bellBadge');
+// ----------------------------------------------------
+// VARIABLES
+// ----------------------------------------------------
+const messagesDiv = document.getElementById("messages");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const toast = document.getElementById("toast");
+const privatePanel = document.getElementById("privatePanel");
+const privateMessages = document.getElementById("privateMessages");
+const privateSendBtn = document.getElementById("privateSendBtn");
+const privateInput = document.getElementById("privateInput");
+const privateTyping = document.getElementById("privateTyping");
+const privateTitle = document.getElementById("privateTitle");
 
-const messagesEl = document.getElementById('messages');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const statusLine = document.getElementById('statusLine');
-const onlineCountEl = document.getElementById('onlineCount');
-const toastEl = document.getElementById('toast');
+let myName = "User" + Math.floor(Math.random()*9999);
+let currentPrivateUser = null;
 
-const loginWrap = document.getElementById('loginWrap');
-const nameInput = document.getElementById('nameInput');
-const joinBtn = document.getElementById('joinBtn');
-
-const privatePopup = document.getElementById('privatePopup');
-const privateTitle = document.getElementById('privateTitle');
-const privateMessages = document.getElementById('privateMessages');
-const privateInput = document.getElementById('privateInput');
-const privateSend = document.getElementById('privateSend');
-const closePrivate = document.getElementById('closePrivate');
-const blockBtn = document.getElementById('blockBtn');
-
-const typingPrivateEl = document.getElementById('typingPrivate');
-const blockedNotice = document.getElementById('blockedNotice');
-
-const dingAudio = document.getElementById('dingAudio');
-
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsPanel = document.getElementById('settingsPanel');
-const togglePrivate = document.getElementById('togglePrivate');
-const togglePrivateKnob = document.getElementById('togglePrivateKnob');
-
-const bellBadgeEl = bellBadge;
-
-/* ----------------- state ----------------- */
-let username = localStorage.getItem('guestName') || '';
-let currentGroupRef = null;
-let currentPrivateRefA = null; // /private/you/them
-let currentPrivateRefB = null; // /private/them/you
-let privateChatWith = null;
-let typingTimer = null;
-let privateTypingTimer = null;
-const privateListeners = new Map();
-/* dedupe set per chat for message keys rendered (ids are prefixed with path to avoid collision) */
-const renderedPrivateMsgIds = new Map();
-
-/* settings */
-const SETTINGS_KEY = 'chat_settings_v1';
-let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
-applySettingsToUI();
-
-/* ----------------- helpers ----------------- */
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
-function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
-function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
-function chatId(a,b){ return `${a}_${b}`; } // For Option A we use directional paths: /private/{from}_{to}
-
-/* ----------------- Login / start ----------------- */
-function showLogin(){ loginWrap.style.display = 'flex'; }
-function hideLogin(){ loginWrap.style.display = 'none'; }
-
-async function startAs(name){
-  username = name;
-  localStorage.setItem('guestName', name);
-  hideLogin();
-  setPresence();
-  startGroupListeners();
-  listenTypingGroup();
-  listenPresence();
-  watchPrivateChatsInitial();
-  listenUnreadAndPanel();
+// ----------------------------------------------------
+// TOAST
+// ----------------------------------------------------
+function showToast(msg){
+  toast.innerText = msg;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),1500);
 }
 
-if(!username) showLogin();
-else startAs(username);
-
-joinBtn.addEventListener('click', ()=> {
-  const n = nameInput.value.trim();
-  if(!n) return showToast('Enter a name');
-  startAs(n);
+// ----------------------------------------------------
+// GROUP MESSAGE LISTENER
+// ----------------------------------------------------
+db.ref("group").on("child_added", snap=>{
+  addGroupMsg(snap.val());
 });
 
-/* ----------------- Settings UI (only private chat toggle) ----------------- */
-settingsBtn.addEventListener('click', ()=> {
-  settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
-});
-document.addEventListener('click', (e)=> {
-  if(!settingsPanel.contains(e.target) && e.target !== settingsBtn) settingsPanel.style.display = 'none';
-});
-function applySettingsToUI(){
-  if(settings.privateChat){
-    togglePrivate.style.background = '#25d366';
-    togglePrivateKnob.style.left = '23px';
-  } else {
-    togglePrivate.style.background = '#2a3942';
-    togglePrivateKnob.style.left = '3px';
-  }
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-}
-togglePrivate.addEventListener('click', ()=> {
-  settings.privateChat = !settings.privateChat; applySettingsToUI();
-});
+function addGroupMsg(msg){
+  const row = document.createElement("div");
+  row.className = "msg-row" + (msg.name===myName ? " self":"");
 
-/* ----------------- Presence & Group ----------------- */
-function setPresence(){
-  if(!username) return;
-  db.ref(`status/${username}`).set(true);
-  db.ref(`status/${username}`).onDisconnect().remove();
-  db.ref(`profiles/${username}`).update({ online: true }).catch(()=>{});
-  db.ref(`profiles/${username}/online`).onDisconnect().remove();
+  const avatar = document.createElement("div");
+  avatar.className="avatar";
+  avatar.innerText = msg.name[0];
+  avatar.onclick = ()=>openPrivate(msg.name);
+
+  const bubble = document.createElement("div");
+  bubble.className="bubble";
+  bubble.innerHTML = `<div class='meta'>${msg.name}</div>${msg.text}`;
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+
+  messagesDiv.appendChild(row);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function startGroupListeners(){
-  if(currentGroupRef) currentGroupRef.off();
-  messagesEl.innerHTML = '';
-  currentGroupRef = db.ref('messages').limitToLast(50);
-  currentGroupRef.on('child_added', snap => renderGroupMessage(snap.val(), snap.key));
-  currentGroupRef.on('child_removed', snap => {
-    const el = messagesEl.querySelector(`[data-key="${snap.key}"]`);
-    if(el) el.remove();
+// ----------------------------------------------------
+// SEND GROUP MESSAGE
+// ----------------------------------------------------
+sendBtn.onclick = ()=>{
+  if(!messageInput.value.trim()) return;
+  db.ref("group").push({
+    name: myName,
+    text: messageInput.value,
+    time: Date.now()
   });
-}
+  messageInput.value="";
+};
 
-function renderGroupMessage(data, key){
-  if(!data || data.banned) return;
-  const isSelf = data.name===username;
-  const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); if(key) row.dataset.key=key;
-  const avatar=document.createElement('div'); avatar.className='avatar'; avatar.textContent=data.name.charAt(0).toUpperCase(); avatar.dataset.username=data.name;
-  avatar.addEventListener('click', ()=>{ if(data.name!==username) openPrivatePopup(data.name); });
-  const popup=document.createElement('div'); popup.className='popup-menu';
-  if(isSelf){ const del=document.createElement('button'); del.textContent='🗑️ Delete'; del.onclick=()=>{ if(key) db.ref(`messages/${key}`).remove(); row.remove(); }; popup.appendChild(del); }
-  else { const report=document.createElement('button'); report.textContent='🚩 Report'; report.onclick=()=>reportUser(data.name); popup.appendChild(report);
-         const block=document.createElement('button'); block.textContent='🚫 Block'; block.onclick=()=>{ db.ref(`blocks/${username}/${data.name}`).set(true); row.remove(); showToast('Blocked'); }; popup.appendChild(block); }
-  avatar.appendChild(popup);
-  const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
-  const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name;
-  const bubble=document.createElement('div'); bubble.className='bubble'; bubble.textContent=data.text||'';
-  const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time||Date.now());
-  content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
-}
-
-/* send group */
-sendBtn.addEventListener('click', sendGroupMessage);
-messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendGroupMessage(); }});
-
-function sendGroupMessage(){
-  const text=messageInput.value.trim(); if(!text) return;
-  db.ref('messages').push({ name: username, text, time: Date.now() }); messageInput.value='';
-  db.ref(`typing/group/${username}`).remove(); cleanupGroup(50);
-}
-function cleanupGroup(limit){ db.ref('messages').once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`messages/${r.k}`]=null); db.ref().update(updates).catch(()=>{}); } }); }
-
-/* typing indicator (group) */
-function listenTypingGroup(){
-  db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; });
-  messageInput.addEventListener('input', ()=>{ db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(()=>db.ref(`typing/group/${username}`).remove(),1500); });
-}
-
-/* presence (avatars) */
-function listenPresence(){
-  db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; if(!u) return; val[u]?a.classList.add('online'):a.classList.remove('online'); }); });
-}
-
-/* report user */
-function reportUser(user){ if(user===username){ showToast("Can't report yourself"); return; } db.ref(`reports/${user}/${username}`).set(true).then(()=>{ db.ref(`reports/${user}`).once('value').then(snap=>{ if(snap.numChildren()>=3){ db.ref('messages').orderByChild('name').equalTo(user).once('value').then(ms=>{ ms.forEach(m=>m.ref.update({banned:true})); db.ref('messages').push({name:'System',text:`${user} has been removed from the group`,time:Date.now()}); }); } }); showToast('User reported successfully!'); }).catch(()=>showToast('Report failed')); }
-
-/* ----------------- UNREAD & PANEL ----------------- */
-function watchPrivateChats(){
-  const root = db.ref('private'); // top-level for Option A we will inspect children under /private
-  root.on('child_added', snap=>{
-    // any new 'from' user path might include chats directed to us
-    const fromKey = snap.key; // e.g. "Alice_Bob" (sender_receiver)
-    if(!fromKey) return;
-    // we will attach listeners per chat path in attachPrivateListener when relevant
-    attachPrivateListenerFromNode(fromKey);
-  });
-  root.once('value').then(all=>{ all.forEach(snap=>{ attachPrivateListenerFromNode(snap.key); }); });
-}
-function attachPrivateListenerFromNode(fromKey){
-  // fromKey is in format "sender_recipient"
-  // we only care if either sender or recipient is our username
-  if(!fromKey) return;
-  // find if this path involves current user
-  if(!fromKey.includes(username)) return;
-  const path = `private/${fromKey}`;
-  if(privateListeners.has(path)) return;
-  const chatRef = db.ref(path).limitToLast(1);
-  const handler = chatRef.on('child_added', snap=>{
-    const msg = snap.val(); if(!msg) return;
-    // ignore our own messages for unread but show notification if it's not from us
-    if(msg.from === username) return;
-    // find the other user
-    const [sender,recipient] = fromKey.split('_');
-    const other = sender === username ? recipient : sender;
-    if(privateChatWith === other && privatePopup.style.display === 'flex'){
-      // we are viewing this conversation; render incoming
-      renderPrivateMessageWithId(path, snap.key, msg);
-    } else {
-      bellFlash();
-    }
-    refreshPanelList();
-  });
-  privateListeners.set(path, { ref: chatRef, handler });
-}
-
-function listenUnreadForMe(){
-  const uRef = db.ref(`unread/${username}`);
-  uRef.on('value', snap=>{
-    const val = snap.val() || {};
-    const totals = Object.values(val).reduce((s,n)=> s + (Number(n)||0), 0);
-    updateBellBadge(totals);
-    refreshPanelList();
-  });
-}
-function updateBellBadge(total){
-  if(total && total > 0){
-    bellBadge.style.display = 'flex';
-    bellBadge.textContent = total > 99 ? '99+' : String(total);
-  } else {
-    bellBadge.style.display = 'none';
-  }
-}
-async function refreshPanelList(){
-  panelListEl.innerHTML = '';
-  // load unread map and private map
-  const allPrivate = await db.ref('private').once('value').then(s=> s.val() || {});
-  const unreadForMe = await db.ref(`unread/${username}`).once('value').then(s=> s.val() || {});
-  const map = {};
-  // allPrivate keys like "Alice_Bob" (from_to)
-  Object.keys(allPrivate).forEach(key=>{
-    const [from,to] = key.split('_');
-    if(from === username) { // chats where I sent messages
-      const other = to;
-      map[other] = map[other] || { other, latest:0, ucount:0 };
-      // find latest time among messages under this node
-      const msgs = allPrivate[key] || {};
-      const times = Object.values(msgs).map(m=> m.time || 0);
-      if(times.length) map[other].latest = Math.max(map[other].latest, Math.max(...times));
-    } else if(to === username){ // chats where I am recipient
-      const other = from;
-      map[other] = map[other] || { other, latest:0, ucount:0 };
-      const msgs = allPrivate[key] || {};
-      const times = Object.values(msgs).map(m=> m.time || 0);
-      if(times.length) map[other].latest = Math.max(map[other].latest, Math.max(...times));
-    }
-  });
-  // add unread counts
-  Object.keys(map).forEach(k=>{
-    map[k].ucount = Number((unreadForMe && unreadForMe[k]) || 0);
-  });
-  // add any unread-only
-  Object.keys(unreadForMe || {}).forEach(other=>{
-    if(!map[other]) map[other] = { other, latest:0, ucount: Number(unreadForMe[other] || 0) };
-  });
-  const arr = Object.values(map).sort((a,b)=> b.latest - a.latest);
-  arr.forEach(item=>{
-    const el = document.createElement('div'); el.className = 'panelItem'; el.dataset.other = item.other;
-    const who = document.createElement('div'); who.className = 'who'; who.textContent = item.other;
-    const count = document.createElement('div'); count.className = 'count'; count.textContent = item.ucount;
-    if(item.ucount === 0) count.style.display = 'none';
-    el.append(who, count);
-    el.addEventListener('click', ()=> {
-      openPrivatePopup(item.other);
-      db.ref(`unread/${username}/${item.other}`).set(0).catch(()=>{});
-    });
-    panelListEl.appendChild(el);
-  });
-}
-function openPanel(){ panelEl.classList.add('open'); panelEl.setAttribute('aria-hidden','false'); const w = panelEl.getBoundingClientRect().width; document.getElementById('app').style.transform = `translateX(-${w}px)`; refreshPanelList(); }
-function closePanel(){ panelEl.classList.remove('open'); panelEl.setAttribute('aria-hidden','true'); document.getElementById('app').style.transform = ''; }
-panelCloseBtn.addEventListener('click', closePanel);
-bellBtn.addEventListener('click', ()=> { if(panelEl.classList.contains('open')) closePanel(); else openPanel(); });
-function bellFlash(){ bellBtn.animate([{ transform: 'translateY(0)' },{ transform: 'translateY(-4px)' },{ transform: 'translateY(0)' }], { duration: 260, easing: 'ease-out' }); try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){} }
-
-/* ----------------- Private Chat open/render/send (Option A) -----------------
-   Data layout:
-     private/{from}_{to}/{pushId} = { from, to, text, time }
-   When opening private chat between A and B:
-     - load /private/A_B (my->them) and /private/B_A (them->me)
-     - merge results by timestamp and render latest 50 combined
-     - attach child_added listeners to both paths for live updates
--------------------------------------------------------------------------- */
-
-function openPrivatePopup(otherUser){
-  if(!settings.privateChat){ showToast('Private chat is turned OFF in settings'); return; }
-  privateChatWith = otherUser;
-  privateTitle.textContent = `Private Chat with ${otherUser}`;
-  privateMessages.innerHTML = '';
-  typingPrivateEl.textContent = '';
-  blockedNotice.textContent = '';
-  privatePopup.style.display = 'flex';
-  privatePopup.setAttribute('aria-hidden','false');
-
-  // 0 out unread for this chat for me
-  db.ref(`unread/${username}/${otherUser}`).set(0).catch(()=>{});
-
-  // prepare paths
-  const pathA = `private/${chatId(username, otherUser)}`; // messages I sent: from=username,to=otherUser
-  const pathB = `private/${chatId(otherUser, username)}`; // messages they sent
-
-  // remove previous listeners if any
-  if(currentPrivateRefA){ currentPrivateRefA.off(); currentPrivateRefA = null; }
-  if(currentPrivateRefB){ currentPrivateRefB.off(); currentPrivateRefB = null; }
-
-  // first load both sets once, merge and render sorted by time (last 50)
-  Promise.all([
-    db.ref(pathA).once('value').then(s=> s.val() || {}),
-    db.ref(pathB).once('value').then(s=> s.val() || {})
-  ]).then(([aVals, bVals])=>{
-    const combined = [];
-    Object.entries(aVals).forEach(([k,v])=> combined.push({ id: pathA + '::' + k, key: k, path: pathA, ...v }));
-    Object.entries(bVals).forEach(([k,v])=> combined.push({ id: pathB + '::' + k, key: k, path: pathB, ...v }));
-    combined.sort((x,y)=> (x.time||0) - (y.time||0));
-    // keep last 50
-    const last = combined.slice(Math.max(0, combined.length-50));
-    // clear dedupe set for this conversation
-    const dedupeKey = `${username}_${otherUser}`;
-    renderedPrivateMsgIds.set(dedupeKey, new Set());
-    last.forEach(item=>{
-      renderPrivateMessageIdObject(dedupeKey, item);
-    });
-    scrollToBottomSoon(privateMessages);
-  }).catch(()=>{ /* ignore */ });
-
-  // attach live child_added for both paths (limitToLast(1) to catch new)
-  currentPrivateRefA = db.ref(pathA);
-  currentPrivateRefB = db.ref(pathB);
-  const dedupeKey = `${username}_${otherUser}`;
-
-  // handler helper
-  const handleAdded = (path) => (snap) => {
-    const msg = snap.val();
-    if(!msg) return;
-    const id = path + '::' + snap.key;
-    // dedupe per conversation
-    let set = renderedPrivateMsgIds.get(dedupeKey);
-    if(!set){ set = new Set(); renderedPrivateMsgIds.set(dedupeKey, set); }
-    if(set.has(id)) return;
-    set.add(id);
-    // append
-    const row = document.createElement('div'); row.className = 'private-row ' + (msg.from===username ? 'self' : '');
-    const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = msg.text;
-    const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.style.color = '#97a4ab';
-    t.textContent = formatTime(msg.time||Date.now());
-    row.append(b,t); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
-  };
-
-  // attach listeners
-  currentPrivateRefA.limitToLast(1).on('child_added', handleAdded(pathA));
-  currentPrivateRefB.limitToLast(1).on('child_added', handleAdded(pathB));
-
-  // typing indicator for this private chat
-  const typingPath = `typing/private/${chatId(username, otherUser)}__${chatId(otherUser,username)}`; // unique key to avoid collisions
-  // We'll monitor typing keys individually: typing/private/{from}_{to}/{user}
-  const typingRefA = db.ref(`typing/private/${chatId(username,otherUser)}`);
-  const typingRefB = db.ref(`typing/private/${chatId(otherUser,username)}`);
-  // listen to both typing nodes
-  typingRefA.on('value', snap => {
-    const obj = snap.val() || {}; delete obj[username]; // exclude me
-    const who = Object.keys(obj);
-    if(who.length) typingPrivateEl.textContent = `${who.join(', ')} is typing...`; else typingPrivateEl.textContent = '';
-  });
-  typingRefB.on('value', snap => {
-    const obj = snap.val() || {}; delete obj[username];
-    const who = Object.keys(obj);
-    if(who.length) typingPrivateEl.textContent = `${who.join(', ')} is typing...`; else if(!typingPrivateEl.textContent) typingPrivateEl.textContent = '';
-  });
-
-  // check block status and update UI
-  updateBlockButtonUI(otherUser);
-
-  // close panel if open
-  closePanel();
-  refreshPanelList();
-}
-
-// helper used when loading initial combined messages
-function renderPrivateMessageIdObject(dedupeKey, item){
-  const id = item.path + '::' + item.key;
-  let set = renderedPrivateMsgIds.get(dedupeKey);
-  if(!set){ set = new Set(); renderedPrivateMsgIds.set(dedupeKey, set); }
-  if(set.has(id)) return;
-  set.add(id);
-  const row = document.createElement('div'); row.className = 'private-row ' + (item.from===username ? 'self' : '');
-  const b = document.createElement('div'); b.className = 'private-bubble'; b.textContent = item.text;
-  const t = document.createElement('div'); t.className = 'time'; t.style.fontSize='11px'; t.style.marginTop='4px'; t.style.color = '#97a4ab';
-  t.textContent = formatTime(item.time||Date.now());
-  row.append(b,t); privateMessages.appendChild(row);
-}
-
-/* send private - write to directional path /private/{from}_{to}/ */
-privateSend.addEventListener('click', sendPrivate);
-privateInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendPrivate(); }});
-
-let privateSendLocked = false;
-async function sendPrivate(){
-  if(!settings.privateChat){ showToast('Private chat is turned OFF in settings'); return; }
-  const text = privateInput.value.trim();
-  if(!text || !privateChatWith) return;
-  // check if other has blocked me
-  const blockedBySnap = await db.ref(`blocks/${privateChatWith}/${username}`).once('value').then(s=> s.val());
-  if(blockedBySnap){
-    blockedNotice.textContent = 'You are blocked by this user — messages are disabled.';
+// ----------------------------------------------------
+// OPEN PRIVATE CHAT
+// ----------------------------------------------------
+function openPrivate(user){
+  if(!document.getElementById("togglePrivate").checked){
+    showToast("Private chat disabled");
     return;
   }
-  // check if I have blocked other
-  const iBlocked = await db.ref(`blocks/${username}/${privateChatWith}`).once('value').then(s=> s.val());
-  if(iBlocked){
-    blockedNotice.textContent = 'You have blocked this user — unblock to send messages.';
-    return;
-  }
+  if(user === myName) return;
 
-  if(privateSendLocked) return;
-  privateSendLocked = true;
-  privateSend.disabled = true;
-  const path = `private/${chatId(username, privateChatWith)}`; // directional write
-  const payload = { from: username, to: privateChatWith, text, time: Date.now() };
-  db.ref(path).push(payload).then(ref=>{
-    // increment unread for recipient (keyed by sender)
-    db.ref(`unread/${privateChatWith}/${username}`).transaction(curr => (Number(curr) || 0) + 1).catch(()=>{});
-    privateInput.value = '';
-    // remove our typing presence
-    db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
-    // cleanup both directional nodes combined to keep combined length under 50 approx
-    // We'll cleanup per-directional node (simple)
-    cleanupPrivate(path, 50);
-    refreshPanelList();
-  }).catch(()=> showToast('Failed to send')).finally(()=>{
-    setTimeout(()=>{ privateSendLocked = false; privateSend.disabled = false; }, 300);
+  currentPrivateUser = user;
+  privateTitle.innerText = user;
+  privateMessages.innerHTML="";
+  privatePanel.style.right="0";
+
+  loadPrivateMsgs(user);
+}
+
+// ----------------------------------------------------
+// LOAD PRIVATE CHAT
+// ----------------------------------------------------
+function loadPrivateMsgs(user){
+  privateMessages.innerHTML="";
+
+  const myRef = db.ref("private/"+myName+"/"+user);
+  const theirRef = db.ref("private/"+user+"/"+myName);
+
+  myRef.on("child_added", s=>addPrivateBubble(s.val(), true));
+  theirRef.on("child_added", s=>addPrivateBubble(s.val(), false));
+}
+
+function addPrivateBubble(msg, isMine){
+  const row = document.createElement("div");
+  row.className="msg-row" + (isMine ? " self":"");
+
+  const bubble = document.createElement("div");
+  bubble.className="bubble";
+  bubble.innerText = msg.text;
+
+  row.appendChild(bubble);
+  privateMessages.appendChild(row);
+
+  privateMessages.scrollTop = privateMessages.scrollHeight;
+}
+
+// ----------------------------------------------------
+// SEND PRIVATE MESSAGE
+// ----------------------------------------------------
+privateSendBtn.onclick = ()=>{
+  if(!privateInput.value.trim()) return;
+  if(!currentPrivateUser) return;
+
+  db.ref("private/"+myName+"/"+currentPrivateUser).push({
+    text: privateInput.value,
+    time: Date.now()
   });
-}
 
-/* typing indicator for private - set under typing/private/{from}_{to}/{user} */
-privateInput.addEventListener('input', ()=>{
-  if(!privateChatWith) return;
-  const myKey = chatId(username, privateChatWith);
-  const path = `typing/private/${myKey}`;
-  db.ref(`${path}/${username}`).set(true);
-  clearTimeout(privateTypingTimer);
-  privateTypingTimer = setTimeout(()=> db.ref(`${path}/${username}`).remove(), 1500);
+  privateInput.value="";
+};
+
+// ----------------------------------------------------
+// CLOSE PRIVATE PANEL
+// ----------------------------------------------------
+document.getElementById("privateToggle").onclick = ()=>{
+  privatePanel.style.right="-100%";
+};
+
+// ----------------------------------------------------
+// PRIVATE TYPING
+// ----------------------------------------------------
+privateInput.oninput = ()=>{
+  if(!currentPrivateUser) return;
+
+  db.ref("typing/"+myName+"/"+currentPrivateUser).set(true);
+  setTimeout(()=>{
+    db.ref("typing/"+myName+"/"+currentPrivateUser).set(false);
+  }, 800);
+};
+
+db.ref("typing").on("value", snap=>{
+  if(!currentPrivateUser) return;
+  const val = snap.val()?.[currentPrivateUser]?.[myName];
+  privateTyping.innerText = val ? "typing…" : "";
 });
 
-/* close private popup */
-closePrivate.addEventListener('click', ()=>{
-  privatePopup.style.display = 'none';
-  privatePopup.setAttribute('aria-hidden','true');
-  // remove listeners we attached
-  if(currentPrivateRefA){ currentPrivateRefA.off(); currentPrivateRefA = null; }
-  if(currentPrivateRefB){ currentPrivateRefB.off(); currentPrivateRefB = null; }
-  // remove typing presence
-  if(privateChatWith) {
-    db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
-  }
-  privateChatWith = null;
-  typingPrivateEl.textContent = '';
-  blockedNotice.textContent = '';
-});
+// ----------------------------------------------------
+// SETTINGS PANEL
+// ----------------------------------------------------
+document.getElementById("settingsBtn").onclick=()=>{
+  document.getElementById("settingsPanel").style.left="0";
+};
 
-/* ----------------- BLOCK / UNBLOCK logic ----------------- */
-async function updateBlockButtonUI(other){
-  const iBlocked = await db.ref(`blocks/${username}/${other}`).once('value').then(s=> s.val());
-  const otherBlockedMe = await db.ref(`blocks/${other}/${username}`).once('value').then(s=> s.val());
-  if(iBlocked){
-    blockBtn.textContent = 'Unblock';
-    blockedNotice.textContent = '';
-    privateInput.disabled = true;
-    privateSend.disabled = true;
-  } else {
-    blockBtn.textContent = 'Block';
-    if(otherBlockedMe){
-      blockedNotice.textContent = 'You are blocked by this user — messages disabled.';
-      privateInput.disabled = true;
-      privateSend.disabled = true;
-    } else {
-      blockedNotice.textContent = '';
-      privateInput.disabled = false;
-      privateSend.disabled = false;
-    }
-  }
-  blockBtn.style.display = privateChatWith ? 'inline-block' : 'none';
-}
+document.body.onclick = (e)=>{
+  if(e.target.id==="settingsBtn" || 
+     e.target.closest("#settingsPanel")) return;
 
-blockBtn.addEventListener('click', async ()=>{
-  if(!privateChatWith) return;
-  const other = privateChatWith;
-  const iBlocked = await db.ref(`blocks/${username}/${other}`).once('value').then(s=> s.val());
-  if(iBlocked){
-    db.ref(`blocks/${username}/${other}`).remove().then(()=> {
-      showToast('User unblocked');
-      updateBlockButtonUI(other);
-    }).catch(()=> showToast('Failed to unblock'));
-  } else {
-    db.ref(`blocks/${username}/${other}`).set(true).then(()=> {
-      showToast('User blocked');
-      updateBlockButtonUI(other);
-    }).catch(()=> showToast('Failed to block'));
-  }
-});
+  document.getElementById("settingsPanel").style.left="-70%";
+};
 
-/* ----------------- cleanup private messages limit (directional) ----------------- */
-function cleanupPrivate(path, limit){ db.ref(path).once('value').then(snap=>{ const val=snap.val()||{}; const keys=Object.keys(val); if(keys.length>limit){ const arr=keys.map(k=>({k,t:val[k].time||0})).sort((a,b)=>a.t-b.t); const remove=arr.slice(0,arr.length-limit); const updates={}; remove.forEach(r=>updates[`${r.k}`]=null); db.ref(path).update(updates).catch(()=>{}); } }); }
-
-/* ----------------- init watchers ----------------- */
-function watchPrivateChatsInitial(){
-  watchPrivateChats();
-  db.ref('private').on('child_changed', ()=> refreshPanelList());
-  db.ref('private').on('child_added', ()=> refreshPanelList());
-}
-
-/* listen and display unread & panel */
-function listenUnreadAndPanel(){
-  listenUnreadForMe();
-  refreshPanelList();
-}
-
-/* ----------------- unload cleanup ----------------- */
-window.addEventListener('beforeunload', ()=>{
-  if(username){
-    db.ref(`status/${username}`).remove();
-    db.ref(`profiles/${username}/online`).remove();
-    db.ref(`typing/group/${username}`).remove();
-    if(privateChatWith) {
-      db.ref(`typing/private/${chatId(username,privateChatWith)}/${username}`).remove().catch(()=>{});
-    }
-  }
-});
-
-/* ----------------- start if logged in ----------------- */
-if(username){
-  hideLogin();
-  setPresence();
-  startGroupListeners();
-  listenTypingGroup();
-  listenPresence();
-  watchPrivateChatsInitial();
-  listenUnreadAndPanel();
-}
-
-/* Some optional debug helpers:
-   window._db = db;
-*/
 </script>
 </body>
 </html>
