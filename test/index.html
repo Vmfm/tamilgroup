@@ -72,19 +72,68 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
 #privateSend{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
 #typingPrivate{font-size:13px;color:var(--muted);margin-left:8px}
+/* settings pop */
+#settingsWrap {
+  position: relative;
+}
 
 /* settings pop */
-#settingsWrap{position:relative}
-#settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
-#settingsPanel{position:absolute;right:12px;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.03);padding:10px;border-radius:8px;display:none;z-index:30;min-width:220px;max-width:340px;overflow:auto}
-.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px}
-.settingRow > div{flex:1;font-size:13px;word-break:break-word}
-#settingsPanel input[type="file"]{max-width:160px;}
-.toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
-.toggleKnob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s}
-.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px}
-.toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
-.toggleKnob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s}
+
+#settingsBtn {
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.04);
+  background: transparent;
+  color: var(--muted);
+}
+
+#settingsPanel {
+  position: absolute;
+  right: 12px;
+  top: 48px;
+  background: #0b141a;
+  border: 1px solid rgba(255,255,255,.03);
+  padding: 10px;
+  border-radius: 8px;
+  display: none;
+  z-index: 30;
+
+  /* FIXES */
+  width: auto;             /* allow popup to auto-size */
+  min-width: 180px;        /* prevent too small on mobile */
+  max-width: 90vw;         /* prevent going off-screen */
+  white-space: normal;     /* allow text to wrap */
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+}
+
+.toggleBtn {
+  width: 46px;
+  height: 26px;
+  border-radius: 16px;
+  background: #2a3942;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .18s;
+}
 
 /* call overlay (Full screen incoming) */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;color:#fff}
@@ -718,20 +767,6 @@ callBtn.addEventListener('click', ()=> {
 
 function initiateCallTo(other){
   const callId = `${chatId(username,other)}_${Date.now()}`;
-  const payload = { from: username, to: other, status: 'ringing', startedAt: Date.now() };
-  // try to write to Firebase, but show outgoing UI even if DB write fails (improves reliability for clients with restrictive rules)
-  db.ref(`calls/${callId}`).set(payload).then(()=>{
-    // set local active call and show "ringing" UI for caller
-    activeCall = { callId, ...payload };
-    showOutgoingRingingUI(other);
-  }).catch((err)=>{
-    console.error('Failed to write call to Firebase:', err);
-    // still show UI locally so user sees call started; mark as local-only until DB is available
-    activeCall = { callId, ...payload, localOnly: true };
-    showOutgoingRingingUI(other);
-    showToast('Call started locally (network/write failed)');
-  });
-}_${Date.now()}`;
   const payload = { from: username, to: other, status: 'ringing', startedAt: Date.now() };
   db.ref(`calls/${callId}`).set(payload).then(()=>{
     activeCall = { callId, ...payload };
