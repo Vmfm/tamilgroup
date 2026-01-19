@@ -30,57 +30,21 @@ const profileSection = document.getElementById("profiles");
 const popup = document.getElementById("popup");
 const popupName = document.getElementById("popupName");
 let selectedUserId = null;
-
-// Check if user info exists in localStorage
 let currentUser = JSON.parse(localStorage.getItem("user"));
-if (currentUser) {
-    loginForm.style.display = "none";
-    profileSection.style.display = "flex";
-    set(ref(db, "users/" + currentUser.id), { 
-        ...currentUser, online: true 
-    });
-    loadProfiles();
-}
 
-// Login / Register
-loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const username = loginForm.username.value.trim();
-    const age = loginForm.age.value.trim();
-    const gender = loginForm.gender.value;
-    const imageFile = loginForm.image.files[0];
-
-    if (!username || !age || !gender || !imageFile) return alert("All fields required");
-
-    const reader = new FileReader();
-    reader.readAsDataURL(imageFile);
-    reader.onload = () => {
-        const imageUrl = reader.result;
-        const userId = "user_" + Date.now(); // simple unique id
-
-        const userData = { id: userId, username, age, gender, imageUrl, online: true };
-        set(ref(db, "users/" + userId), userData);
-
-        localStorage.setItem("user", JSON.stringify(userData));
-        currentUser = userData;
-
-        loginForm.style.display = "none";
-        profileSection.style.display = "flex";
-        loadProfiles();
-    };
-});
-
-// Load profiles
+// Function to show profiles
 function loadProfiles() {
+    profileSection.innerHTML = "";
     const usersRef = ref(db, "users/");
     onValue(usersRef, (snapshot) => {
         const users = snapshot.val();
         profileSection.innerHTML = "";
         let count = 0;
         for (const uid in users) {
-            if (count >= 3) break; // only show 3 images
             const user = users[uid];
-            if (user.id === currentUser.id) continue; // skip self
+            if (!user || !user.id) continue;
+            if (currentUser && user.id === currentUser.id) continue; // skip self
+            if (count >= 3) break; // show only 3 profiles
             const div = document.createElement("div");
             div.classList.add("user-card");
             div.innerHTML = `
@@ -94,12 +58,49 @@ function loadProfiles() {
     });
 }
 
+// If user is already logged in
+if (currentUser) {
+    loginForm.style.display = "none";
+    profileSection.style.display = "flex";
+    set(ref(db, "users/" + currentUser.id), { ...currentUser, online: true }); // ensure online status updated
+    loadProfiles();
+}
+
+// Login / Register
+loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const username = loginForm.username.value.trim();
+    const age = loginForm.age.value.trim();
+    const gender = loginForm.gender.value;
+    const imageFile = loginForm.image.files[0];
+
+    if (!username || !age || !gender || !imageFile) return alert("All fields are required");
+
+    const reader = new FileReader();
+    reader.readAsDataURL(imageFile);
+    reader.onload = () => {
+        const imageUrl = reader.result;
+        const userId = "user_" + Date.now(); // simple unique ID
+
+        const userData = { id: userId, username, age, gender, imageUrl, online: true };
+        set(ref(db, "users/" + userId), userData).then(() => {
+            localStorage.setItem("user", JSON.stringify(userData));
+            currentUser = userData;
+
+            loginForm.style.display = "none";
+            profileSection.style.display = "flex";
+            loadProfiles();
+        });
+    };
+});
+
 // Popup actions
 window.openPopup = function(uid) {
     selectedUserId = uid;
     const userRef = ref(db, "users/" + uid);
     onValue(userRef, (snapshot) => {
         const user = snapshot.val();
+        if (!user) return;
         popupName.textContent = user.username;
         popup.style.display = "block";
     }, { once: true });
@@ -112,21 +113,17 @@ document.getElementById("closePopup").addEventListener("click", () => {
 document.getElementById("chatBtn").addEventListener("click", () => {
     alert("Open chat with user " + selectedUserId);
 });
-
 document.getElementById("audioBtn").addEventListener("click", () => {
     alert("Start audio call with user " + selectedUserId);
 });
-
 document.getElementById("videoBtn").addEventListener("click", () => {
     alert("Start video call with user " + selectedUserId);
 });
-
 document.getElementById("blockBtn").addEventListener("click", async () => {
     if (!selectedUserId) return;
     await update(ref(db, "users/" + selectedUserId), { blocked: true });
     alert("User blocked");
 });
-
 document.getElementById("unblockBtn").addEventListener("click", async () => {
     if (!selectedUserId) return;
     await update(ref(db, "users/" + selectedUserId), { blocked: false });
