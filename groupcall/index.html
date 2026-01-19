@@ -1,1 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp Full Chat + Group Voice Call</title>
+<style>
+body{margin:0;background:#111b21;color:#fff;font-family:sans-serif}
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+*{box-sizing:border-box}
+#app{max-width:1100px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:10px}
+#messages{flex:1;overflow:auto;padding:12px;background:#071215}
+#inputBar{display:flex;padding:10px;background:#202c33;gap:8px}
+#messageInput{flex:1;border-radius:20px;border:0;padding:10px;background:#2a3942;color:#fff}
+#sendBtn{width:44px;border-radius:50%;border:0;background:#25d366;color:#000}
+.msg{margin-bottom:8px}
+#groupCallBtn{background:#25d366;border:0;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer}
+#groupCallBar{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b141a;padding:10px 14px;border-radius:18px;z-index:9999;gap:10px;align-items:center}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topBar">
+    <div>Group Chat</div>
+    <button id="groupCallBtn">🎧 Group Call</button>
+  </div>
+
+  <div id="messages"></div>
+
+  <div id="inputBar">
+    <input id="messageInput" placeholder="Type message"/>
+    <button id="sendBtn">➤</button>
+  </div>
+</div>
+
+<div id="groupCallBar">
+  <span id="groupCallStatus">Group Call</span>
+  <button id="muteGroupBtn">Mute</button>
+  <button id="leaveGroupBtn" style="background:#ff3b30;color:#fff">Leave</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+const firebaseConfig={
+apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+authDomain:"tamil-chat-2d54e.firebaseapp.com",
+databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+projectId:"tamil-chat-2d54e",
+storageBucket:"tamil-chat-2d54e.appspot.com",
+messagingSenderId:"804705969240",
+appId:"1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let username=localStorage.getItem("name")||prompt("Enter name");
+localStorage.setItem("name",username);
+
+const messages=document.getElementById("messages");
+const input=document.getElementById("messageInput");
+
+db.ref("messages").limitToLast(50).on("child_added",s=>{
+ const d=s.val();
+ const div=document.createElement("div");
+ div.className="msg";
+ div.textContent=d.name+": "+d.text;
+ messages.appendChild(div);
+ messages.scrollTop=messages.scrollHeight;
+});
+
+sendBtn.onclick=()=>{
+ if(!input.value)return;
+ db.ref("messages").push({name:username,text:input.value,time:Date.now()});
+ input.value="";
+};
+
+/* ================= GROUP VOICE CALL ================= */
+
+const groupBtn=document.getElementById("groupCallBtn");
+const groupBar=document.getElementById("groupCallBar");
+const muteBtn=document.getElementById("muteGroupBtn");
+const leaveBtn=document.getElementById("leaveGroupBtn");
+
+let localStream=null;
+let peers={};
+let muted=false;
+const GROUP_ID="main";
+const pcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+
+groupBtn.onclick=async()=>{
+ if(groupBar.style.display==="flex")return;
+ localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+ groupBar.style.display="flex";
+
+ db.ref(`groupCalls/${GROUP_ID}/participants/${username}`).set(true);
+ db.ref(`groupCalls/${GROUP_ID}/participants`).on("child_added",s=>{
+  if(s.key!==username)createPeer(s.key,true);
+ });
+
+ db.ref(`groupCalls/${GROUP_ID}/offers/${username}`).on("child_added",async s=>{
+  const v=s.val();
+  const pc=createPeer(v.from,false);
+  await pc.setRemoteDescription(new RTCSessionDescription(v.sdp));
+  const ans=await pc.createAnswer();
+  await pc.setLocalDescription(ans);
+  db.ref(`groupCalls/${GROUP_ID}/answers/${v.from}`).push({from:username,sdp:ans});
+ });
+
+ db.ref(`groupCalls/${GROUP_ID}/answers/${username}`).on("child_added",s=>{
+  const v=s.val();
+  peers[v.from].setRemoteDescription(new RTCSessionDescription(v.sdp));
+ });
+
+ db.ref(`groupCalls/${GROUP_ID}/ice/${username}`).on("child_added",s=>{
+  const v=s.val();
+  peers[v.from].addIceCandidate(new RTCIceCandidate(v.candidate));
+ });
+};
+
+function createPeer(other,offer){
+ if(peers[other])return peers[other];
+ const pc=new RTCPeerConnection(pcConfig);
+ peers[other]=pc;
+ localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+ pc.ontrack=e=>{
+  const a=document.createElement("audio");
+  a.srcObject=e.streams[0];
+  a.autoplay=true;
+ };
+ pc.onicecandidate=e=>{
+  if(e.candidate){
+   db.ref(`groupCalls/${GROUP_ID}/ice/${other}`).push({from:username,candidate:e.candidate});
+  }
+ };
+ if(offer){
+  pc.createOffer().then(o=>{
+   pc.setLocalDescription(o);
+   db.ref(`groupCalls/${GROUP_ID}/offers/${other}`).push({from:username,sdp:o});
+  });
+ }
+ return pc;
+}
+
+muteBtn.onclick=()=>{
+ muted=!muted;
+ localStream.getAudioTracks()[0].enabled=!muted;
+ muteBtn.textContent=muted?"Unmute":"Mute";
+};
+
+leaveBtn.onclick=()=>{
+ Object.values(peers).forEach(p=>p.close());
+ peers={};
+ localStream.getTracks().forEach(t=>t.stop());
+ db.ref(`groupCalls/${GROUP_ID}/participants/${username}`).remove();
+ groupBar.style.display="none";
+};
+</script>
+</body>
+</html>
 
