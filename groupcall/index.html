@@ -7,10 +7,9 @@
 <script type="module">
 // Firebase App (the core Firebase SDK)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getDatabase, ref, set, push, onValue, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-// Your Firebase configuration
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -23,7 +22,6 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getDatabase(app);
 
 // Elements
@@ -33,126 +31,110 @@ const popup = document.getElementById("popup");
 const popupName = document.getElementById("popupName");
 let selectedUserId = null;
 
-// Register/Login Form Submit
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = loginForm.username.value;
-  const age = loginForm.age.value;
-  const gender = loginForm.gender.value;
-  const email = loginForm.email.value;
-  const password = loginForm.password.value;
-  const image = loginForm.image.files[0];
-
-  // Convert image to base64
-  const reader = new FileReader();
-  reader.readAsDataURL(image);
-  reader.onload = async () => {
-    const imageUrl = reader.result;
-
-    // Create account
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-
-      // Save user info to database
-      await set(ref(db, "users/" + uid), {
-        username,
-        age,
-        gender,
-        imageUrl,
-        online: true
-      });
-
-      loginForm.reset();
-      alert("Account created and logged in!");
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-});
-
-// Listen to auth state changes
-onAuthStateChanged(auth, (user) => {
-  if (user) {
+// Check if user info exists in localStorage
+let currentUser = JSON.parse(localStorage.getItem("user"));
+if (currentUser) {
     loginForm.style.display = "none";
     profileSection.style.display = "flex";
+    set(ref(db, "users/" + currentUser.id), { 
+        ...currentUser, online: true 
+    });
     loadProfiles();
-  } else {
-    loginForm.style.display = "block";
-    profileSection.style.display = "none";
-  }
+}
+
+// Login / Register
+loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const username = loginForm.username.value.trim();
+    const age = loginForm.age.value.trim();
+    const gender = loginForm.gender.value;
+    const imageFile = loginForm.image.files[0];
+
+    if (!username || !age || !gender || !imageFile) return alert("All fields required");
+
+    const reader = new FileReader();
+    reader.readAsDataURL(imageFile);
+    reader.onload = () => {
+        const imageUrl = reader.result;
+        const userId = "user_" + Date.now(); // simple unique id
+
+        const userData = { id: userId, username, age, gender, imageUrl, online: true };
+        set(ref(db, "users/" + userId), userData);
+
+        localStorage.setItem("user", JSON.stringify(userData));
+        currentUser = userData;
+
+        loginForm.style.display = "none";
+        profileSection.style.display = "flex";
+        loadProfiles();
+    };
 });
 
-// Load all profiles
+// Load profiles
 function loadProfiles() {
-  const usersRef = ref(db, "users/");
-  onValue(usersRef, (snapshot) => {
-    profileSection.innerHTML = "";
-    const users = snapshot.val();
-    let count = 0;
-    for (const uid in users) {
-      if (count >= 3) break; // show only 3 images one by one
-      const user = users[uid];
-      const div = document.createElement("div");
-      div.classList.add("user-card");
-      div.innerHTML = `
-        <img src="${user.imageUrl}" alt="${user.username}" onclick="openPopup('${uid}')">
-        <span class="online-dot ${user.online ? 'online' : ''}"></span>
-        <p>${user.username}, ${user.age}, ${user.gender}</p>
-      `;
-      profileSection.appendChild(div);
-      count++;
-    }
-  });
+    const usersRef = ref(db, "users/");
+    onValue(usersRef, (snapshot) => {
+        const users = snapshot.val();
+        profileSection.innerHTML = "";
+        let count = 0;
+        for (const uid in users) {
+            if (count >= 3) break; // only show 3 images
+            const user = users[uid];
+            if (user.id === currentUser.id) continue; // skip self
+            const div = document.createElement("div");
+            div.classList.add("user-card");
+            div.innerHTML = `
+                <img src="${user.imageUrl}" alt="${user.username}" onclick="openPopup('${uid}')">
+                <span class="online-dot ${user.online ? 'online' : ''}"></span>
+                <p>${user.username}, ${user.age}, ${user.gender}</p>
+            `;
+            profileSection.appendChild(div);
+            count++;
+        }
+    });
 }
 
 // Popup actions
 window.openPopup = function(uid) {
-  selectedUserId = uid;
-  const userRef = ref(db, "users/" + uid);
-  onValue(userRef, (snapshot) => {
-    const user = snapshot.val();
-    popupName.textContent = user.username;
-    popup.style.display = "block";
-  }, { once: true });
+    selectedUserId = uid;
+    const userRef = ref(db, "users/" + uid);
+    onValue(userRef, (snapshot) => {
+        const user = snapshot.val();
+        popupName.textContent = user.username;
+        popup.style.display = "block";
+    }, { once: true });
 };
 
 document.getElementById("closePopup").addEventListener("click", () => {
-  popup.style.display = "none";
+    popup.style.display = "none";
 });
 
 document.getElementById("chatBtn").addEventListener("click", () => {
-  alert("Open chat with user " + selectedUserId);
+    alert("Open chat with user " + selectedUserId);
 });
 
 document.getElementById("audioBtn").addEventListener("click", () => {
-  alert("Start audio call with user " + selectedUserId);
+    alert("Start audio call with user " + selectedUserId);
 });
 
 document.getElementById("videoBtn").addEventListener("click", () => {
-  alert("Start video call with user " + selectedUserId);
+    alert("Start video call with user " + selectedUserId);
 });
 
 document.getElementById("blockBtn").addEventListener("click", async () => {
-  if (!selectedUserId) return;
-  await update(ref(db, "users/" + selectedUserId), { blocked: true });
-  alert("User blocked");
+    if (!selectedUserId) return;
+    await update(ref(db, "users/" + selectedUserId), { blocked: true });
+    alert("User blocked");
 });
 
 document.getElementById("unblockBtn").addEventListener("click", async () => {
-  if (!selectedUserId) return;
-  await update(ref(db, "users/" + selectedUserId), { blocked: false });
-  alert("User unblocked");
+    if (!selectedUserId) return;
+    await update(ref(db, "users/" + selectedUserId), { blocked: false });
+    alert("User unblocked");
 });
 </script>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f0f0f0;
-  margin: 0;
-  padding: 0;
-  text-align: center;
-}
+body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; text-align: center;}
 form { margin: 50px auto; background: white; padding: 20px; border-radius: 10px; width: 300px; box-shadow: 0 0 10px rgba(0,0,0,0.2);}
 input, select { width: 100%; margin: 10px 0; padding: 8px; }
 #profiles { display: none; justify-content: center; gap: 20px; margin: 50px; flex-wrap: wrap;}
@@ -179,8 +161,6 @@ input, select { width: 100%; margin: 10px 0; padding: 8px; }
     <option value="Female">Female</option>
     <option value="Other">Other</option>
   </select>
-  <input type="email" name="email" placeholder="Email" required>
-  <input type="password" name="password" placeholder="Password" required>
   <input type="file" name="image" accept="image/*" required>
   <button type="submit">Login / Register</button>
 </form>
