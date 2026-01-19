@@ -1,164 +1,332 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp Full Chat + Group Voice Call</title>
+<meta charset="UTF-8">
+<title>Tamil VM Chat – Full</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{margin:0;background:#111b21;color:#fff;font-family:sans-serif}
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+:root{
+  --bg:#0b141a;
+  --card:#111b21;
+  --bar:#202c33;
+  --accent:#00a884;
+  --muted:#8696a0;
+}
 *{box-sizing:border-box}
-#app{max-width:1100px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
-#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:10px}
-#messages{flex:1;overflow:auto;padding:12px;background:#071215}
-#inputBar{display:flex;padding:10px;background:#202c33;gap:8px}
-#messageInput{flex:1;border-radius:20px;border:0;padding:10px;background:#2a3942;color:#fff}
-#sendBtn{width:44px;border-radius:50%;border:0;background:#25d366;color:#000}
-.msg{margin-bottom:8px}
-#groupCallBtn{background:#25d366;border:0;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer}
-#groupCallBar{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b141a;padding:10px 14px;border-radius:18px;z-index:9999;gap:10px;align-items:center}
+body{margin:0;background:var(--bg);color:#fff;font-family:system-ui}
+button{cursor:pointer}
+
+/* TOP BAR */
+#topBar{display:flex;align-items:center;padding:10px;background:var(--bar)}
+#titleText{font-weight:700}
+#notifWrap{display:flex;align-items:center;gap:12px;position:relative}
+.bell{position:relative;font-size:20px;cursor:pointer}
+.badge{position:absolute;top:-5px;right:-5px;background:red;border-radius:50%;padding:2px 5px;font-size:10px;display:none}
+
+/* MESSAGES */
+#messages,#privateMessages{flex:1;overflow:auto;padding:10px}
+.msg{margin:4px 0}
+
+/* INPUT BARS */
+#inputBar,#privateInputBar{display:flex;padding:10px;background:var(--bar);gap:8px}
+input{flex:1;padding:8px;border-radius:6px;border:0}
+
+/* LOGIN */
+#loginWrap{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999}
+#loginCard{background:var(--card);padding:20px;border-radius:10px;display:flex;flex-direction:column;gap:10px}
+
+/* PRIVATE CHAT */
+#privatePopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999}
+#privatePopup .card{height:100%;display:flex;flex-direction:column;background:var(--card)}
+#privateHeader{display:flex;align-items:center;padding:10px;background:var(--bar);gap:10px}
+
+/* CALL */
+#callOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center}
+.callCard{background:var(--card);padding:20px;border-radius:12px;text-align:center}
+#inCallBar{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;padding:10px;border-radius:10px;z-index:2000}
 </style>
 </head>
 <body>
 
-<div id="app">
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div id="loginCard">
+    <div style="font-weight:700;color:#fff">Enter your name</div>
+    <input id="nameInput" placeholder="Your name" />
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="joinBtn">Join</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">Name is saved to this device.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;height:100vh;">
   <div id="topBar">
-    <div>Group Chat</div>
-    <button id="groupCallBtn">🎧 Group Call</button>
+    <div id="titleText">Group Chat</div>
+    <div style="flex:1"></div>
+
+    <div id="notifWrap">
+      <!-- Bell badge -->
+      <div class="bell" id="bellBtn" title="Private messages">🔔
+        <div class="badge" id="bellBadge">0</div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settingsWrap" style="position:relative">
+        <button id="settingsBtn">⚙️</button>
+        <div id="settingsPanel" role="dialog" aria-label="Settings" style="display:none;position:absolute;top:40px;right:0;background:var(--card);padding:10px;border-radius:6px">
+          <div class="settingRow">
+            <div>Audio Call</div>
+            <div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div>
+          </div>
+          <div class="settingRow">
+            <div>Private Chat</div>
+            <div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div>
+          </div>
+          <div class="settingRow">
+            <div>Profile Image</div>
+            <input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px">
+          </div>
+          <div class="settingRow">
+            <div></div>
+            <div style="font-size:12px;color:var(--muted)">Your image is saved to your profile.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div>
   </div>
 
-  <div id="messages"></div>
+  <div id="statusLine"></div>
+  <div id="messages" aria-live="polite" style="flex:1;overflow:auto;"></div>
 
   <div id="inputBar">
-    <input id="messageInput" placeholder="Type message"/>
+    <input id="messageInput" placeholder="Type a message">
     <button id="sendBtn">➤</button>
   </div>
 </div>
 
-<div id="groupCallBar">
-  <span id="groupCallStatus">Group Call</span>
-  <button id="muteGroupBtn">Mute</button>
-  <button id="leaveGroupBtn" style="background:#ff3b30;color:#fff">Leave</button>
+<!-- PRIVATE CHAT MODAL -->
+<div id="privatePopup">
+  <div class="card">
+    <div id="privateHeader">
+      <button id="closePrivate">⬅</button>
+      <b id="privateTitle">Private Chat</b>
+      <div style="flex:1"></div>
+      <button id="callBtn">📞</button>
+      <button id="blockBtn">🚫</button>
+    </div>
+    <div id="privateMessages" style="flex:1;overflow:auto;padding:10px"></div>
+    <div id="privateInputBar">
+      <input id="privateInput" placeholder="Type a private message">
+      <button id="privateSend">➤</button>
+    </div>
+  </div>
 </div>
 
+<!-- CALL OVERLAY -->
+<div id="callOverlay">
+  <div class="callCard">
+    <div style="color:var(--muted)">Incoming Call</div>
+    <h2 id="callFrom"></h2>
+    <button id="acceptCallBtn">Accept</button>
+    <button id="declineCallBtn">Decline</button>
+  </div>
+</div>
+
+<!-- IN CALL BAR -->
+<div id="inCallBar">
+  Call with <span id="inCallWith"></span> |
+  <span id="inCallElapsed">00:00</span>
+  <button id="endCallBtn">End</button>
+</div>
+
+<audio id="remoteAudio" autoplay></audio>
+
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-const firebaseConfig={
-apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
-authDomain:"tamil-chat-2d54e.firebaseapp.com",
-databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-projectId:"tamil-chat-2d54e",
-storageBucket:"tamil-chat-2d54e.appspot.com",
-messagingSenderId:"804705969240",
-appId:"1:804705969240:web:658df281dd8360843c162d"
-};
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp({
+  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+});
 const db=firebase.database();
 
-let username=localStorage.getItem("name")||prompt("Enter name");
-localStorage.setItem("name",username);
-
-const messages=document.getElementById("messages");
-const input=document.getElementById("messageInput");
-
-db.ref("messages").limitToLast(50).on("child_added",s=>{
- const d=s.val();
- const div=document.createElement("div");
- div.className="msg";
- div.textContent=d.name+": "+d.text;
- messages.appendChild(div);
- messages.scrollTop=messages.scrollHeight;
-});
-
-sendBtn.onclick=()=>{
- if(!input.value)return;
- db.ref("messages").push({name:username,text:input.value,time:Date.now()});
- input.value="";
+/* LOGIN */
+let username;
+joinBtn.onclick=()=>{
+  username=nameInput.value.trim();
+  if(!username) return;
+  localStorage.setItem("name",username);
+  loginWrap.style.display="none";
+  app.style.display="flex";
+  startApp();
 };
-
-/* ================= GROUP VOICE CALL ================= */
-
-const groupBtn=document.getElementById("groupCallBtn");
-const groupBar=document.getElementById("groupCallBar");
-const muteBtn=document.getElementById("muteGroupBtn");
-const leaveBtn=document.getElementById("leaveGroupBtn");
-
-let localStream=null;
-let peers={};
-let muted=false;
-const GROUP_ID="main";
-const pcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
-
-groupBtn.onclick=async()=>{
- if(groupBar.style.display==="flex")return;
- localStream=await navigator.mediaDevices.getUserMedia({audio:true});
- groupBar.style.display="flex";
-
- db.ref(`groupCalls/${GROUP_ID}/participants/${username}`).set(true);
- db.ref(`groupCalls/${GROUP_ID}/participants`).on("child_added",s=>{
-  if(s.key!==username)createPeer(s.key,true);
- });
-
- db.ref(`groupCalls/${GROUP_ID}/offers/${username}`).on("child_added",async s=>{
-  const v=s.val();
-  const pc=createPeer(v.from,false);
-  await pc.setRemoteDescription(new RTCSessionDescription(v.sdp));
-  const ans=await pc.createAnswer();
-  await pc.setLocalDescription(ans);
-  db.ref(`groupCalls/${GROUP_ID}/answers/${v.from}`).push({from:username,sdp:ans});
- });
-
- db.ref(`groupCalls/${GROUP_ID}/answers/${username}`).on("child_added",s=>{
-  const v=s.val();
-  peers[v.from].setRemoteDescription(new RTCSessionDescription(v.sdp));
- });
-
- db.ref(`groupCalls/${GROUP_ID}/ice/${username}`).on("child_added",s=>{
-  const v=s.val();
-  peers[v.from].addIceCandidate(new RTCIceCandidate(v.candidate));
- });
-};
-
-function createPeer(other,offer){
- if(peers[other])return peers[other];
- const pc=new RTCPeerConnection(pcConfig);
- peers[other]=pc;
- localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
- pc.ontrack=e=>{
-  const a=document.createElement("audio");
-  a.srcObject=e.streams[0];
-  a.autoplay=true;
- };
- pc.onicecandidate=e=>{
-  if(e.candidate){
-   db.ref(`groupCalls/${GROUP_ID}/ice/${other}`).push({from:username,candidate:e.candidate});
-  }
- };
- if(offer){
-  pc.createOffer().then(o=>{
-   pc.setLocalDescription(o);
-   db.ref(`groupCalls/${GROUP_ID}/offers/${other}`).push({from:username,sdp:o});
-  });
- }
- return pc;
+if(localStorage.getItem("name")){
+  username=localStorage.getItem("name");
+  loginWrap.style.display="none";
+  app.style.display="flex";
+  startApp();
 }
 
-muteBtn.onclick=()=>{
- muted=!muted;
- localStream.getAudioTracks()[0].enabled=!muted;
- muteBtn.textContent=muted?"Unmute":"Mute";
-};
+function startApp(){
+  /* GROUP CHAT */
+  sendBtn.onclick=()=>{
+    if(!messageInput.value) return;
+    db.ref("group").push({u:username,m:messageInput.value});
+    messageInput.value="";
+  };
+  db.ref("group").limitToLast(50).on("child_added",s=>{
+    messages.innerHTML+=`<div class="msg"><b>${s.val().u}:</b> ${s.val().m}</div>`;
+    messages.scrollTop=messages.scrollHeight;
+  });
 
-leaveBtn.onclick=()=>{
- Object.values(peers).forEach(p=>p.close());
- peers={};
- localStream.getTracks().forEach(t=>t.stop());
- db.ref(`groupCalls/${GROUP_ID}/participants/${username}`).remove();
- groupBar.style.display="none";
-};
+  /* PRIVATE CHAT */
+  let privateUser=null;
+  let unreadCount=0;
+  bellBtn.onclick=()=>{privatePopup.style.display="block";unreadCount=0;updateBadge();}
+  function updateBadge(){bellBadge.style.display=unreadCount>0?"block":"none";bellBadge.textContent=unreadCount;}
+
+  openPrivate?.addEventListener("click",()=>{
+    privateUser=prompt("Private chat with?");
+    if(!privateUser) return;
+    privateTitle.textContent=privateUser;
+    privatePopup.style.display="block";
+    loadPrivate();
+  });
+  closePrivate.onclick=()=>privatePopup.style.display="none";
+
+  function chatId(a,b){return [a,b].sort().join("_");}
+  function loadPrivate(){
+    privateMessages.innerHTML="";
+    db.ref("private/"+chatId(username,privateUser)).limitToLast(50).on("child_added",s=>{
+      privateMessages.innerHTML+=`<div class="msg"><b>${s.val().u}:</b> ${s.val().m}</div>`;
+      privateMessages.scrollTop=privateMessages.scrollHeight;
+      if(s.val().u!==username){unreadCount++;updateBadge();}
+    });
+  }
+
+  /* BLOCK/UNBLOCK */
+  blockBtn.onclick=()=>{
+    const ref=db.ref(`blocks/${privateUser}/${username}`);
+    ref.once("value",s=>{
+      if(s.exists()){ref.remove();alert("User unblocked")}
+      else{ref.set(true);alert("User blocked")}
+    });
+  };
+
+  /* SEND PRIVATE MESSAGE */
+  privateSend.onclick=()=>{
+    db.ref(`blocks/${privateUser}/${username}`).once("value",b=>{
+      if(b.exists()) return alert("You blocked this user");
+      db.ref(`blocks/${username}/${privateUser}`).once("value",bb=>{
+        if(bb.exists()) return alert("You are blocked");
+        db.ref("private/"+chatId(username,privateUser))
+          .push({u:username,m:privateInput.value});
+        privateInput.value="";
+      });
+    });
+  };
+
+  /* ===================== */
+  /* 🔊 AUDIO CALL WEBRTC */
+  let pc,localStream,activeCall,timer;
+  const rtc={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+
+  callBtn.onclick=()=>startCall(privateUser);
+
+  async function startCall(other){
+    const callId=chatId(username,other)+"_"+Date.now();
+    activeCall={callId,other};
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    pc=new RTCPeerConnection(rtc);
+    localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+    pc.ontrack=e=>remoteAudio.srcObject=e.streams[0];
+    pc.onicecandidate=e=>{
+      if(e.candidate) db.ref(`calls/${callId}/ice/${username}`).push(e.candidate);
+    };
+    const offer=await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    db.ref("calls/"+callId).set({from:username,to:other,status:"ringing",offer});
+    listenICE(callId);
+  }
+
+  db.ref("calls").on("child_added",s=>{
+    const c=s.val();
+    if(c&&c.to===username&&c.status==="ringing"){
+      activeCall={callId:s.key,other:c.from,offer:c.offer};
+      callFrom.textContent=c.from;
+      callOverlay.style.display="flex";
+    }
+  });
+
+  acceptCallBtn.onclick=async()=>{
+    const {callId,offer}=activeCall;
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    pc=new RTCPeerConnection(rtc);
+    localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+    pc.ontrack=e=>remoteAudio.srcObject=e.streams[0];
+    pc.onicecandidate=e=>{
+      if(e.candidate) db.ref(`calls/${callId}/ice/${username}`).push(e.candidate);
+    };
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer=await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    db.ref("calls/"+callId).update({status:"answered",answer});
+    listenICE(callId);
+    startUI();
+  };
+
+  db.ref("calls").on("child_changed",async s=>{
+    const c=s.val();
+    if(activeCall&&s.key===activeCall.callId&&c.answer){
+      await pc.setRemoteDescription(new RTCSessionDescription(c.answer));
+      startUI();
+    }
+    if(c.status==="ended") cleanup();
+  });
+
+  function listenICE(id){
+    db.ref("calls/"+id+"/ice").on("child_added",s=>{
+      s.forEach(c=>pc.addIceCandidate(new RTCIceCandidate(c.val())));
+    });
+  }
+
+  function startUI(){
+    callOverlay.style.display="none";
+    inCallBar.style.display="flex";
+    inCallWith.textContent=activeCall.other;
+    let start=Date.now();
+    timer=setInterval(()=>{
+      let d=Date.now()-start;
+      inCallElapsed.textContent=
+        String(d/60000|0).padStart(2,"0")+":"+
+        String(d/1000%60|0).padStart(2,"0");
+    },1000);
+  }
+  function cleanup(){
+    if(pc) pc.close();
+    if(localStream) localStream.getTracks().forEach(t=>t.stop());
+    clearInterval(timer);
+    callOverlay.style.display="none";
+    inCallBar.style.display="none";
+    activeCall=null;
+  }
+  declineCallBtn.onclick=cleanup;
+  endCallBtn.onclick=()=>db.ref("calls/"+activeCall.callId+"/status").set("ended");
+
+  /* SETTINGS PANEL TOGGLE */
+  settingsBtn.onclick=()=>settingsPanel.style.display=(settingsPanel.style.display==="none"?"block":"none");
+}
 </script>
 </body>
 </html>
-
