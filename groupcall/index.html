@@ -3,47 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Firebase Dating App Demo</title>
+<title>Firebase Dating App – No Login</title>
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
 .hidden{display:none}
-input,select,button{padding:10px;margin:5px 0;width:100%;border-radius:6px;border:none}
+input,select,button{padding:10px;margin:6px 0;width:100%;border-radius:6px;border:none}
 button{background:#22c55e;color:#000;font-weight:bold;cursor:pointer}
 .container{max-width:420px;margin:auto;padding:15px}
-.card{background:#020617;border-radius:12px;padding:12px;margin:10px 0;position:relative}
-.avatar{width:100%;border-radius:10px}
-.online{position:absolute;top:10px;right:10px;width:12px;height:12px;border-radius:50%}
+.card{background:#020617;border-radius:14px;padding:12px;margin:12px 0;position:relative}
+.avatar{width:100%;border-radius:12px}
+.online{position:absolute;top:12px;right:12px;width:12px;height:12px;border-radius:50%}
 .online.on{background:#22c55e}
 .online.off{background:#64748b}
 .topbar{display:flex;justify-content:space-between;align-items:center}
 .profileRow{display:flex;gap:10px;align-items:center}
 .profileRow img{width:45px;height:45px;border-radius:50%}
-.chatBox{height:260px;overflow:auto;background:#020617;padding:10px;border-radius:10px}
+.chatBox{height:280px;overflow:auto;background:#020617;padding:10px;border-radius:10px}
 .msg{margin:6px 0}
 .msg.me{text-align:right;color:#22c55e}
-.notification{position:fixed;top:10px;right:10px;background:#020617;padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center}
+.notification{position:fixed;top:10px;right:10px;background:#020617;padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center;z-index:99}
 .notification img{width:40px;height:40px;border-radius:50%}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal .box{background:#020617;padding:20px;border-radius:14px;width:90%;max-width:400px}
 </style>
 </head>
 <body>
 
-<div class="container" id="login">
-  <h2>Login / Register</h2>
-  <input id="name" placeholder="Name" />
-  <input id="age" type="number" placeholder="Age" />
-  <select id="gender"><option>Male</option><option>Female</option></select>
-  <input id="photo" type="file" />
-  <button onclick="register()">Continue</button>
+<!-- PROFILE SETUP (NO LOGIN) -->
+<div class="modal" id="setupModal">
+  <div class="box">
+    <h3>Create Your Profile</h3>
+    <input id="name" placeholder="Your name" />
+    <input id="age" type="number" placeholder="Age" />
+    <select id="gender"><option>Male</option><option>Female</option></select>
+    <input id="photo" type="file" />
+    <button onclick="createProfile()">Enter App</button>
+  </div>
 </div>
 
-<div class="container hidden" id="profiles">
+<!-- PROFILES LIST -->
+<div class="container" id="profiles">
   <div class="topbar">
-    <h3>Profiles</h3>
+    <h3>Discover</h3>
     <button onclick="openSettings()">⚙️</button>
   </div>
   <div id="profileList"></div>
 </div>
 
+<!-- CHAT -->
 <div class="container hidden" id="chat">
   <div class="topbar">
     <button onclick="backProfiles()">⬅</button>
@@ -55,11 +62,14 @@ button{background:#22c55e;color:#000;font-weight:bold;cursor:pointer}
   <button onclick="sendMsg()">Send</button>
 </div>
 
-<div class="container hidden" id="settings">
-  <h3>Settings</h3>
-  <input type="file" id="newPhoto" />
-  <button onclick="updatePhoto()">Change Profile Image</button>
-  <button onclick="closeSettings()">Close</button>
+<!-- SETTINGS -->
+<div class="modal hidden" id="settingsModal">
+  <div class="box">
+    <h3>Settings</h3>
+    <input type="file" id="newPhoto" />
+    <button onclick="updatePhoto()">Change Profile Image</button>
+    <button onclick="closeSettings()">Close</button>
+  </div>
 </div>
 
 <div id="notify" class="notification hidden"></div>
@@ -86,18 +96,26 @@ const storage = firebase.storage();
 let myId = localStorage.getItem('uid');
 let chatWith = null;
 
-function register(){
+if(myId){ setupModal.classList.add('hidden'); showProfiles(); }
+
+function createProfile(){
+ if(!name.value||!photo.files[0]) return alert('Fill all details');
  const uid = Date.now().toString();
- const file = photo.files[0];
- storage.ref('profiles/'+uid).put(file).then(s=>s.ref.getDownloadURL()).then(url=>{
-  db.ref('users/'+uid).set({name:name.value,age:age.value,gender:gender.value,photo:url,online:true,blocked:{}});
+ storage.ref('profiles/'+uid).put(photo.files[0])
+ .then(s=>s.ref.getDownloadURL())
+ .then(url=>{
+  db.ref('users/'+uid).set({
+   name:name.value,age:age.value,gender:gender.value,
+   photo:url,online:true,blocked:{}
+  });
   localStorage.setItem('uid',uid);
-  myId=uid; showProfiles();
+  myId=uid;
+  setupModal.classList.add('hidden');
+  showProfiles();
  });
 }
 
 function showProfiles(){
- login.classList.add('hidden'); profiles.classList.remove('hidden');
  db.ref('users').on('value',snap=>{
   profileList.innerHTML='';
   snap.forEach(u=>{
@@ -117,6 +135,7 @@ function openChat(uid,name){chatWith=uid; profiles.classList.add('hidden'); chat
 function backProfiles(){chat.classList.add('hidden'); profiles.classList.remove('hidden');}
 
 function sendMsg(){
+ if(!msgInput.value) return;
  const msg={from:myId,text:msgInput.value,time:Date.now()};
  db.ref('chats/'+chatWith+'/'+myId).push(msg);
  msgInput.value='';
@@ -144,14 +163,15 @@ function listenNotifications(){
 
 function blockUser(){ db.ref('users/'+myId+'/blocked/'+chatWith).set(true); alert('User blocked'); }
 
-function openSettings(){ settings.classList.remove('hidden'); }
-function closeSettings(){ settings.classList.add('hidden'); }
+function openSettings(){ settingsModal.classList.remove('hidden'); }
+function closeSettings(){ settingsModal.classList.add('hidden'); }
 function updatePhoto(){
- const file=newPhoto.files[0];
- storage.ref('profiles/'+myId).put(file).then(s=>s.ref.getDownloadURL()).then(url=>db.ref('users/'+myId+'/photo').set(url));
+ if(!newPhoto.files[0]) return;
+ storage.ref('profiles/'+myId).put(newPhoto.files[0])
+ .then(s=>s.ref.getDownloadURL())
+ .then(url=>db.ref('users/'+myId+'/photo').set(url));
+ alert('Profile updated');
 }
-
-if(myId) showProfiles();
 </script>
 </body>
 </html>
