@@ -1,83 +1,157 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Full Chat App – Single HTML</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Firebase Dating App Demo</title>
 <style>
-body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#ece5dd}
-#app{max-width:420px;margin:auto;height:100vh;background:#fff;display:flex;flex-direction:column}
-header{background:#075e54;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center}
-#messages{flex:1;overflow-y:auto;padding:10px}
-.row{margin-bottom:8px}
-.me{text-align:right}
-.bubble{display:inline-block;padding:8px 10px;border-radius:8px;max-width:80%;background:#dcf8c6}
-.other .bubble{background:#fff}
-.tick{font-size:11px;margin-left:6px;color:#999}
-.tick.seen{color:#34b7f1}
-.seenUsers{font-size:11px;color:#666}
-.avatar{width:16px;height:16px;border-radius:50%;margin-right:2px}
-.typing{font-size:12px;color:#666;padding:4px}
-footer{display:flex;padding:6px;border-top:1px solid #ddd}
-footer input{flex:1;padding:8px}
-footer button{margin-left:4px}
-#settings{position:fixed;top:0;right:-100%;width:260px;height:100%;background:#fff;box-shadow:-2px 0 8px rgba(0,0,0,.2);transition:.3s;padding:10px;z-index:99}
-video{width:100%;border-radius:6px;margin-top:4px}
+body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
+.hidden{display:none}
+input,select,button{padding:10px;margin:5px 0;width:100%;border-radius:6px;border:none}
+button{background:#22c55e;color:#000;font-weight:bold;cursor:pointer}
+.container{max-width:420px;margin:auto;padding:15px}
+.card{background:#020617;border-radius:12px;padding:12px;margin:10px 0;position:relative}
+.avatar{width:100%;border-radius:10px}
+.online{position:absolute;top:10px;right:10px;width:12px;height:12px;border-radius:50%}
+.online.on{background:#22c55e}
+.online.off{background:#64748b}
+.topbar{display:flex;justify-content:space-between;align-items:center}
+.profileRow{display:flex;gap:10px;align-items:center}
+.profileRow img{width:45px;height:45px;border-radius:50%}
+.chatBox{height:260px;overflow:auto;background:#020617;padding:10px;border-radius:10px}
+.msg{margin:6px 0}
+.msg.me{text-align:right;color:#22c55e}
+.notification{position:fixed;top:10px;right:10px;background:#020617;padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center}
+.notification img{width:40px;height:40px;border-radius:50%}
 </style>
 </head>
 <body>
-<div id="app">
-<header>
- <span id="title">Group Chat</span>
- <div>
-  <button onclick="openPrivate()">💬</button>
-  <button onclick="startCall(false)">📞</button>
-  <button onclick="startCall(true)">🎥</button>
-  <button onclick="toggleSettings()">⚙️</button>
- </div>
-</header>
-<div id="messages"></div>
-<div id="typing" class="typing"></div>
-<footer>
- <input id="msg" placeholder="Type message…" />
- <button onclick="sendMsg()">Send</button>
- <button onclick="recordVoice()">🎤</button>
-</footer>
+
+<div class="container" id="login">
+  <h2>Login / Register</h2>
+  <input id="name" placeholder="Name" />
+  <input id="age" type="number" placeholder="Age" />
+  <select id="gender"><option>Male</option><option>Female</option></select>
+  <input id="photo" type="file" />
+  <button onclick="register()">Continue</button>
 </div>
-<div id="settings">
-<h3>Settings</h3>
-<label>Username <input id="setName"></label>
-<label><input type="checkbox" id="typingOn" checked> Typing indicator</label>
-<button onclick="saveSettings()">Save</button>
-<button onclick="toggleSettings()">Close</button>
+
+<div class="container hidden" id="profiles">
+  <div class="topbar">
+    <h3>Profiles</h3>
+    <button onclick="openSettings()">⚙️</button>
+  </div>
+  <div id="profileList"></div>
 </div>
-<div id="callBox" style="display:none;padding:6px">
-<video id="localVideo" autoplay muted></video>
-<video id="remoteVideo" autoplay></video>
-<button onclick="endCall()">End</button>
+
+<div class="container hidden" id="chat">
+  <div class="topbar">
+    <button onclick="backProfiles()">⬅</button>
+    <h3 id="chatName"></h3>
+    <button onclick="blockUser()">Block</button>
+  </div>
+  <div class="chatBox" id="messages"></div>
+  <input id="msgInput" placeholder="Message" />
+  <button onclick="sendMsg()">Send</button>
 </div>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
+<div class="container hidden" id="settings">
+  <h3>Settings</h3>
+  <input type="file" id="newPhoto" />
+  <button onclick="updatePhoto()">Change Profile Image</button>
+  <button onclick="closeSettings()">Close</button>
+</div>
+
+<div id="notify" class="notification hidden"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
 <script>
-const firebaseConfig={apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",authDomain:"tamil-chat-2d54e.firebaseapp.com",databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",projectId:"tamil-chat-2d54e",storageBucket:"tamil-chat-2d54e.appspot.com",messagingSenderId:"804705969240",appId:"1:804705969240:web:658df281dd8360843c162d"};
+const firebaseConfig = {
+ apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+ authDomain: "tamil-chat-2d54e.firebaseapp.com",
+ databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+ projectId: "tamil-chat-2d54e",
+ storageBucket: "tamil-chat-2d54e.appspot.com",
+ messagingSenderId: "804705969240",
+ appId: "1:804705969240:web:658df281dd8360843"
+};
+
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-const storage=firebase.storage();
-let username=localStorage.getItem('name')||prompt('Enter name');localStorage.setItem('name',username);
-const avatar=u=>`https://ui-avatars.com/api/?name=${u}`;
-function sendMsg(){const t=msg.value.trim();if(!t)return;db.ref('group').push({name:username,text:t,time:Date.now(),seen:{[username]:Date.now()}});msg.value='';}
-msg.oninput=()=>{if(!typingOn.checked)return;db.ref('typing/'+username).set(true);setTimeout(()=>db.ref('typing/'+username).remove(),1200)};
-db.ref('typing').on('value',s=>{const v=s.val()||{};const o=Object.keys(v).filter(u=>u!==username);typing.textContent=o.length?o.join(', ')+' typing…':''});
-let rec,chunks=[];async function recordVoice(){if(!rec){const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st);rec.ondataavailable=e=>chunks.push(e.data);rec.onstop=()=>{const b=new Blob(chunks,{type:'audio/webm'});chunks=[];const r=storage.ref('voice/'+Date.now()+'.webm');r.put(b).then(()=>r.getDownloadURL()).then(u=>db.ref('group').push({name:username,audio:u,time:Date.now(),seen:{[username]:Date.now()}}))};rec.start()}else{rec.stop();rec=null}}
-const box=messages;db.ref('group').on('child_added',s=>{const m=s.val(),k=s.key;db.ref(`group/${k}/seen/${username}`).set(Date.now());const r=document.createElement('div');r.className='row '+(m.name===username?'me':'other');const b=document.createElement('div');b.className='bubble';if(m.text)b.innerHTML=m.text;if(m.audio){const a=document.createElement('audio');a.src=m.audio;a.controls=true;b.appendChild(a)}const t=document.createElement('span');t.className='tick';const c=m.seen?Object.keys(m.seen).length:1;t.textContent=c>1?'✓✓':'✓';if(c>1)t.classList.add('seen');b.appendChild(t);const seen=document.createElement('div');seen.className='seenUsers';if(m.seen)seen.innerHTML=Object.keys(m.seen).map(u=>`<img class='avatar' src='${avatar(u)}' title='Seen ${new Date(m.seen[u]).toLocaleTimeString()}'>`).join('');r.appendChild(b);r.appendChild(seen);box.appendChild(r);box.scrollTop=99999});
-let privateUser=null;function openPrivate(){privateUser=prompt('User name');title.textContent='Private: '+privateUser;messages.innerHTML='';db.ref('private/'+chatKey()).off();db.ref('private/'+chatKey()).on('child_added',s=>{const m=s.val(),k=s.key;db.ref(`private/${chatKey()}/${k}/seen/${username}`).set(Date.now());const r=document.createElement('div');r.className='row '+(m.name===username?'me':'other');const b=document.createElement('div');b.className='bubble';b.innerHTML=m.text||'';const t=document.createElement('span');t.className='tick';t.textContent=Object.keys(m.seen||{}).length>1?'✓✓':'✓';b.appendChild(t);r.appendChild(b);messages.appendChild(r)})}
-function chatKey(){return [username,privateUser].sort().join('_')}
-let pc,localStream;async function startCall(video){callBox.style.display='block';localStream=await navigator.mediaDevices.getUserMedia({audio:true,video});localVideo.srcObject=localStream;pc=new RTCPeerConnection();localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));pc.ontrack=e=>remoteVideo.srcObject=e.streams[0];const offer=await pc.createOffer();await pc.setLocalDescription(offer);db.ref('calls/offer').set(offer);db.ref('calls/answer').on('value',async s=>{if(s.val())await pc.setRemoteDescription(new RTCSessionDescription(s.val()))});pc.onicecandidate=e=>e.candidate&&db.ref('calls/candidate').push(e.candidate);db.ref('calls/candidate').on('child_added',s=>pc.addIceCandidate(new RTCIceCandidate(s.val())))}
-function endCall(){callBox.style.display='none';pc&&pc.close()}
-function toggleSettings(){settings.style.right=settings.style.right==='0px'?'-100%':'0'}
-function saveSettings(){username=setName.value||username;localStorage.setItem('name',username);toggleSettings()}setName.value=username;
+const db = firebase.database();
+const storage = firebase.storage();
+
+let myId = localStorage.getItem('uid');
+let chatWith = null;
+
+function register(){
+ const uid = Date.now().toString();
+ const file = photo.files[0];
+ storage.ref('profiles/'+uid).put(file).then(s=>s.ref.getDownloadURL()).then(url=>{
+  db.ref('users/'+uid).set({name:name.value,age:age.value,gender:gender.value,photo:url,online:true,blocked:{}});
+  localStorage.setItem('uid',uid);
+  myId=uid; showProfiles();
+ });
+}
+
+function showProfiles(){
+ login.classList.add('hidden'); profiles.classList.remove('hidden');
+ db.ref('users').on('value',snap=>{
+  profileList.innerHTML='';
+  snap.forEach(u=>{
+   if(u.key===myId) return;
+   const d=u.val();
+   profileList.innerHTML+=`<div class='card' onclick="openChat('${u.key}','${d.name}')">
+    <img src='${d.photo}' class='avatar'>
+    <div class='online ${d.online?'on':'off'}'></div>
+    <p>${d.name}, ${d.age} (${d.gender})</p>
+   </div>`;
+  });
+ });
+ listenNotifications();
+}
+
+function openChat(uid,name){chatWith=uid; profiles.classList.add('hidden'); chat.classList.remove('hidden'); chatName.innerText=name; loadMsgs();}
+function backProfiles(){chat.classList.add('hidden'); profiles.classList.remove('hidden');}
+
+function sendMsg(){
+ const msg={from:myId,text:msgInput.value,time:Date.now()};
+ db.ref('chats/'+chatWith+'/'+myId).push(msg);
+ msgInput.value='';
+}
+
+function loadMsgs(){
+ messages.innerHTML='';
+ db.ref('chats/'+myId+'/'+chatWith).on('child_added',s=>{
+  const m=s.val();
+  messages.innerHTML+=`<div class='msg ${m.from===myId?'me':''}'>${m.text}</div>`;
+ });
+}
+
+function listenNotifications(){
+ db.ref('chats/'+myId).on('child_added',snap=>{
+  const uid=snap.key;
+  db.ref('users/'+uid).once('value',u=>{
+   const d=u.val();
+   notify.innerHTML=`<img src='${d.photo}'><div>New message from ${d.name}</div>`;
+   notify.classList.remove('hidden');
+   setTimeout(()=>notify.classList.add('hidden'),3000);
+  });
+ });
+}
+
+function blockUser(){ db.ref('users/'+myId+'/blocked/'+chatWith).set(true); alert('User blocked'); }
+
+function openSettings(){ settings.classList.remove('hidden'); }
+function closeSettings(){ settings.classList.add('hidden'); }
+function updatePhoto(){
+ const file=newPhoto.files[0];
+ storage.ref('profiles/'+myId).put(file).then(s=>s.ref.getDownloadURL()).then(url=>db.ref('users/'+myId+'/photo').set(url));
+}
+
+if(myId) showProfiles();
 </script>
 </body>
 </html>
