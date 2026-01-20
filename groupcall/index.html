@@ -1,178 +1,83 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tamil Chat Profiles</title>
-<script type="module">
-// Firebase App (the core Firebase SDK)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
-  authDomain: "tamil-chat-2d54e.firebaseapp.com",
-  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-  projectId: "tamil-chat-2d54e",
-  storageBucket: "tamil-chat-2d54e.appspot.com",
-  messagingSenderId: "804705969240",
-  appId: "1:804705969240:web:658df281dd8360843c162d"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// Elements
-const loginForm = document.getElementById("loginForm");
-const profileSection = document.getElementById("profiles");
-const popup = document.getElementById("popup");
-const popupName = document.getElementById("popupName");
-let selectedUserId = null;
-let currentUser = JSON.parse(localStorage.getItem("user"));
-
-// Function to show profiles
-function loadProfiles() {
-    profileSection.innerHTML = "";
-    const usersRef = ref(db, "users/");
-    onValue(usersRef, (snapshot) => {
-        const users = snapshot.val();
-        profileSection.innerHTML = "";
-        let count = 0;
-        for (const uid in users) {
-            const user = users[uid];
-            if (!user || !user.id) continue;
-            if (currentUser && user.id === currentUser.id) continue; // skip self
-            if (count >= 3) break; // show only 3 profiles
-            const div = document.createElement("div");
-            div.classList.add("user-card");
-            div.innerHTML = `
-                <img src="${user.imageUrl}" alt="${user.username}" onclick="openPopup('${uid}')">
-                <span class="online-dot ${user.online ? 'online' : ''}"></span>
-                <p>${user.username}, ${user.age}, ${user.gender}</p>
-            `;
-            profileSection.appendChild(div);
-            count++;
-        }
-    });
-}
-
-// If user is already logged in
-if (currentUser) {
-    loginForm.style.display = "none";
-    profileSection.style.display = "flex";
-    set(ref(db, "users/" + currentUser.id), { ...currentUser, online: true }); // ensure online status updated
-    loadProfiles();
-}
-
-// Login / Register
-loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const username = loginForm.username.value.trim();
-    const age = loginForm.age.value.trim();
-    const gender = loginForm.gender.value;
-    const imageFile = loginForm.image.files[0];
-
-    if (!username || !age || !gender || !imageFile) return alert("All fields are required");
-
-    const reader = new FileReader();
-    reader.readAsDataURL(imageFile);
-    reader.onload = () => {
-        const imageUrl = reader.result;
-        const userId = "user_" + Date.now(); // simple unique ID
-
-        const userData = { id: userId, username, age, gender, imageUrl, online: true };
-        set(ref(db, "users/" + userId), userData).then(() => {
-            localStorage.setItem("user", JSON.stringify(userData));
-            currentUser = userData;
-
-            loginForm.style.display = "none";
-            profileSection.style.display = "flex";
-            loadProfiles();
-        });
-    };
-});
-
-// Popup actions
-window.openPopup = function(uid) {
-    selectedUserId = uid;
-    const userRef = ref(db, "users/" + uid);
-    onValue(userRef, (snapshot) => {
-        const user = snapshot.val();
-        if (!user) return;
-        popupName.textContent = user.username;
-        popup.style.display = "block";
-    }, { once: true });
-};
-
-document.getElementById("closePopup").addEventListener("click", () => {
-    popup.style.display = "none";
-});
-
-document.getElementById("chatBtn").addEventListener("click", () => {
-    alert("Open chat with user " + selectedUserId);
-});
-document.getElementById("audioBtn").addEventListener("click", () => {
-    alert("Start audio call with user " + selectedUserId);
-});
-document.getElementById("videoBtn").addEventListener("click", () => {
-    alert("Start video call with user " + selectedUserId);
-});
-document.getElementById("blockBtn").addEventListener("click", async () => {
-    if (!selectedUserId) return;
-    await update(ref(db, "users/" + selectedUserId), { blocked: true });
-    alert("User blocked");
-});
-document.getElementById("unblockBtn").addEventListener("click", async () => {
-    if (!selectedUserId) return;
-    await update(ref(db, "users/" + selectedUserId), { blocked: false });
-    alert("User unblocked");
-});
-</script>
+<title>Full Chat App – Single HTML</title>
 <style>
-body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; text-align: center;}
-form { margin: 50px auto; background: white; padding: 20px; border-radius: 10px; width: 300px; box-shadow: 0 0 10px rgba(0,0,0,0.2);}
-input, select { width: 100%; margin: 10px 0; padding: 8px; }
-#profiles { display: none; justify-content: center; gap: 20px; margin: 50px; flex-wrap: wrap;}
-.user-card { position: relative; display: inline-block; }
-.user-card img { width: 150px; height: 150px; border-radius: 10px; cursor: pointer; object-fit: cover; }
-.user-card .online-dot { position: absolute; top: 10px; right: 10px; width: 15px; height: 15px; border-radius: 50%; background: gray; border: 2px solid white; }
-.user-card .online-dot.online { background: green; }
-.user-card p { margin: 5px 0; }
-#popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.3);}
-#popup button { margin: 5px; padding: 10px 15px; }
-#closePopup { position: absolute; top: 5px; right: 10px; cursor: pointer; font-weight: bold;}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#ece5dd}
+#app{max-width:420px;margin:auto;height:100vh;background:#fff;display:flex;flex-direction:column}
+header{background:#075e54;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center}
+#messages{flex:1;overflow-y:auto;padding:10px}
+.row{margin-bottom:8px}
+.me{text-align:right}
+.bubble{display:inline-block;padding:8px 10px;border-radius:8px;max-width:80%;background:#dcf8c6}
+.other .bubble{background:#fff}
+.tick{font-size:11px;margin-left:6px;color:#999}
+.tick.seen{color:#34b7f1}
+.seenUsers{font-size:11px;color:#666}
+.avatar{width:16px;height:16px;border-radius:50%;margin-right:2px}
+.typing{font-size:12px;color:#666;padding:4px}
+footer{display:flex;padding:6px;border-top:1px solid #ddd}
+footer input{flex:1;padding:8px}
+footer button{margin-left:4px}
+#settings{position:fixed;top:0;right:-100%;width:260px;height:100%;background:#fff;box-shadow:-2px 0 8px rgba(0,0,0,.2);transition:.3s;padding:10px;z-index:99}
+video{width:100%;border-radius:6px;margin-top:4px}
 </style>
 </head>
 <body>
-
-<h1>Tamil Chat Login</h1>
-<form id="loginForm">
-  <input type="text" name="username" placeholder="Username" required>
-  <input type="number" name="age" placeholder="Age" required>
-  <select name="gender" required>
-    <option value="">Select Gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-    <option value="Other">Other</option>
-  </select>
-  <input type="file" name="image" accept="image/*" required>
-  <button type="submit">Login / Register</button>
-</form>
-
-<div id="profiles"></div>
-
-<div id="popup">
-  <span id="closePopup">X</span>
-  <h3 id="popupName"></h3>
-  <button id="chatBtn">Chat</button>
-  <button id="audioBtn">Audio Call</button>
-  <button id="videoBtn">Video Call</button>
-  <button id="blockBtn">Block</button>
-  <button id="unblockBtn">Unblock</button>
+<div id="app">
+<header>
+ <span id="title">Group Chat</span>
+ <div>
+  <button onclick="openPrivate()">💬</button>
+  <button onclick="startCall(false)">📞</button>
+  <button onclick="startCall(true)">🎥</button>
+  <button onclick="toggleSettings()">⚙️</button>
+ </div>
+</header>
+<div id="messages"></div>
+<div id="typing" class="typing"></div>
+<footer>
+ <input id="msg" placeholder="Type message…" />
+ <button onclick="sendMsg()">Send</button>
+ <button onclick="recordVoice()">🎤</button>
+</footer>
 </div>
-
+<div id="settings">
+<h3>Settings</h3>
+<label>Username <input id="setName"></label>
+<label><input type="checkbox" id="typingOn" checked> Typing indicator</label>
+<button onclick="saveSettings()">Save</button>
+<button onclick="toggleSettings()">Close</button>
+</div>
+<div id="callBox" style="display:none;padding:6px">
+<video id="localVideo" autoplay muted></video>
+<video id="remoteVideo" autoplay></video>
+<button onclick="endCall()">End</button>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",authDomain:"tamil-chat-2d54e.firebaseapp.com",databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",projectId:"tamil-chat-2d54e",storageBucket:"tamil-chat-2d54e.appspot.com",messagingSenderId:"804705969240",appId:"1:804705969240:web:658df281dd8360843c162d"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+const storage=firebase.storage();
+let username=localStorage.getItem('name')||prompt('Enter name');localStorage.setItem('name',username);
+const avatar=u=>`https://ui-avatars.com/api/?name=${u}`;
+function sendMsg(){const t=msg.value.trim();if(!t)return;db.ref('group').push({name:username,text:t,time:Date.now(),seen:{[username]:Date.now()}});msg.value='';}
+msg.oninput=()=>{if(!typingOn.checked)return;db.ref('typing/'+username).set(true);setTimeout(()=>db.ref('typing/'+username).remove(),1200)};
+db.ref('typing').on('value',s=>{const v=s.val()||{};const o=Object.keys(v).filter(u=>u!==username);typing.textContent=o.length?o.join(', ')+' typing…':''});
+let rec,chunks=[];async function recordVoice(){if(!rec){const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st);rec.ondataavailable=e=>chunks.push(e.data);rec.onstop=()=>{const b=new Blob(chunks,{type:'audio/webm'});chunks=[];const r=storage.ref('voice/'+Date.now()+'.webm');r.put(b).then(()=>r.getDownloadURL()).then(u=>db.ref('group').push({name:username,audio:u,time:Date.now(),seen:{[username]:Date.now()}}))};rec.start()}else{rec.stop();rec=null}}
+const box=messages;db.ref('group').on('child_added',s=>{const m=s.val(),k=s.key;db.ref(`group/${k}/seen/${username}`).set(Date.now());const r=document.createElement('div');r.className='row '+(m.name===username?'me':'other');const b=document.createElement('div');b.className='bubble';if(m.text)b.innerHTML=m.text;if(m.audio){const a=document.createElement('audio');a.src=m.audio;a.controls=true;b.appendChild(a)}const t=document.createElement('span');t.className='tick';const c=m.seen?Object.keys(m.seen).length:1;t.textContent=c>1?'✓✓':'✓';if(c>1)t.classList.add('seen');b.appendChild(t);const seen=document.createElement('div');seen.className='seenUsers';if(m.seen)seen.innerHTML=Object.keys(m.seen).map(u=>`<img class='avatar' src='${avatar(u)}' title='Seen ${new Date(m.seen[u]).toLocaleTimeString()}'>`).join('');r.appendChild(b);r.appendChild(seen);box.appendChild(r);box.scrollTop=99999});
+let privateUser=null;function openPrivate(){privateUser=prompt('User name');title.textContent='Private: '+privateUser;messages.innerHTML='';db.ref('private/'+chatKey()).off();db.ref('private/'+chatKey()).on('child_added',s=>{const m=s.val(),k=s.key;db.ref(`private/${chatKey()}/${k}/seen/${username}`).set(Date.now());const r=document.createElement('div');r.className='row '+(m.name===username?'me':'other');const b=document.createElement('div');b.className='bubble';b.innerHTML=m.text||'';const t=document.createElement('span');t.className='tick';t.textContent=Object.keys(m.seen||{}).length>1?'✓✓':'✓';b.appendChild(t);r.appendChild(b);messages.appendChild(r)})}
+function chatKey(){return [username,privateUser].sort().join('_')}
+let pc,localStream;async function startCall(video){callBox.style.display='block';localStream=await navigator.mediaDevices.getUserMedia({audio:true,video});localVideo.srcObject=localStream;pc=new RTCPeerConnection();localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));pc.ontrack=e=>remoteVideo.srcObject=e.streams[0];const offer=await pc.createOffer();await pc.setLocalDescription(offer);db.ref('calls/offer').set(offer);db.ref('calls/answer').on('value',async s=>{if(s.val())await pc.setRemoteDescription(new RTCSessionDescription(s.val()))});pc.onicecandidate=e=>e.candidate&&db.ref('calls/candidate').push(e.candidate);db.ref('calls/candidate').on('child_added',s=>pc.addIceCandidate(new RTCIceCandidate(s.val())))}
+function endCall(){callBox.style.display='none';pc&&pc.close()}
+function toggleSettings(){settings.style.right=settings.style.right==='0px'?'-100%':'0'}
+function saveSettings(){username=setName.value||username;localStorage.setItem('name',username);toggleSettings()}setName.value=username;
+</script>
 </body>
 </html>
