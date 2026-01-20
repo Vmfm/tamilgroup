@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <style>
 body{font-family:Arial;background:#f2f2f2;margin:0}
@@ -33,7 +34,7 @@ button{background:#ff2e63;color:#fff;border:none;font-size:16px}
 <input id="name" placeholder="Name">
 <input id="age" type="number" placeholder="Age">
 <select id="gender"><option>Male</option><option>Female</option></select>
-<input id="photo" placeholder="Profile Image URL">
+<input id="photoFile" type="file">
 <button onclick="login()">Enter</button>
 </div>
 
@@ -61,6 +62,7 @@ appId: "1:804705969240:web:658df281dd8360843"
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.database();
+const storage=firebase.storage();
 let myId=null,chatWith=null;
 
 // Anonymous login
@@ -68,11 +70,16 @@ auth.signInAnonymously();
 auth.onAuthStateChanged(u=>{if(u){myId=u.uid}});
 
 function login(){
-const data={name:name.value,age:age.value,gender:gender.value,photo:photo.value,online:true};
+const file=document.getElementById('photoFile').files[0];
+if(!file){alert('Select a profile image');return;}
+const storageRef=storage.ref('profiles/'+myId);
+storageRef.put(file).then(snap=>snap.ref.getDownloadURL()).then(url=>{
+const data={name:name.value,age:age.value,gender:gender.value,photo:url,online:true};
 db.ref('users/'+myId).set(data);
 document.getElementById('login').style.display='none';
 document.getElementById('users').style.display='block';
 loadUsers();
+});
 }
 
 window.onbeforeunload=()=>db.ref('users/'+myId+'/online').set(false);
