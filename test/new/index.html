@@ -460,7 +460,26 @@ async function refreshPanelList(){
   });
 }
 
-clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); showToast("Notifications cleared"); refreshPanelList(); };
+/* MODIFIED CLEAR HISTORY - NO CONFIRMATION DIALOGUE */
+clearHistoryBtn.onclick = async () => { 
+  // 1. Clear unread counters
+  await db.ref(`unread/${username}`).remove(); 
+  
+  // 2. Clear all messages in private chat rooms you are part of
+  const allChatsSnap = await db.ref('privateChats').once('value');
+  const allChats = allChatsSnap.val() || {};
+  
+  const deletePromises = [];
+  Object.keys(allChats).forEach(chatKey => {
+    if(chatKey.includes(username)) {
+      deletePromises.push(db.ref(`privateChats/${chatKey}`).remove());
+    }
+  });
+  
+  await Promise.all(deletePromises);
+  showToast("Chat history cleared"); 
+  refreshPanelList(); 
+};
 
 async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
