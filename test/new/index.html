@@ -596,14 +596,24 @@ bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panel
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 function bellFlash(){ try{dingAudio.play();}catch(e){} }
 
-/* REAL VOICE WEBRTC CALLS */
+/* REAL VOICE WEBRTC CALLS - FIXED */
 async function setupWebRTC(callId, isCaller) {
   peerConnection = new RTCPeerConnection(rtcConfig);
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  } catch(e) {
+    showToast("Mic access denied");
+    cleanupCall();
+    return;
+  }
 
   peerConnection.ontrack = (event) => {
-    document.getElementById('remoteAudio').srcObject = event.streams[0];
+    const remoteAudio = document.getElementById('remoteAudio');
+    if (remoteAudio.srcObject !== event.streams[0]) {
+      remoteAudio.srcObject = event.streams[0];
+    }
   };
 
   peerConnection.onicecandidate = (event) => {
@@ -614,7 +624,9 @@ async function setupWebRTC(callId, isCaller) {
 
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
   db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => {
-    peerConnection.addIceCandidate(new RTCIceCandidate(snap.val()));
+    if (peerConnection) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+    }
   });
 
   if (isCaller) {
@@ -639,9 +651,9 @@ function watchCallsForMe(){
     if(c.status === 'ended' || c.status === 'declined') cleanupCall();
     if(c.status === 'answered' && (c.from === username || c.to === username)) {
       startInCallTimer(c);
-      if (c.to === username) handleIncomingAnswer(snap.key, c);
+      if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c);
     }
-    if(c.answer && c.from === username && peerConnection) {
+    if(c.answer && c.from === username && peerConnection && peerConnection.signalingState !== "stable") {
         peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer));
     }
   });
@@ -712,11 +724,16 @@ function cleanupCall(){
   ringtone.pause(); ringtone.currentTime=0; 
   callOverlay.style.display='none'; 
   clearInterval(callTimerInterval); 
-  if(peerConnection) { peerConnection.close(); peerConnection = null; }
+  if(peerConnection) { 
+    db.ref(`calls/${activeCall?.id}/candidates/${username}`).off();
+    peerConnection.close(); 
+    peerConnection = null; 
+  }
   if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   activeCall = null; 
   callTimer.textContent = "Ringing...";
   muteBtn.classList.remove('active');
+  document.getElementById('remoteAudio').srcObject = null;
 }
 
 muteBtn.onclick = () => {
@@ -735,7 +752,6 @@ speakerBtn.onclick = () => {
 
 /* IMPROVED BLOCKING LOGIC */
 function listenBlocks(){ 
-  // Listen for who I have blocked
   db.ref(`blocks/${username}`).on('value', s => {
     blockedUsers = new Set(Object.keys(s.val()||{}));
     if(privateChatWith) {
@@ -746,7 +762,6 @@ function listenBlocks(){
     refreshPanelList();
   }); 
 
-  // Check if others have blocked me (to stop sending messages)
   db.ref('blocks').on('value', snap => {
     const allBlocks = snap.val() || {};
     iHaveBeenBlockedBy = new Set();
@@ -767,7 +782,6 @@ blockBtn.onclick = () => {
 reportBtn.onclick = () => { 
     showToast(`User ${privateChatWith} reported to admins.`); 
     db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); 
-    // Logic: Also notify the reported user (optional per your request)
     db.ref(`notifications/${privateChatWith}`).push({
         text: "You have been reported for violating community guidelines.",
         time: Date.now()
