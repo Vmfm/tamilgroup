@@ -1,10 +1,12 @@
 // config.js
 const firebaseConfig = {
-  apiKey: "AIzaSyBSwaiMR4JpYOS3IK77nu97RPvco0NlJpQ",
-  authDomain: "tamil-chat-2d54e.firebaseapp.com",
-  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
-  projectId: "tamil-chat-2d54e",
-  storageBucket: "tamil-chat-2d54e.appspot.com",
-  messagingSenderId: "804705969240",
-  appId: "1:804705969240:web:658df281dd8360843c162d"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DB_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
+
+export default firebaseConfig;
