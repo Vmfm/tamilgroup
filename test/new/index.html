@@ -96,19 +96,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #blockBtn.not-blocked { border-color: #ff3b30; color: #ff3b30; }
 #reportBtn { border-color: #eab308; color: #eab308; }
 
-/* CALL BUTTON FIX (GREEN) */
-#callBtn {
-  background: none;
-  border: 0;
-  color: #25d366 !important;
-  cursor: pointer;
-  font-weight: 700;
-  margin-right: 10px;
-  font-size: 22px;
-  transition: transform 0.2s;
-}
-#callBtn:hover { transform: scale(1.15); }
-
 /* UNREAD DIVIDER */
 .unread-divider{text-align:center;margin:10px 0;position:relative;display:flex;align-items:center;justify-content:center}
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
@@ -223,7 +210,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
       <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
       <div style="font-weight:700" id="privateTitle">Private Chat</div>
       <div style="flex:1"></div>
-      <button id="callBtn" title="Call">📞</button>
+      <button id="callBtn" style="background:none;border:0;color:#25d366;cursor:pointer;font-weight:700;margin-right:10px;font-size:20px">📞</button>
       <button id="blockBtn" class="headerActionBtn not-blocked">Block</button>
       <button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button>
     </div>
@@ -273,10 +260,20 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
 
-<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-// Database initialized via config.js (which must call firebase.initializeApp)
+const firebaseConfig = {
+  apiKey: "AIzaSyBSwaiMR4JpYOS3IK77nu97RPvco0NlJpQ",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /* DOM & STATE */
@@ -305,7 +302,7 @@ const cancelCallBtn = document.getElementById('cancelCallBtn');
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
 let blockedUsers = new Set();
-let iHaveBeenBlockedBy = new Set();
+let iHaveBeenBlockedBy = new Set(); // New state to track if others blocked us
 let currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 let activeCall = null, callTimerInterval = null, currentDeleteAction = null;
@@ -478,7 +475,10 @@ function attachPrivateListener(chatKey){
   const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
+    
+    // Don't show messages if we blocked them
     if(blockedUsers.has(other)) return;
+
     if(privateChatWith === other && privatePopup.style.display === 'flex') {
        if(!msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true});
     } else { bellFlash(); }
@@ -536,9 +536,12 @@ async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex';
   privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
+  
+  // Update UI for blocking
   const isBlocked = blockedUsers.has(other);
   blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
   blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
+  
   const key = chatId(username, other);
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
   snapshot.forEach(child => { const m = child.val(); if(m.name === other && !m.read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); });
@@ -577,8 +580,11 @@ function renderPrivateMessageWithId(chatKey, id, msg){
 
 privateSend.onclick = () => {
   const text = privateInput.value.trim(); if(!text || !privateChatWith) return;
+  
+  // LOGIC: Block Check
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send message");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
+
   const key = chatId(username, privateChatWith);
   db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false });
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
@@ -590,28 +596,39 @@ bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panel
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 function bellFlash(){ try{dingAudio.play();}catch(e){} }
 
-/* REAL VOICE WEBRTC CALLS - FIXED SPEAKER MODE */
+/* REAL VOICE WEBRTC CALLS - FIXED */
 async function setupWebRTC(callId, isCaller) {
   peerConnection = new RTCPeerConnection(rtcConfig);
+  
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
   } catch(e) {
-    showToast("Mic access denied"); cleanupCall(); return;
+    showToast("Mic access denied");
+    cleanupCall();
+    return;
   }
+
   peerConnection.ontrack = (event) => {
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== event.streams[0]) {
       remoteAudio.srcObject = event.streams[0];
     }
   };
+
   peerConnection.onicecandidate = (event) => {
-    if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON());
+    if (event.candidate) {
+      db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON());
+    }
   };
+
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
   db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => {
-    if (peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+    if (peerConnection) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+    }
   });
+
   if (isCaller) {
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
@@ -646,8 +663,11 @@ async function showCallOverlay(otherName, type) {
   callFrom.textContent = otherName;
   callOverlay.style.display = 'flex';
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
-  if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`;
-  else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
+  if(prof.profileImage) {
+      callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`;
+  } else {
+      callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
+  }
   if(type === 'incoming') {
       callTypeText.textContent = "Incoming Audio Call";
       inboundCallBtns.style.display = 'flex';
@@ -677,7 +697,8 @@ callBtn.onclick = async () => {
   activeCall = { id, from: username, to: privateChatWith };
   db.ref(`calls/${id}`).set({ from:username, to:privateChatWith, status:'ringing', startedAt:Date.now() });
   showCallOverlay(privateChatWith, 'outgoing');
-  ringtone.play(); setupWebRTC(id, true);
+  ringtone.play();
+  setupWebRTC(id, true);
 };
 
 acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
@@ -688,7 +709,8 @@ endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status
 function startInCallTimer(c){
   ringtone.pause();
   callTypeText.textContent = "Ongoing Call";
-  inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none';
+  inboundCallBtns.style.display = 'none';
+  outboundCallBtns.style.display = 'none';
   activeCallControls.style.display = 'flex';
   clearInterval(callTimerInterval);
   callTimerInterval = setInterval(() => {
@@ -704,13 +726,14 @@ function cleanupCall(){
   clearInterval(callTimerInterval); 
   if(peerConnection) { 
     db.ref(`calls/${activeCall?.id}/candidates/${username}`).off();
-    peerConnection.close(); peerConnection = null; 
+    peerConnection.close(); 
+    peerConnection = null; 
   }
   if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  activeCall = null; callTimer.textContent = "Ringing...";
-  muteBtn.classList.remove('active'); speakerBtn.classList.remove('active');
-  const remoteAudio = document.getElementById('remoteAudio');
-  remoteAudio.srcObject = null; remoteAudio.volume = 1.0;
+  activeCall = null; 
+  callTimer.textContent = "Ringing...";
+  muteBtn.classList.remove('active');
+  document.getElementById('remoteAudio').srcObject = null;
 }
 
 muteBtn.onclick = () => {
@@ -722,18 +745,9 @@ muteBtn.onclick = () => {
     }
 };
 
-/* SPEAKER LOGIC FIX */
 speakerBtn.onclick = () => {
-    const remoteAudio = document.getElementById('remoteAudio');
-    const isSpeaker = speakerBtn.classList.toggle('active');
-    // Mimic speaker mode by increasing volume and ensuring hardware output isn't restricted
-    if (isSpeaker) {
-        remoteAudio.volume = 1.0; 
-        showToast("Speaker ON");
-    } else {
-        remoteAudio.volume = 0.4; // Lower volume for 'earpiece' mode simulation
-        showToast("Speaker OFF");
-    }
+    speakerBtn.classList.toggle('active');
+    showToast(speakerBtn.classList.contains('active') ? "Speaker ON" : "Speaker OFF");
 };
 
 /* IMPROVED BLOCKING LOGIC */
@@ -747,6 +761,7 @@ function listenBlocks(){
     }
     refreshPanelList();
   }); 
+
   db.ref('blocks').on('value', snap => {
     const allBlocks = snap.val() || {};
     iHaveBeenBlockedBy = new Set();
