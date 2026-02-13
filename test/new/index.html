@@ -260,9 +260,22 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
 
-<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBSwaiMR4JpYOS3IK77nu97RPvco0NlJpQ",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 /* DOM & STATE */
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -298,8 +311,10 @@ let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 
-// Database helper
-const db = firebase.database();
+/* WEBRTC REAL VOICE STATE */
+let peerConnection = null;
+let localStream = null;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 /* CUSTOM DELETE LOGIC */
 function openDeletePrompt(action) {
@@ -583,7 +598,6 @@ function bellFlash(){ try{dingAudio.play();}catch(e){} }
 
 /* REAL VOICE WEBRTC CALLS - FIXED */
 async function setupWebRTC(callId, isCaller) {
-  const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   peerConnection = new RTCPeerConnection(rtcConfig);
   
   try {
