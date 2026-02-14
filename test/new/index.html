@@ -313,8 +313,23 @@ function sendGroupMessage(){
 }
 
 function listenTypingGroup(){
-  db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; });
-  messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(()=>db.ref(`typing/group/${username}`).remove(),1500); };
+  db.ref('typing/group').on('value', snap=>{ 
+    const obj=snap.val()||{}; 
+    delete obj[username]; 
+    const who=Object.keys(obj); 
+    if(who.length > 0) {
+        statusLine.textContent = `${who.join(', ')} is typing...`;
+    } else {
+        statusLine.textContent = '';
+    }
+  });
+  messageInput.oninput = () => { 
+    db.ref(`typing/group/${username}`).set(true); 
+    clearTimeout(typingTimer); 
+    typingTimer=setTimeout(() => {
+        db.ref(`typing/group/${username}`).remove();
+    }, 2000); 
+  };
 }
 
 function listenPresence(){
@@ -538,7 +553,7 @@ profileImgInput.onchange = function(){
   }; reader.readAsDataURL(file);
 };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } };
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
 </script>
 </body>
 </html>
