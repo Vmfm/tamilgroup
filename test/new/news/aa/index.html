@@ -1,112 +1,257 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Simple Group + Private Chat</title>
-  <style>
-    body { font-family: Arial; background:#f0f0f0; }
-    #chat { height:250px; overflow-y:auto; background:white; padding:10px; margin-bottom:10px;}
-    #users { background:white; padding:10px; margin-bottom:10px;}
-    input { padding:8px; margin:5px; }
-    button { padding:8px; cursor:pointer; }
-    .private { color: green; }
-  </style>
+<meta charset="UTF-8">
+<title>Simple Group + Private Chat</title>
+
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#f2f2f2;
+}
+
+#loginScreen, #chatScreen{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    width:350px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border:1px solid #ccc;
+    border-radius:5px;
+}
+
+button{
+    padding:10px;
+    border:none;
+    border-radius:5px;
+    background:#4CAF50;
+    color:white;
+    cursor:pointer;
+    margin-top:5px;
+}
+
+button:hover{
+    background:#45a049;
+}
+
+#chatContainer{
+    display:flex;
+    height:100vh;
+}
+
+#users{
+    width:30%;
+    background:white;
+    padding:10px;
+    overflow-y:auto;
+    border-right:1px solid #ddd;
+}
+
+#messages{
+    width:70%;
+    display:flex;
+    flex-direction:column;
+}
+
+#chatBox{
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    background:#fafafa;
+}
+
+.message{
+    margin-bottom:10px;
+}
+
+.me{
+    text-align:right;
+    color:blue;
+}
+
+.privateTitle{
+    background:#eee;
+    padding:5px;
+    font-size:14px;
+}
+
+#inputArea{
+    display:flex;
+    padding:10px;
+    background:white;
+    border-top:1px solid #ddd;
+}
+
+#inputArea input{
+    flex:1;
+    margin-right:5px;
+}
+</style>
 </head>
 <body>
 
-<h2>My Group Chat</h2>
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="card">
+    <h2>Enter Your Name</h2>
+    <input type="text" id="username" placeholder="Your Name">
+    <button onclick="login()">Enter Chat</button>
+  </div>
+</div>
 
-<div id="users"></div>
+<!-- CHAT -->
+<div id="chatScreen" style="display:none;">
+  <div id="chatContainer">
 
-<div id="chat"></div>
+    <div id="users">
+      <h3>Users</h3>
+      <button onclick="openGroup()">Group Chat</button>
+      <div id="userList"></div>
+    </div>
 
-<input type="text" id="name" placeholder="Your Name">
-<input type="text" id="message" placeholder="Type message">
-<button onclick="sendMessage()">Send Group</button>
+    <div id="messages">
+      <div class="privateTitle" id="chatTitle">Group Chat</div>
+      <div id="chatBox"></div>
+
+      <div id="inputArea">
+        <input type="text" id="messageInput" placeholder="Type message...">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
-let chatBox = document.getElementById("chat");
-let usersBox = document.getElementById("users");
-let nameInput = document.getElementById("name");
+let currentUser = localStorage.getItem("myName");
+let currentChat = "group";
 
-/* ✅ Remember name on same device */
-if(localStorage.getItem("myName")){
-  nameInput.value = localStorage.getItem("myName");
-  nameInput.disabled = true;
+/* AUTO LOGIN */
+if(currentUser){
+    showChat();
 }
 
-/* Save name permanently */
-nameInput.addEventListener("change", function(){
-  if(this.value.trim() !== ""){
-    localStorage.setItem("myName", this.value.trim());
-    this.disabled = true;
-  }
-});
-
-/* Load group messages */
-function loadMessages() {
-  let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
-  chatBox.innerHTML = "";
-  messages.forEach(msg => {
-    chatBox.innerHTML += "<p><b>" + msg.name + ":</b> " + msg.text + "</p>";
-  });
-  chatBox.scrollTop = chatBox.scrollHeight;
+/* LOGIN */
+function login(){
+    let name = document.getElementById("username").value.trim();
+    if(name){
+        localStorage.setItem("myName", name);
+        currentUser = name;
+        showChat();
+    }
 }
 
-/* Send group message */
-function sendMessage() {
-  let name = localStorage.getItem("myName");
-  let text = document.getElementById("message").value;
-
-  if(name && text){
-    let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
-    messages.push({name:name, text:text});
-    localStorage.setItem("groupChat", JSON.stringify(messages));
-    document.getElementById("message").value = "";
-    updateUsers();
+function showChat(){
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("chatScreen").style.display="block";
+    loadUsers();
     loadMessages();
-  }
 }
 
-/* Show user list */
-function updateUsers(){
-  let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
-  let users = [...new Set(messages.map(m => m.name))];
-  usersBox.innerHTML = "<b>Users:</b><br>";
-  users.forEach(u => {
-    if(u !== localStorage.getItem("myName")){
-      usersBox.innerHTML += 
-        `<button onclick="openPrivate('${u}')">${u}</button> `;
-    }
-  });
+/* LOAD USERS */
+function loadUsers(){
+    let group = JSON.parse(localStorage.getItem("groupChat")) || [];
+    let users = [...new Set(group.map(m => m.name))];
+
+    let list = document.getElementById("userList");
+    list.innerHTML="";
+    users.forEach(u=>{
+        if(u!==currentUser){
+            let btn=document.createElement("button");
+            btn.innerText=u;
+            btn.onclick=()=>openPrivate(u);
+            list.appendChild(btn);
+        }
+    });
 }
 
-/* Private Chat */
+/* OPEN GROUP */
+function openGroup(){
+    currentChat="group";
+    document.getElementById("chatTitle").innerText="Group Chat";
+    loadMessages();
+}
+
+/* OPEN PRIVATE */
 function openPrivate(user){
-  let myName = localStorage.getItem("myName");
-  let key = "private_" + myName + "_" + user;
-
-  let privateMessages = JSON.parse(localStorage.getItem(key)) || [];
-  chatBox.innerHTML = `<h3 class="private">Private Chat with ${user}</h3>`;
-  
-  privateMessages.forEach(msg => {
-    chatBox.innerHTML += "<p><b>" + msg.name + ":</b> " + msg.text + "</p>";
-  });
-
-  document.getElementById("message").placeholder = "Private message to " + user;
-
-  document.querySelector("button").onclick = function(){
-    let text = document.getElementById("message").value;
-    if(text){
-      privateMessages.push({name:myName, text:text});
-      localStorage.setItem(key, JSON.stringify(privateMessages));
-      document.getElementById("message").value = "";
-      openPrivate(user);
-    }
-  };
+    currentChat=user;
+    document.getElementById("chatTitle").innerText="Private Chat with "+user;
+    loadMessages();
 }
 
-loadMessages();
-updateUsers();
+/* LOAD MESSAGES */
+function loadMessages(){
+    let chatBox=document.getElementById("chatBox");
+    chatBox.innerHTML="";
+
+    let messages;
+
+    if(currentChat==="group"){
+        messages=JSON.parse(localStorage.getItem("groupChat"))||[];
+    }else{
+        let key1="private_"+currentUser+"_"+currentChat;
+        let key2="private_"+currentChat+"_"+currentUser;
+        messages=(JSON.parse(localStorage.getItem(key1))||[])
+            .concat(JSON.parse(localStorage.getItem(key2))||[]);
+    }
+
+    messages.forEach(m=>{
+        let div=document.createElement("div");
+        div.className="message";
+        if(m.name===currentUser){
+            div.classList.add("me");
+        }
+        div.innerHTML="<b>"+m.name+":</b> "+m.text;
+        chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop=chatBox.scrollHeight;
+}
+
+/* SEND MESSAGE */
+function sendMessage(){
+    let input=document.getElementById("messageInput");
+    let text=input.value.trim();
+    if(!text) return;
+
+    let message={name:currentUser,text:text};
+
+    if(currentChat==="group"){
+        let group=JSON.parse(localStorage.getItem("groupChat"))||[];
+        group.push(message);
+        localStorage.setItem("groupChat",JSON.stringify(group));
+    }else{
+        let key="private_"+currentUser+"_"+currentChat;
+        let chat=JSON.parse(localStorage.getItem(key))||[];
+        chat.push(message);
+        localStorage.setItem(key,JSON.stringify(chat));
+    }
+
+    input.value="";
+    loadUsers();
+    loadMessages();
+}
+
+/* ENTER KEY SEND */
+document.getElementById("messageInput").addEventListener("keypress",function(e){
+    if(e.key==="Enter"){
+        sendMessage();
+    }
+});
 </script>
 
 </body>
