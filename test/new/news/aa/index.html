@@ -1,11 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Just Nothing</title>
+  <title>Simple Group Chat</title>
+  <style>
+    body { font-family: Arial; background:#f0f0f0; }
+    #chat { height:300px; overflow-y:auto; background:white; padding:10px; }
+    input { padding:8px; margin:5px; }
+    button { padding:8px; }
+  </style>
 </head>
 <body>
-    <h1>Empty Space</h1>
-    <p>Everything is working. Now, what goes here?</p>
+
+<h2>My Group Chat</h2>
+
+<div id="chat"></div>
+
+<input type="text" id="name" placeholder="Your Name">
+<input type="text" id="message" placeholder="Type message">
+<button onclick="sendMessage()">Send</button>
+
+<script>
+let chatBox = document.getElementById("chat");
+
+function loadMessages() {
+  let messages = JSON.parse(localStorage.getItem("chat")) || [];
+  chatBox.innerHTML = "";
+  messages.forEach(msg => {
+    chatBox.innerHTML += "<p><b>" + msg.name + ":</b> " + msg.text + "</p>";
+  });
+}
+
+function sendMessage() {
+  let name = document.getElementById("name").value;
+  let text = document.getElementById("message").value;
+
+  if(name && text){
+    let messages = JSON.parse(localStorage.getItem("chat")) || [];
+    messages.push({name:name, text:text});
+    localStorage.setItem("chat", JSON.stringify(messages));
+    document.getElementById("message").value = "";
+    loadMessages();
+  }
+}
+
+loadMessages();
+</script>
+
 </body>
 </html>
