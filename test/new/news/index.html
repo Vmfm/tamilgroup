@@ -468,7 +468,28 @@ function cleanupCall(){
 }
 
 muteBtn.onclick = () => { if(localStream) { const audioTrack = localStream.getAudioTracks()[0]; audioTrack.enabled = !audioTrack.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = audioTrack.enabled ? '🎤' : '🔇'; } };
-speakerBtn.onclick = () => { speakerBtn.classList.toggle('active'); showToast(speakerBtn.classList.contains('active') ? "Speaker ON" : "Speaker OFF"); };
+
+/* UPDATED SPEAKER LOGIC */
+speakerBtn.onclick = async () => {
+  const audioEl = document.getElementById('remoteAudio');
+  speakerBtn.classList.toggle('active');
+  const isSpeakerOn = speakerBtn.classList.contains('active');
+  
+  if (isSpeakerOn) {
+    showToast("Speaker ON");
+    audioEl.volume = 1.0;
+    // For browsers that support setting output device
+    if (audioEl.setSinkId) {
+       // Attempt to find a loudspeaker device (often requires user selection, defaults to system default)
+       audioEl.setSinkId("").then(() => console.log("Default speaker set"));
+    }
+  } else {
+    showToast("Speaker OFF (Earpiece Mode)");
+    // Browsers don't allow easy switching to earpiece via JS for privacy.
+    // We lower volume significantly to simulate the earpiece effect.
+    audioEl.volume = 0.2; 
+  }
+};
 
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => {
