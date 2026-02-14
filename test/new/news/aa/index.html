@@ -1,49 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Simple Group Chat</title>
+  <title>Simple Group + Private Chat</title>
   <style>
     body { font-family: Arial; background:#f0f0f0; }
-    #chat { height:300px; overflow-y:auto; background:white; padding:10px; }
+    #chat { height:250px; overflow-y:auto; background:white; padding:10px; margin-bottom:10px;}
+    #users { background:white; padding:10px; margin-bottom:10px;}
     input { padding:8px; margin:5px; }
-    button { padding:8px; }
+    button { padding:8px; cursor:pointer; }
+    .private { color: green; }
   </style>
 </head>
 <body>
 
 <h2>My Group Chat</h2>
 
+<div id="users"></div>
+
 <div id="chat"></div>
 
 <input type="text" id="name" placeholder="Your Name">
 <input type="text" id="message" placeholder="Type message">
-<button onclick="sendMessage()">Send</button>
+<button onclick="sendMessage()">Send Group</button>
 
 <script>
 let chatBox = document.getElementById("chat");
+let usersBox = document.getElementById("users");
+let nameInput = document.getElementById("name");
 
+/* ✅ Remember name on same device */
+if(localStorage.getItem("myName")){
+  nameInput.value = localStorage.getItem("myName");
+  nameInput.disabled = true;
+}
+
+/* Save name permanently */
+nameInput.addEventListener("change", function(){
+  if(this.value.trim() !== ""){
+    localStorage.setItem("myName", this.value.trim());
+    this.disabled = true;
+  }
+});
+
+/* Load group messages */
 function loadMessages() {
-  let messages = JSON.parse(localStorage.getItem("chat")) || [];
+  let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
   chatBox.innerHTML = "";
   messages.forEach(msg => {
     chatBox.innerHTML += "<p><b>" + msg.name + ":</b> " + msg.text + "</p>";
   });
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+/* Send group message */
 function sendMessage() {
-  let name = document.getElementById("name").value;
+  let name = localStorage.getItem("myName");
   let text = document.getElementById("message").value;
 
   if(name && text){
-    let messages = JSON.parse(localStorage.getItem("chat")) || [];
+    let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
     messages.push({name:name, text:text});
-    localStorage.setItem("chat", JSON.stringify(messages));
+    localStorage.setItem("groupChat", JSON.stringify(messages));
     document.getElementById("message").value = "";
+    updateUsers();
     loadMessages();
   }
 }
 
+/* Show user list */
+function updateUsers(){
+  let messages = JSON.parse(localStorage.getItem("groupChat")) || [];
+  let users = [...new Set(messages.map(m => m.name))];
+  usersBox.innerHTML = "<b>Users:</b><br>";
+  users.forEach(u => {
+    if(u !== localStorage.getItem("myName")){
+      usersBox.innerHTML += 
+        `<button onclick="openPrivate('${u}')">${u}</button> `;
+    }
+  });
+}
+
+/* Private Chat */
+function openPrivate(user){
+  let myName = localStorage.getItem("myName");
+  let key = "private_" + myName + "_" + user;
+
+  let privateMessages = JSON.parse(localStorage.getItem(key)) || [];
+  chatBox.innerHTML = `<h3 class="private">Private Chat with ${user}</h3>`;
+  
+  privateMessages.forEach(msg => {
+    chatBox.innerHTML += "<p><b>" + msg.name + ":</b> " + msg.text + "</p>";
+  });
+
+  document.getElementById("message").placeholder = "Private message to " + user;
+
+  document.querySelector("button").onclick = function(){
+    let text = document.getElementById("message").value;
+    if(text){
+      privateMessages.push({name:myName, text:text});
+      localStorage.setItem(key, JSON.stringify(privateMessages));
+      document.getElementById("message").value = "";
+      openPrivate(user);
+    }
+  };
+}
+
 loadMessages();
+updateUsers();
 </script>
 
 </body>
