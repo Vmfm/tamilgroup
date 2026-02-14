@@ -2,256 +2,205 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Simple Group + Private Chat</title>
+<title>VM Pro Chat</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
-body{
-    margin:0;
-    font-family: Arial, sans-serif;
-    background:#f2f2f2;
+body { margin:0; font-family:sans-serif; background:#e5ddd5; }
+#app { display:flex; height:100vh; }
+
+#sidebar {
+  width:30%;
+  background:#ffffff;
+  border-right:1px solid #ccc;
+  overflow-y:auto;
 }
 
-#loginScreen, #chatScreen{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+#chat {
+  width:70%;
+  display:flex;
+  flex-direction:column;
 }
 
-.card{
-    background:white;
-    padding:20px;
-    width:350px;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
+.header {
+  padding:10px;
+  background:#075e54;
+  color:white;
 }
 
-input{
-    width:100%;
-    padding:10px;
-    margin:5px 0;
-    border:1px solid #ccc;
-    border-radius:5px;
+#messages {
+  flex:1;
+  padding:10px;
+  overflow-y:auto;
 }
 
-button{
-    padding:10px;
-    border:none;
-    border-radius:5px;
-    background:#4CAF50;
-    color:white;
-    cursor:pointer;
-    margin-top:5px;
+.message {
+  margin:5px 0;
+  padding:8px;
+  border-radius:8px;
+  max-width:60%;
 }
 
-button:hover{
-    background:#45a049;
+.me { background:#dcf8c6; margin-left:auto; }
+.other { background:white; }
+
+#inputArea {
+  display:flex;
+  padding:10px;
+  background:white;
 }
 
-#chatContainer{
-    display:flex;
-    height:100vh;
+#inputArea input {
+  flex:1;
+  padding:8px;
 }
 
-#users{
-    width:30%;
-    background:white;
-    padding:10px;
-    overflow-y:auto;
-    border-right:1px solid #ddd;
+button {
+  padding:8px;
+  background:#075e54;
+  color:white;
+  border:none;
+  cursor:pointer;
 }
 
-#messages{
-    width:70%;
-    display:flex;
-    flex-direction:column;
+.userItem {
+  padding:10px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
 }
 
-#chatBox{
-    flex:1;
-    padding:10px;
-    overflow-y:auto;
-    background:#fafafa;
-}
-
-.message{
-    margin-bottom:10px;
-}
-
-.me{
-    text-align:right;
-    color:blue;
-}
-
-.privateTitle{
-    background:#eee;
-    padding:5px;
-    font-size:14px;
-}
-
-#inputArea{
-    display:flex;
-    padding:10px;
-    background:white;
-    border-top:1px solid #ddd;
-}
-
-#inputArea input{
-    flex:1;
-    margin-right:5px;
-}
+.online { color:green; font-size:12px; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginScreen">
-  <div class="card">
-    <h2>Enter Your Name</h2>
-    <input type="text" id="username" placeholder="Your Name">
-    <button onclick="login()">Enter Chat</button>
+<div id="app">
+
+<div id="sidebar">
+  <div class="header">Rooms</div>
+  <div id="rooms"></div>
+  <div class="header">Users</div>
+  <div id="users"></div>
+</div>
+
+<div id="chat">
+  <div class="header" id="chatTitle">Select Room</div>
+  <div id="messages"></div>
+
+  <div id="inputArea">
+    <input id="msgInput" placeholder="Type message">
+    <button onclick="sendMessage()">Send</button>
   </div>
 </div>
 
-<!-- CHAT -->
-<div id="chatScreen" style="display:none;">
-  <div id="chatContainer">
-
-    <div id="users">
-      <h3>Users</h3>
-      <button onclick="openGroup()">Group Chat</button>
-      <div id="userList"></div>
-    </div>
-
-    <div id="messages">
-      <div class="privateTitle" id="chatTitle">Group Chat</div>
-      <div id="chatBox"></div>
-
-      <div id="inputArea">
-        <input type="text" id="messageInput" placeholder="Type message...">
-        <button onclick="sendMessage()">Send</button>
-      </div>
-    </div>
-
-  </div>
 </div>
 
 <script>
-let currentUser = localStorage.getItem("myName");
-let currentChat = "group";
+const supabase = window.supabase.createClient(
+  "YOUR_SUPABASE_URL",
+  "YOUR_PUBLIC_ANON_KEY"
+);
 
-/* AUTO LOGIN */
-if(currentUser){
-    showChat();
-}
+let currentUser = localStorage.getItem("vm_user");
+let currentRoom = "global";
 
 /* LOGIN */
-function login(){
-    let name = document.getElementById("username").value.trim();
-    if(name){
-        localStorage.setItem("myName", name);
-        currentUser = name;
-        showChat();
-    }
+if(!currentUser){
+  currentUser = prompt("Enter username");
+  localStorage.setItem("vm_user", currentUser);
 }
 
-function showChat(){
-    document.getElementById("loginScreen").style.display="none";
-    document.getElementById("chatScreen").style.display="block";
-    loadUsers();
-    loadMessages();
-}
+/* SET ONLINE */
+supabase.from("profiles").upsert({username:currentUser, online:true});
 
 /* LOAD USERS */
-function loadUsers(){
-    let group = JSON.parse(localStorage.getItem("groupChat")) || [];
-    let users = [...new Set(group.map(m => m.name))];
-
-    let list = document.getElementById("userList");
-    list.innerHTML="";
-    users.forEach(u=>{
-        if(u!==currentUser){
-            let btn=document.createElement("button");
-            btn.innerText=u;
-            btn.onclick=()=>openPrivate(u);
-            list.appendChild(btn);
-        }
-    });
+async function loadUsers(){
+  let {data} = await supabase.from("profiles").select("*");
+  let list=document.getElementById("users");
+  list.innerHTML="";
+  data.forEach(u=>{
+    if(u.username!==currentUser){
+      let div=document.createElement("div");
+      div.className="userItem";
+      div.innerHTML=u.username + 
+        (u.online ? " <span class='online'>● online</span>" : "");
+      div.onclick=()=>openPrivate(u.username);
+      list.appendChild(div);
+    }
+  });
 }
 
-/* OPEN GROUP */
-function openGroup(){
-    currentChat="group";
-    document.getElementById("chatTitle").innerText="Group Chat";
-    loadMessages();
+/* ROOMS */
+const rooms=["global","tamil","friends"];
+let roomBox=document.getElementById("rooms");
+rooms.forEach(r=>{
+  let div=document.createElement("div");
+  div.className="userItem";
+  div.innerText=r;
+  div.onclick=()=>openRoom(r);
+  roomBox.appendChild(div);
+});
+
+function openRoom(room){
+  currentRoom=room;
+  document.getElementById("chatTitle").innerText="Room: "+room;
+  loadMessages();
 }
 
-/* OPEN PRIVATE */
 function openPrivate(user){
-    currentChat=user;
-    document.getElementById("chatTitle").innerText="Private Chat with "+user;
-    loadMessages();
+  currentRoom="private_"+user;
+  document.getElementById("chatTitle").innerText="Chat with "+user;
+  loadMessages();
 }
 
 /* LOAD MESSAGES */
-function loadMessages(){
-    let chatBox=document.getElementById("chatBox");
-    chatBox.innerHTML="";
+async function loadMessages(){
+  let {data}=await supabase.from("messages")
+    .select("*")
+    .eq("room",currentRoom)
+    .order("created_at",{ascending:true});
 
-    let messages;
+  let box=document.getElementById("messages");
+  box.innerHTML="";
 
-    if(currentChat==="group"){
-        messages=JSON.parse(localStorage.getItem("groupChat"))||[];
-    }else{
-        let key1="private_"+currentUser+"_"+currentChat;
-        let key2="private_"+currentChat+"_"+currentUser;
-        messages=(JSON.parse(localStorage.getItem(key1))||[])
-            .concat(JSON.parse(localStorage.getItem(key2))||[]);
-    }
+  data.forEach(m=>{
+    let div=document.createElement("div");
+    div.className="message "+(m.sender===currentUser?"me":"other");
+    div.innerText=m.content;
+    box.appendChild(div);
+  });
 
-    messages.forEach(m=>{
-        let div=document.createElement("div");
-        div.className="message";
-        if(m.name===currentUser){
-            div.classList.add("me");
-        }
-        div.innerHTML="<b>"+m.name+":</b> "+m.text;
-        chatBox.appendChild(div);
-    });
-
-    chatBox.scrollTop=chatBox.scrollHeight;
+  box.scrollTop=box.scrollHeight;
 }
 
-/* SEND MESSAGE */
-function sendMessage(){
-    let input=document.getElementById("messageInput");
-    let text=input.value.trim();
-    if(!text) return;
+/* SEND */
+async function sendMessage(){
+  let input=document.getElementById("msgInput");
+  if(!input.value) return;
 
-    let message={name:currentUser,text:text};
+  await supabase.from("messages").insert({
+    room:currentRoom,
+    sender:currentUser,
+    content:input.value
+  });
 
-    if(currentChat==="group"){
-        let group=JSON.parse(localStorage.getItem("groupChat"))||[];
-        group.push(message);
-        localStorage.setItem("groupChat",JSON.stringify(group));
-    }else{
-        let key="private_"+currentUser+"_"+currentChat;
-        let chat=JSON.parse(localStorage.getItem(key))||[];
-        chat.push(message);
-        localStorage.setItem(key,JSON.stringify(chat));
-    }
-
-    input.value="";
-    loadUsers();
-    loadMessages();
+  input.value="";
+  loadMessages();
 }
 
-/* ENTER KEY SEND */
-document.getElementById("messageInput").addEventListener("keypress",function(e){
-    if(e.key==="Enter"){
-        sendMessage();
-    }
-});
+/* REALTIME */
+supabase.channel('messages')
+  .on('postgres_changes',
+      { event:'INSERT', schema:'public', table:'messages' },
+      payload=>{ loadMessages(); }
+  )
+  .subscribe();
+
+/* REFRESH USERS */
+setInterval(loadUsers,3000);
+
+loadUsers();
+openRoom("global");
 </script>
 
 </body>
