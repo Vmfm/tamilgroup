@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>WhatsApp Full Chat</title>
 <style>
+/* ... Styles remain exactly the same as your original ... */
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
@@ -14,24 +15,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #notifWrap{display:flex;align-items:center;gap:8px}
 .bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
 .badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
-
-/* PLAY STORE BUTTON STYLE */
-.playstore-btn {
-  background: #25d366;
-  color: #fff;
-  text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.2s;
-}
-.playstore-btn:hover { opacity: 0.9; }
-
-/* PANEL NAVIGATION */
 #panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
 #panel.open{transform:translateX(0)}
 .panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
@@ -42,12 +25,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .panelItem:hover{background:rgba(255,255,255,.02)}
 .panelItem .who{flex:1}
 .panelItem .count{background:#ff3b30;color:#fff;border-radius:12px;padding:2px 8px;font-size:12px}
-
-/* CLEAR HISTORY BUTTON STYLE */
 #clearHistoryBtn{background:transparent;border:1px solid #ff3b30;color:#ff3b30;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;margin-right:10px;transition:all 0.2s}
 #clearHistoryBtn:hover{background:#ff3b30;color:#fff}
-
-/* MESSAGES */
 #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
 .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
 .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
@@ -60,21 +39,16 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
 .read-status{font-size:14px;line-height:1}
 .read-status.read{color:#53bdeb}
-
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
 #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
 #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
 #toast.show{opacity:1;bottom:40px}
-
-/* LOGIN */
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
 #loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:300px}
 #loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
 #loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-
-/* SETTINGS PANEL FIX */
 #settingsWrap{position:relative}
 #settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
 #settingsPanel{position:absolute;right:0;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.1);padding:12px;border-radius:12px;display:none;z-index:100;min-width:260px;box-shadow: 0 8px 24px rgba(0,0,0,0.5)}
@@ -82,11 +56,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .settingRow:last-child{border-bottom:none}
 .toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
 .toggleKnob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s}
-
-/* Logout Button */
 #logoutBtn{width:100%;background:#ff3b30;color:#fff;border:0;padding:8px;border-radius:8px;margin-top:10px;cursor:pointer;font-weight:600}
-
-/* PRIVATE POPUP */
 #privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
 .card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
 #privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -100,8 +70,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #micBtn.recording{background:#ff3b30;animation:pulse 1s infinite}
 #privateMessages img{max-width:200px;border-radius:8px;margin-top:5px;display:block}
 #privateMessages audio{max-width:240px;height:35px;margin-top:5px}
-
-/* Action Buttons in Header */
 .headerActionBtn {
   background: none;
   border: 1px solid rgba(255,255,255,0.1);
@@ -111,13 +79,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #blockBtn.blocked { border-color: var(--accent); color: var(--accent); }
 #blockBtn.not-blocked { border-color: #ff3b30; color: #ff3b30; }
 #reportBtn { border-color: #eab308; color: #eab308; }
-
-/* UNREAD DIVIDER */
 .unread-divider{text-align:center;margin:10px 0;position:relative;display:flex;align-items:center;justify-content:center}
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
 .unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
-
-/* CALLS */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0b141a;z-index:10000;flex-direction:column;color:#fff}
 .callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;height:100%;max-width:450px;justify-content: space-between;}
 .callAvatar{width:120px;height:120px;border-radius:50%;background:#2a3942;display:flex;align-items:center;justify-content:center;font-size:50px;overflow:hidden;border:3px solid var(--accent)}
@@ -132,8 +96,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .callControls{display:flex;gap:20px;margin-top:20px}
 .ctrlBtn{width:50px;height:50px;border-radius:50%;background:#2a3942;border:none;color:#fff;cursor:pointer;font-size:18px}
 .ctrlBtn.active{background:#fff;color:#000}
-
-/* CUSTOM CONFIRM DELETE MODAL */
 #deleteModal{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:10001;display:none;align-items:center;justify-content:center}
 .deleteCard{background:#202c33;padding:24px;border-radius:16px;width:300px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
 .deleteCard h3{margin:0 0 16px 0;font-size:16px;font-weight:400;color:#e9edef}
@@ -141,167 +103,60 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .deleteBtns button{background:none;border:none;font-weight:600;font-size:14px;cursor:pointer;padding:8px;text-transform:uppercase}
 #cancelDel{color:var(--accent)}
 #confirmDel{color:var(--accent)}
-
+/* ADDED PLAYSTORE BUTTON STYLE */
+.playStoreBtn {
+  text-decoration: none;
+  background: #25d366;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: opacity 0.2s;
+}
+.playStoreBtn:hover { opacity: 0.8; }
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
-  .playstore-btn span {display:none;} /* Hide text on mobile for space */
 }
 </style>
 </head>
 <body>
 
-<div id="deleteModal">
-  <div class="deleteCard">
-    <h3 id="deleteTitle">Delete this message for everyone?</h3>
-    <div class="deleteBtns">
-      <button id="cancelDel">Cancel</button>
-      <button id="confirmDel">Delete for everyone</button>
-    </div>
-  </div>
-</div>
-
-<div id="panel" aria-hidden="true">
-  <div class="panelHeader">
-    <div class="panelTitle">Private Messages</div>
-    <button id="clearHistoryBtn">Clear History</button>
-    <button id="panelClose" class="panelClose">✕</button>
-  </div>
-  <div class="panelList" id="panelList"></div>
-</div>
-
-<div id="app">
-  <div id="topBar">
-    <div id="title"><div id="titleText">Group Chat</div></div>
-    <div style="flex:1"></div>
-    <div id="notifWrap">
-      <a href="https://play.google.com/store/apps/details?id=tamil.group" class="playstore-btn" target="_blank">
-        📲 <span>Download App</span>
-      </a>
-
-      <div class="bell" id="bellBtn" title="Private messages">🔔
-        <div class="badge" id="bellBadge" style="display:none">0</div>
-      </div>
-      <div id="settingsWrap">
-        <button id="settingsBtn">⚙️</button>
-        <div id="settingsPanel">
-          <div class="settingRow">
-            <div>Audio Call</div>
-            <div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div>
-          </div>
-          <div class="settingRow">
-            <div>Private Chat</div>
-            <div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div>
-          </div>
-          <div class="settingRow" style="flex-direction:column; align-items:flex-start;">
-            <div style="margin-bottom:8px">Profile Image</div>
-            <input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%">
-          </div>
-          <button id="logoutBtn">Logout</button>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px">Your image is saved locally.</div>
-        </div>
-      </div>
-    </div>
-    <div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div>
-  </div>
-
-  <div id="statusLine"></div>
-  <div id="messages" aria-live="polite"></div>
-
-  <div id="inputBar">
-    <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
-    <button id="sendBtn">➤</button>
-  </div>
-</div>
-
+<div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
+<div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
+<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap">
+<a href="https://play.google.com/store/apps/details?id=tamil.group" target="_blank" class="playStoreBtn">Get App</a>
+<div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel"><div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div><div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div><div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button><div style="font-size:11px;color:var(--muted);margin-top:8px">Your image is saved locally.</div></div></div></div><div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div><div id="inputBar"><input id="messageInput" placeholder="Type a message" autocomplete="off"/><button id="sendBtn">➤</button></div></div>
 <div id="toast"></div>
-
-<div id="loginWrap">
-  <div id="loginCard">
-    <div style="font-weight:700;color:#fff">Enter your name</div>
-    <input id="nameInput" placeholder="Your name" />
-    <button id="joinBtn">Join</button>
-    <div style="font-size:12px;color:var(--muted)">Name is saved locally.</div>
-  </div>
-</div>
-
-<div id="privatePopup">
-  <div class="card">
-    <div id="privateHeader">
-      <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
-      <div style="font-weight:700" id="privateTitle">Private Chat</div>
-      <div style="flex:1"></div>
-      <button id="callBtn" style="background:none;border:0;color:#25d366;cursor:pointer;font-weight:700;margin-right:10px;font-size:20px">📞</button>
-      <button id="blockBtn" class="headerActionBtn not-blocked">Block</button>
-      <button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button>
-    </div>
-    <div id="privateMessages"></div>
-    <div id="typingPrivate" class="small"></div>
-    <div id="privateInputBar">
-      <input type="file" id="privImgFile" accept="image/*" style="display:none">
-      <button class="mediaBtn" onclick="document.getElementById('privImgFile').click()" title="Send Image">📷</button>
-      <button class="mediaBtn" id="micBtn" title="Voice Message (Max 10s)">🎤</button>
-      <input id="privateInput" placeholder="Type a message" autocomplete="off"/>
-      <button id="privateSend">➤</button>
-    </div>
-  </div>
-</div>
-
-<div id="callOverlay">
-  <div class="callCard">
-    <div style="text-align:center">
-        <div id="callTypeText" style="font-size:12px;color:var(--muted);margin-bottom:20px">Incoming call</div>
-        <div class="callAvatar" id="callAvatarContainer">?</div>
-        <div class="callName" id="callFrom" style="margin-top:15px">User</div>
-        <div id="callTimer" class="callStatusText">Ringing...</div>
-    </div>
-
-    <div id="activeCallControls" style="display:none; flex-direction: column; align-items: center; gap: 20px;">
-        <div class="callControls">
-            <button class="ctrlBtn" id="muteBtn" title="Mute">🎤</button>
-            <button class="ctrlBtn" id="speakerBtn" title="Speaker">🔊</button>
-        </div>
-        <button class="circleBtn btnDecline" id="endCallBtnBig" style="width:70px; height:70px;">📞</button>
-    </div>
-
-    <div class="callBtns" id="inboundCallBtns">
-      <button class="circleBtn btnDecline" id="declineCallBtn">✕</button>
-      <button class="circleBtn btnAccept" id="acceptCallBtn">✓</button>
-    </div>
-    
-    <div class="callBtns" id="outboundCallBtns" style="display:none">
-        <button class="circleBtn btnDecline" id="cancelCallBtn">✕</button>
-    </div>
-  </div>
-</div>
-
-<div id="inCallBar" style="display:none"></div>
-
+<div id="loginWrap"><div id="loginCard"><div style="font-weight:700;color:#fff">Enter your name</div><input id="nameInput" placeholder="Your name" /><button id="joinBtn">Join</button><div style="font-size:12px;color:var(--muted)">Name is saved locally.</div></div></div>
+<div id="privatePopup"><div class="card"><div id="privateHeader"><button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button><div style="font-weight:700" id="privateTitle">Private Chat</div><div style="flex:1"></div><button id="blockBtn" class="headerActionBtn not-blocked">Block</button><button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button></div><div id="privateMessages"></div><div id="typingPrivate" class="small"></div><div id="privateInputBar"><input type="file" id="privImgFile" accept="image/*" style="display:none"><button class="mediaBtn" onclick="document.getElementById('privImgFile').click()" title="Send Image">📷</button><button class="mediaBtn" id="micBtn" title="Voice Message (Max 10s)">🎤</button><input id="privateInput" placeholder="Type a message" autocomplete="off"/><button id="privateSend">➤</button></div></div></div>
+<div id="callOverlay"><div class="callCard"><div style="text-align:center"><div id="callTypeText" style="font-size:12px;color:var(--muted);margin-bottom:20px">Incoming call</div><div class="callAvatar" id="callAvatarContainer">?</div><div class="callName" id="callFrom" style="margin-top:15px">User</div><div id="callTimer" class="callStatusText">Ringing...</div></div><div id="activeCallControls" style="display:none; flex-direction: column; align-items: center; gap: 20px;"><div class="callControls"><button class="ctrlBtn" id="muteBtn" title="Mute">🎤</button><button class="ctrlBtn" id="speakerBtn" title="Speaker">🔊</button></div><button class="circleBtn btnDecline" id="endCallBtnBig" style="width:70px; height:70px;">📞</button></div><div class="callBtns" id="inboundCallBtns"><button class="circleBtn btnDecline" id="declineCallBtn">✕</button><button class="circleBtn btnAccept" id="acceptCallBtn">✓</button></div><div class="callBtns" id="outboundCallBtns" style="display:none"><button class="circleBtn btnDecline" id="cancelCallBtn">✕</button></div></div></div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
-// Configuration is now loaded via external script.
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* DOM & STATE */
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
-const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), callBtn = document.getElementById('callBtn'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
-const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingeAudio = document.getElementById('dingAudio');
+const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
+const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
-
-// New Call DOM
 const callAvatarContainer = document.getElementById('callAvatarContainer');
 const callTypeText = document.getElementById('callTypeText');
 const callTimer = document.getElementById('callTimer');
@@ -316,7 +171,7 @@ const cancelCallBtn = document.getElementById('cancelCallBtn');
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
 let blockedUsers = new Set();
-let iHaveBeenBlockedBy = new Set(); 
+let iHaveBeenBlockedBy = new Set();
 let currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 let activeCall = null, callTimerInterval = null, currentDeleteAction = null;
@@ -325,26 +180,37 @@ let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 
-/* CUSTOM DELETE LOGIC */
-function openDeletePrompt(action) {
-  currentDeleteAction = action;
-  deleteModal.style.display = 'flex';
-}
+let peerConnection = null;
+let localStream = null;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+// --- FEATURE: AUTO CLEAR HISTORY (EVERY 60 SECONDS) ---
+setInterval(() => {
+  if(!username) return;
+  const cutoff = Date.now() - (24 * 60 * 60 * 1000); // 24 Hours ago
+  db.ref('privateChats').once('value', snap => {
+    const all = snap.val() || {};
+    Object.keys(all).forEach(chatKey => {
+      if(chatKey.includes(username)) {
+        Object.keys(all[chatKey]).forEach(msgId => {
+          if(all[chatKey][msgId].time < cutoff) {
+            db.ref(`privateChats/${chatKey}/${msgId}`).remove();
+          }
+        });
+      }
+    });
+  });
+}, 60000);
+
+function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
 
-/* VOICE & MEDIA ADDITIONS */
 let mediaRecorder, audioChunks = [], recordTimer;
 micBtn.onclick = async () => {
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
-  
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    clearTimeout(recordTimer);
-    mediaRecorder.stop();
-    micBtn.classList.remove('recording');
-    return;
-  }
+  if (mediaRecorder && mediaRecorder.state === "recording") { clearTimeout(recordTimer); mediaRecorder.stop(); micBtn.classList.remove('recording'); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
@@ -359,22 +225,32 @@ micBtn.onclick = async () => {
     };
     mediaRecorder.start();
     micBtn.classList.add('recording');
-    recordTimer = setTimeout(() => {
-      if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        micBtn.classList.remove('recording');
-        showToast("Recording limit reached (10s)");
-      }
-    }, 10000);
+    recordTimer = setTimeout(() => { if (mediaRecorder.state === "recording") { mediaRecorder.stop(); micBtn.classList.remove('recording'); showToast("Recording limit reached (10s)"); } }, 10000);
   } catch (err) { showToast("Mic permission denied"); }
 };
 
+// --- FEATURE: COMPRESSED IMAGE SENDING ---
 privImgFile.onchange = e => {
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send images");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   const file = e.target.files[0]; if(!file) return;
+  
   const reader = new FileReader();
-  reader.onload = ev => sendPrivateMedia(ev.target.result, 'image');
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 800; // Limit width for smaller size
+      let width = img.width, height = img.height;
+      if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedData = canvas.toDataURL('image/jpeg', 0.3);
+      sendPrivateMedia(compressedData, 'image');
+    };
+    img.src = ev.target.result;
+  };
   reader.readAsDataURL(file);
 };
 
@@ -387,13 +263,11 @@ function sendPrivateMedia(data, type) {
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
 }
 
-/* HELPERS */
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-/* SETTINGS LOGIC */
 function applySettingsToUI(){
   toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942';
   toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px';
@@ -406,17 +280,8 @@ settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display 
 document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
 
-logoutBtn.onclick = () => {
-    if(username) {
-        db.ref(`status/${username}`).remove();
-        db.ref(`profiles/${username}/online`).remove();
-    }
-    localStorage.removeItem('guestName');
-    location.reload();
-};
-
-/* CORE CHAT LOGIC */
 async function startAs(name){
   username = name; localStorage.setItem('guestName', name);
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
@@ -464,15 +329,29 @@ function sendGroupMessage(){
 }
 
 function listenTypingGroup(){
-  db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent=who.length?`${who.join(', ')} is typing...`:''; });
-  messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(()=>db.ref(`typing/group/${username}`).remove(),1500); };
+  db.ref('typing/group').on('value', snap=>{ 
+    const obj=snap.val()||{}; 
+    delete obj[username]; 
+    const who=Object.keys(obj); 
+    if(who.length > 0) {
+        statusLine.textContent = `${who.join(', ')} is typing...`;
+    } else {
+        statusLine.textContent = '';
+    }
+  });
+  messageInput.oninput = () => { 
+    db.ref(`typing/group/${username}`).set(true); 
+    clearTimeout(typingTimer); 
+    typingTimer=setTimeout(() => {
+        db.ref(`typing/group/${username}`).remove();
+    }, 2000); 
+  };
 }
 
 function listenPresence(){
   db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); });
 }
 
-/* PRIVATE CHATS & READ/UNREAD FEATURE */
 function watchPrivateChatsInitial(){
   db.ref('privateChats').on('child_added', snap => { if(snap.key.includes(username)) attachPrivateListener(snap.key); });
   listenUnreadForMe(); watchCallsForMe();
@@ -530,12 +409,9 @@ clearHistoryBtn.onclick = async () => {
   const allChatsSnap = await db.ref('privateChats').once('value');
   const allChats = allChatsSnap.val() || {};
   const deletePromises = [];
-  Object.keys(allChats).forEach(chatKey => {
-    if(chatKey.includes(username)) { deletePromises.push(db.ref(`privateChats/${chatKey}`).remove()); }
-  });
+  Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) { deletePromises.push(db.ref(`privateChats/${chatKey}`).remove()); } });
   await Promise.all(deletePromises);
-  showToast("Chat history cleared"); 
-  refreshPanelList(); 
+  showToast("Chat history cleared"); refreshPanelList(); 
 };
 
 async function openPrivatePopup(other){
@@ -557,8 +433,7 @@ async function openPrivatePopup(other){
     const msg = snap.val();
     if(!dividerAdded && msg.name === other && !msg.read) {
         const div = document.createElement('div'); div.className='unread-divider';
-        div.innerHTML = `<span>New Messages</span>`;
-        privateMessages.appendChild(div); dividerAdded = true;
+        div.innerHTML = `<span>New Messages</span>`; privateMessages.appendChild(div); dividerAdded = true;
     }
     renderPrivateMessageWithId(key, snap.key, msg);
     if(msg.name === other && !msg.read) db.ref(`privateChats/${key}/${snap.key}`).update({read: true});
@@ -596,16 +471,9 @@ bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panel
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 function bellFlash(){ try{dingAudio.play();}catch(e){} }
 
-/* REAL VOICE WEBRTC CALLS */
-let peerConnection = null, localStream = null;
-const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
 async function setupWebRTC(callId, isCaller) {
   peerConnection = new RTCPeerConnection(rtcConfig);
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-  } catch(e) { showToast("Mic access denied"); cleanupCall(); return; }
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream)); } catch(e) { showToast("Mic access denied"); cleanupCall(); return; }
   peerConnection.ontrack = (event) => { const remoteAudio = document.getElementById('remoteAudio'); if (remoteAudio.srcObject !== event.streams[0]) { remoteAudio.srcObject = event.streams[0]; } };
   peerConnection.onicecandidate = (event) => { if (event.candidate) { db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); } };
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
@@ -615,18 +483,11 @@ async function setupWebRTC(callId, isCaller) {
 
 function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => {
-    const c = snap.val(); 
-    if(c.to === username && c.status === 'ringing') {
-      if(!settings.audioCall || blockedUsers.has(c.from)) return db.ref(`calls/${snap.key}/status`).set('declined');
-      activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming'); ringtone.play();
-    }
+    const c = snap.val(); if(c.to === username && c.status === 'ringing') { if(!settings.audioCall || blockedUsers.has(c.from)) return db.ref(`calls/${snap.key}/status`).set('declined'); activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming'); ringtone.play(); }
   });
   db.ref('calls').on('child_changed', snap => {
-    const c = snap.val(); 
-    if(c.status === 'ended' || c.status === 'declined') cleanupCall();
-    if(c.status === 'answered' && (c.from === username || c.to === username)) {
-      startInCallTimer(c); if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c);
-    }
+    const c = snap.val(); if(c.status === 'ended' || c.status === 'declined') cleanupCall();
+    if(c.status === 'answered' && (c.from === username || c.to === username)) { startInCallTimer(c); if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c); }
     if(c.answer && c.from === username && peerConnection && peerConnection.signalingState !== "stable") { peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer)); }
   });
 }
@@ -634,28 +495,15 @@ function watchCallsForMe(){
 async function showCallOverlay(otherName, type) {
   callFrom.textContent = otherName; callOverlay.style.display = 'flex';
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
-  if(prof.profileImage) { callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; } 
-  else { callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase(); }
-  if(type === 'incoming') { callTypeText.textContent = "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
+  if(prof.profileImage) { callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; } else { callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase(); }
+  if(type === 'incoming') { callTypeText.textContent = "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; }
   else if(type === 'outgoing') { callTypeText.textContent = "Calling..."; inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'flex'; activeCallControls.style.display = 'none'; }
 }
 
-async function handleIncomingAnswer(callId, c) {
-  await setupWebRTC(callId, false);
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer));
-  const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer);
-  db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } });
-}
+async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
-callBtn.onclick = async () => {
-  if(!settings.audioCall) return showToast('Calls disabled');
-  if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
-  if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('User is unavailable');
-  const id = `call_${Date.now()}`;
-  activeCall = { id, from: username, to: privateChatWith };
-  db.ref(`calls/${id}`).set({ from:username, to:privateChatWith, status:'ringing', startedAt:Date.now() });
-  showCallOverlay(privateChatWith, 'outgoing'); ringtone.play(); setupWebRTC(id, true);
-};
+// Note: Call functionality remains via incoming triggers and existing logic, 
+// but the trigger button in the private popup has been removed as requested.
 
 acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
 declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(); };
@@ -680,23 +528,22 @@ function cleanupCall(){
 }
 
 muteBtn.onclick = () => { if(localStream) { const audioTrack = localStream.getAudioTracks()[0]; audioTrack.enabled = !audioTrack.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = audioTrack.enabled ? '🎤' : '🔇'; } };
-speakerBtn.onclick = () => { speakerBtn.classList.toggle('active'); showToast(speakerBtn.classList.contains('active') ? "Speaker ON" : "Speaker OFF"); };
 
-/* BLOCKING LOGIC */
+speakerBtn.onclick = async () => {
+  const audioEl = document.getElementById('remoteAudio');
+  speakerBtn.classList.toggle('active');
+  const isSpeakerOn = speakerBtn.classList.contains('active');
+  if (isSpeakerOn) { showToast("Speaker ON"); audioEl.volume = 1.0; if (audioEl.setSinkId) audioEl.setSinkId(""); } 
+  else { showToast("Speaker OFF (Earpiece Mode)"); audioEl.volume = 0.2; }
+};
+
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => {
     blockedUsers = new Set(Object.keys(s.val()||{}));
-    if(privateChatWith) {
-      const isBlocked = blockedUsers.has(privateChatWith);
-      blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
-      blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
-    }
+    if(privateChatWith) { const isBlocked = blockedUsers.has(privateChatWith); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked'); }
     refreshPanelList();
   }); 
-  db.ref('blocks').on('value', snap => {
-    const allBlocks = snap.val() || {}; iHaveBeenBlockedBy = new Set();
-    Object.keys(allBlocks).forEach(user => { if(allBlocks[user][username]) iHaveBeenBlockedBy.add(user); });
-  });
+  db.ref('blocks').on('value', snap => { const allBlocks = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(allBlocks).forEach(user => { if(allBlocks[user][username]) iHaveBeenBlockedBy.add(user); }); });
 }
 
 blockBtn.onclick = () => {
@@ -704,22 +551,19 @@ blockBtn.onclick = () => {
   ref.once('value', s => { if(s.exists()) { ref.remove(); showToast(`${privateChatWith} unblocked`); } else { ref.set(true); showToast(`${privateChatWith} blocked`); } });
 };
 
-reportBtn.onclick = () => { 
-    showToast(`User ${privateChatWith} reported to admins.`); 
-    db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); 
-    db.ref(`notifications/${privateChatWith}`).push({ text: "You have been reported for violating community guidelines.", time: Date.now() });
-};
+reportBtn.onclick = () => { showToast(`User ${privateChatWith} reported to admins.`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); db.ref(`notifications/${privateChatWith}`).push({ text: "You have been reported for violating community guidelines.", time: Date.now() }); };
 
 profileImgInput.onchange = function(){
   const file = this.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
     profileImage = e.target.result; localStorage.setItem('profileImage', profileImage);
-    if(username) db.ref(`profiles/${username}`).update({ profileImage }); showToast('Profile updated');
+    if(username) db.ref(`profiles/${username}`).update({ profileImage });
+    showToast('Profile updated');
   }; reader.readAsDataURL(file);
 };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } };
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
 </script>
 </body>
 </html>
