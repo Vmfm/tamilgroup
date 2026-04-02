@@ -1,6 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Image Example</title>
+    <style>
+        /* Style for the loader */
+        #loader {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        #content {
+            display: none; /* Hide content initially */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loader Image -->
+    <div id="loader">
+        <img src="https://media2.giphy.com/media/tz8mn1B6x877oQSRoB/giphy.gif?cid=6c09b9525mvckrkbgvie8cj749lfd2xubogxa8yvpwc5eqak&ep=v1_internal_gif_by_id&rid=giphy.gif&ct=s" alt="Loading..." />
+    </div>
+
+    <script>
+        // Simulate loading time and hide the loader
+        window.onload = function () {
+            setTimeout(() => {
+                document.getElementById("loader").style.display = "none";
+                document.getElementById("content").style.display = "block";
+            }, 2000); // Adjust delay as needed
+        };
+    </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>WhatsApp Full Chat</title>
