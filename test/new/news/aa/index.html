@@ -67,7 +67,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
 .avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word;position:relative}
 .bubble audio{max-width:200px;height:35px;margin-top:5px;display:block}
 .msg-row.self .bubble{background:#005c4b}
 .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
@@ -98,7 +98,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
 #privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-.private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%;cursor:pointer}
+.private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%;cursor:pointer;position:relative}
 .private-row.self{align-self:flex-end}
 #privateInputBar{display:flex;gap:8px;margin-top:8px;align-items:center}
 #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
@@ -140,6 +140,40 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .deleteBtns button{background:none;border:none;font-weight:600;font-size:14px;cursor:pointer;padding:8px;text-transform:uppercase}
 #cancelDel{color:var(--accent)}
 #confirmDel{color:var(--accent)}
+
+/* --- EMOJI REACTIONS CSS --- */
+.reaction-container {
+    position: absolute;
+    bottom: -10px;
+    right: 4px;
+    background: #2a3942;
+    border-radius: 10px;
+    padding: 1px 4px;
+    font-size: 12px;
+    display: flex;
+    gap: 2px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 10;
+}
+#emojiPicker {
+    position: fixed;
+    background: #202c33;
+    padding: 8px;
+    border-radius: 20px;
+    display: none;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 10002;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.emoji-btn {
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+}
+.emoji-btn:hover { transform: scale(1.3); }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -147,6 +181,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </style>
 </head>
 <body>
+
+<div id="emojiPicker">
+    <span class="emoji-btn">❤️</span>
+    <span class="emoji-btn">😂</span>
+    <span class="emoji-btn">😮</span>
+    <span class="emoji-btn">😢</span>
+    <span class="emoji-btn">🙏</span>
+    <span class="emoji-btn">👍</span>
+</div>
 
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
@@ -191,6 +234,11 @@ const speakerBtn = document.getElementById('speakerBtn');
 const endCallBtnBig = document.getElementById('endCallBtnBig');
 const cancelCallBtn = document.getElementById('cancelCallBtn');
 
+// Emoji Globals
+const emojiPicker = document.getElementById('emojiPicker');
+let longPressTimer;
+let currentReactionRef = null;
+
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
 let blockedUsers = new Set();
@@ -207,6 +255,52 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+// --- REACTIONS LOGIC ---
+function showEmojiPicker(x, y, refPath) {
+    currentReactionRef = refPath;
+    emojiPicker.style.left = x + 'px';
+    emojiPicker.style.top = (y - 50) + 'px';
+    emojiPicker.style.display = 'flex';
+}
+
+document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.onclick = () => {
+        if(currentReactionRef) {
+            db.ref(currentReactionRef + '/reactions/' + username).set(btn.textContent);
+        }
+        emojiPicker.style.display = 'none';
+    };
+});
+
+document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
+
+function attachLongPress(el, refPath) {
+    const start = (e) => {
+        longPressTimer = setTimeout(() => {
+            const touch = e.touches ? e.touches[0] : e;
+            showEmojiPicker(touch.clientX, touch.clientY, refPath);
+        }, 600);
+    };
+    const cancel = () => clearTimeout(longPressTimer);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('touchstart', start);
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+    el.addEventListener('touchend', cancel);
+}
+
+function renderReactions(container, reactionsObj) {
+    let existing = container.querySelector('.reaction-container');
+    if(existing) existing.remove();
+    if(!reactionsObj) return;
+    const reactions = Object.values(reactionsObj);
+    const unique = [...new Set(reactions)];
+    const div = document.createElement('div');
+    div.className = 'reaction-container';
+    div.innerHTML = unique.join('');
+    container.appendChild(div);
+}
 
 // --- GROUP VOICE NOTE (10 SEC) ---
 let groupMediaRecorder, groupAudioChunks = [], groupRecordTimer;
@@ -334,6 +428,10 @@ function startGroupListeners(){
     renderGroupMessage(data, snap.key);
     if(data.name !== username) playTing();
   });
+  currentGroupRef.on('child_changed', snap => {
+    const el = document.querySelector(`[data-key="${snap.key}"] .bubble`);
+    if(el) renderReactions(el, snap.val().reactions);
+  });
   currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); });
 }
 
@@ -351,6 +449,11 @@ function renderGroupMessage(data, key){
   if(data.text) bubble.textContent=data.text;
   if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`;
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove());
+  
+  // Attach Long Press Reaction
+  attachLongPress(bubble, `messages/${key}`);
+  renderReactions(bubble, data.reactions);
+
   const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time);
   content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
 }
@@ -389,7 +492,15 @@ function attachPrivateListener(chatKey){
     } else { playTing(); }
     refreshPanelList();
   });
-  chatRef.on('child_changed', snap => { const msg = snap.val(); const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); if(msgEl && msg.read) msgEl.classList.add('read'); });
+  chatRef.on('child_changed', snap => { 
+    const msg = snap.val(); 
+    const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); 
+    if(msgEl && msg.read) msgEl.classList.add('read');
+    
+    // Update Private Reactions
+    const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`);
+    if(bubble) renderReactions(bubble, msg.reactions);
+  });
   chatRef.on('child_removed', snap => { const el = document.querySelector(`[data-msgid="${snap.key}"]`); if(el) el.remove(); });
   privateListeners.set(chatKey, { ref: chatRef, handler });
 }
@@ -448,7 +559,14 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
   const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : '';
   row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`;
-  if(isSelf) row.querySelector('.private-bubble').onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove());
+  
+  const bubble = row.querySelector('.private-bubble');
+  if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove());
+  
+  // Attach Reactions for Private
+  attachLongPress(bubble, `privateChats/${chatKey}/${id}`);
+  renderReactions(bubble, msg.reactions);
+
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
