@@ -8,6 +8,38 @@
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+
+/* --- LOADER CSS --- */
+#loader-wrapper {
+    position: fixed;
+    inset: 0;
+    background: #0b141a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+.loader-wheel {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-top: 5px solid #ffeb3b; /* Yellow color */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+.loader-text {
+    color: #ffeb3b;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 #app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
 #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
 #title{font-weight:600;display:flex;align-items:center;gap:10px}
@@ -158,6 +190,11 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </head>
 <body>
 
+<div id="loader-wrapper">
+    <div class="loader-wheel"></div>
+    <div class="loader-text">Loading Group Chat...</div>
+</div>
+
 <div id="emojiPicker">
     <span class="emoji-btn">❤️</span>
     <span class="emoji-btn">😂</span>
@@ -200,6 +237,13 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// Hide loader when page is fully ready
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        document.getElementById('loader-wrapper').style.display = 'none';
+    }, 1500); // Small delay to ensure smooth transition
+});
 
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -256,20 +300,15 @@ async function openProfilePop(targetUser) {
     previewSelectedUser = targetUser;
     previewName.textContent = targetUser;
     previewImgBox.innerHTML = targetUser.charAt(0).toUpperCase();
-    
-    // Fetch profile image from DB
     const profSnap = await db.ref(`profiles/${targetUser}`).once('value');
     const prof = profSnap.val();
     if (prof && prof.profileImage) {
         previewImgBox.innerHTML = `<img src="${prof.profileImage}">`;
     }
-    
     profilePreviewOverlay.style.display = "flex";
 }
-
 closePreviewBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; };
 profilePreviewOverlay.onclick = (e) => { if(e.target === profilePreviewOverlay) profilePreviewOverlay.style.display = "none"; };
-
 previewMsgBtn.onclick = () => {
     profilePreviewOverlay.style.display = "none";
     openPrivatePopup(previewSelectedUser);
@@ -282,7 +321,6 @@ function showEmojiPicker(x, y, refPath) {
     emojiPicker.style.top = (y - 50) + 'px';
     emojiPicker.style.display = 'flex';
 }
-
 document.querySelectorAll('.emoji-btn').forEach(btn => {
     btn.onclick = () => {
         if(currentReactionRef) {
@@ -291,9 +329,7 @@ document.querySelectorAll('.emoji-btn').forEach(btn => {
         emojiPicker.style.display = 'none';
     };
 });
-
 document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
-
 function attachLongPress(el, refPath) {
     const start = (e) => {
         longPressTimer = setTimeout(() => {
@@ -308,7 +344,6 @@ function attachLongPress(el, refPath) {
     el.addEventListener('mouseleave', cancel);
     el.addEventListener('touchend', cancel);
 }
-
 function renderReactions(container, reactionsObj) {
     let existing = container.querySelector('.reaction-container');
     if(existing) existing.remove();
@@ -344,7 +379,6 @@ groupMicBtn.onclick = async () => {
 };
 
 function playTing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
-
 function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
@@ -459,10 +493,7 @@ function renderGroupMessage(data, key){
   const isSelf = data.name===username;
   const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key;
   const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name;
-  
-  // UPDATED: Open profile preview popup on click
   avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); };
-  
   if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); }
   else { avatar.textContent=data.name.charAt(0).toUpperCase(); }
   const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
@@ -471,11 +502,8 @@ function renderGroupMessage(data, key){
   if(data.text) bubble.textContent=data.text;
   if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`;
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove());
-  
-  // Attach Long Press Reaction
   attachLongPress(bubble, `messages/${key}`);
   renderReactions(bubble, data.reactions);
-
   const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time);
   content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
 }
@@ -518,8 +546,6 @@ function attachPrivateListener(chatKey){
     const msg = snap.val(); 
     const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); 
     if(msgEl && msg.read) msgEl.classList.add('read');
-    
-    // Update Private Reactions
     const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`);
     if(bubble) renderReactions(bubble, msg.reactions);
   });
@@ -581,14 +607,10 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
   const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : '';
   row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`;
-  
   const bubble = row.querySelector('.private-bubble');
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove());
-  
-  // Attach Reactions for Private
   attachLongPress(bubble, `privateChats/${chatKey}/${id}`);
   renderReactions(bubble, msg.reactions);
-
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
