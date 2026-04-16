@@ -257,7 +257,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
-<audio id="bellAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
+<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -278,7 +278,7 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
-const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), bellAudio = document.getElementById('bellAudio');
+const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn'), groupMicBtn = document.getElementById('groupMicBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
@@ -403,14 +403,16 @@ groupMicBtn.onclick = async () => {
   } catch (err) { showToast("Mic permission denied"); }
 };
 
-function playTing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
-function playBell() { if(settings.messageTone) { try { bellAudio.currentTime = 0; bellAudio.play(); } catch(e){} } }
+function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
+function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
+
 function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
 
 let mediaRecorder, audioChunks = [], recordTimer;
 micBtn.onclick = async () => {
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   if (mediaRecorder && mediaRecorder.state === "recording") { clearTimeout(recordTimer); mediaRecorder.stop(); micBtn.classList.remove('recording'); return; }
@@ -432,7 +434,8 @@ micBtn.onclick = async () => {
   } catch (err) { showToast("Mic permission denied"); }
 };
 
-privImgFile.onchange = e => {
+privImgFile.onchange = async (e) => {
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send images");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   const file = e.target.files[0]; if(!file) return;
@@ -475,6 +478,7 @@ function applySettingsToUI(){
   toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942';
   toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px';
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  if(username) db.ref(`profiles/${username}`).update({ settings: settings });
 }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
@@ -485,13 +489,8 @@ toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; apply
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
 
 async function startAs(name){
-  // Requirement 1: Check if name already taken (online)
   const statusSnap = await db.ref(`status/${name}`).once('value');
-  if(statusSnap.exists()) {
-      showToast("Name already in use. Try another.");
-      return;
-  }
-  
+  if(statusSnap.exists()) { showToast("Name already in use. Try another."); return; }
   username = name; localStorage.setItem('guestName', name);
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
   loginWrap.style.display = 'none';
@@ -502,7 +501,7 @@ joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); el
 
 function setPresence(){
   db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove();
-  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '' });
+  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', settings: settings });
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
 }
 
@@ -512,7 +511,7 @@ function startGroupListeners(){
   currentGroupRef.on('child_added', snap => {
     const data = snap.val();
     renderGroupMessage(data, snap.key);
-    if(data.name !== username) playTing();
+    if(data.name !== username) playDing();
   });
   currentGroupRef.on('child_changed', snap => {
     const el = document.querySelector(`[data-key="${snap.key}"] .bubble`);
@@ -559,15 +558,9 @@ function listenPresence(){
     const val=snap.val()||{}; 
     onlineCountEl.textContent=`${Object.keys(val).length} online`; 
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
-    // Requirement 3: Realtime update for private header
     if(privateChatWith) {
-        if(val[privateChatWith]) {
-            headerDot.style.background = 'var(--online)';
-            headerStatusText.textContent = 'online';
-        } else {
-            headerDot.style.background = 'var(--offline)';
-            headerStatusText.textContent = 'offline';
-        }
+        if(val[privateChatWith]) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
     }
   });
 }
@@ -586,10 +579,7 @@ function attachPrivateListener(chatKey){
     if(blockedUsers.has(other)) return;
     if(privateChatWith === other && privatePopup.style.display === 'flex') {
        if(!msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true});
-    } else { 
-        // Requirement 2: Play different bell notification for private chat
-        playBell(); 
-    }
+    } else { playTing(); }
     refreshPanelList();
   });
   chatRef.on('child_changed', snap => { 
@@ -626,20 +616,23 @@ async function refreshPanelList(){
 
 clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); const allChatsSnap = await db.ref('privateChats').once('value'); const allChats = allChatsSnap.val() || {}; const deletePromises = []; Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) { deletePromises.push(db.ref(`privateChats/${chatKey}`).remove()); } }); await Promise.all(deletePromises); showToast("Chat history cleared"); refreshPanelList(); };
 
+async function checkTargetPrivateChatStatus() {
+    if(!privateChatWith) return false;
+    const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value');
+    const targetProf = targetProfSnap.val();
+    if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) {
+        showToast("User has disabled private chat");
+        return false;
+    }
+    return true;
+}
+
 async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
-  
-  // Requirement 3: Initial online check for header
   const statusSnap = await db.ref(`status/${other}`).once('value');
-  if(statusSnap.exists()) {
-      headerDot.style.background = 'var(--online)';
-      headerStatusText.textContent = 'online';
-  } else {
-      headerDot.style.background = 'var(--offline)';
-      headerStatusText.textContent = 'offline';
-  }
-
+  if(statusSnap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+  else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
   const isBlocked = blockedUsers.has(other); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
   const key = chatId(username, other);
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
@@ -675,8 +668,9 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
-privateSend.onclick = () => {
+privateSend.onclick = async () => {
   const text = privateInput.value.trim(); if(!text || !privateChatWith) return;
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send message");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   const key = chatId(username, privateChatWith);
@@ -691,20 +685,14 @@ panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getEl
 
 privateCallBtn.onclick = async () => {
     if(!privateChatWith) return;
+    if(!await checkTargetPrivateChatStatus()) return;
     if(!settings.audioCall) return showToast('Audio calls are disabled in settings');
     if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('You cannot call this user');
 
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing' };
-
-    await db.ref(`calls/${callId}`).set({
-        from: username,
-        to: privateChatWith,
-        status: 'ringing',
-        timestamp: Date.now()
-    });
-
+    await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing');
     setupWebRTC(callId, true);
 };
