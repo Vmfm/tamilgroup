@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>WhatsApp Full Chat</title>
 <style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
 
@@ -24,7 +24,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     width: 50px;
     height: 50px;
     border: 5px solid rgba(255, 255, 255, 0.1);
-    border-top: 5px solid #ffeb3b; /* Yellow color */
+    border-top: 5px solid #ffeb3b;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 15px;
@@ -94,6 +94,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privatePopup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000}
 .card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
 #privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.user-info-mini {display:flex; flex-direction:column; gap:2px}
+.online-dot {width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px}
+.status-text {font-size:11px; color:var(--muted)}
 #privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
 .private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%;cursor:pointer;position:relative}
 .private-row.self{align-self:flex-end}
@@ -229,7 +232,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="card">
         <div id="privateHeader">
             <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
-            <div style="font-weight:700" id="privateTitle">Private Chat</div>
+            <div class="user-info-mini">
+                <div style="font-weight:700" id="privateTitle">Private Chat</div>
+                <div class="status-text"><span id="headerDot" class="online-dot" style="background:var(--offline)"></span><span id="headerStatusText">offline</span></div>
+            </div>
             <div style="flex:1"></div>
             <button id="privateCallBtn" class="headerActionBtn" style="border-color: var(--accent); color: var(--accent); margin-right: 8px; font-size: 14px;">📞</button>
             <button id="blockBtn" class="headerActionBtn not-blocked">Block</button>
@@ -251,6 +257,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
+<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -260,7 +267,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Hide loader when page is fully ready
 window.addEventListener('load', () => {
     setTimeout(() => {
         document.getElementById('loader-wrapper').style.display = 'none';
@@ -272,7 +278,7 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
-const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio');
+const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn'), groupMicBtn = document.getElementById('groupMicBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
@@ -286,11 +292,9 @@ const muteBtn = document.getElementById('muteBtn');
 const speakerBtn = document.getElementById('speakerBtn');
 const endCallBtnBig = document.getElementById('endCallBtnBig');
 const cancelCallBtn = document.getElementById('cancelCallBtn');
+const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText');
 
-// New private call button element
 const privateCallBtn = document.getElementById('privateCallBtn');
-
-// Profile Preview Elements
 const profilePreviewOverlay = document.getElementById('profilePreviewOverlay');
 const previewImgBox = document.getElementById('previewImgBox');
 const previewName = document.getElementById('previewName');
@@ -298,7 +302,6 @@ const closePreviewBtn = document.getElementById('closePreviewBtn');
 const previewMsgBtn = document.getElementById('previewMsgBtn');
 let previewSelectedUser = "";
 
-// Emoji Globals
 const emojiPicker = document.getElementById('emojiPicker');
 let longPressTimer;
 let currentReactionRef = null;
@@ -320,7 +323,6 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-// --- PROFILE PREVIEW LOGIC ---
 async function openProfilePop(targetUser) {
     previewSelectedUser = targetUser;
     previewName.textContent = targetUser;
@@ -339,7 +341,6 @@ previewMsgBtn.onclick = () => {
     openPrivatePopup(previewSelectedUser);
 };
 
-// --- REACTIONS LOGIC ---
 function showEmojiPicker(x, y, refPath) {
     currentReactionRef = refPath;
     emojiPicker.style.left = x + 'px';
@@ -381,7 +382,6 @@ function renderReactions(container, reactionsObj) {
     container.appendChild(div);
 }
 
-// --- GROUP VOICE NOTE (10 SEC) ---
 let groupMediaRecorder, groupAudioChunks = [], groupRecordTimer;
 groupMicBtn.onclick = async () => {
   if (groupMediaRecorder && groupMediaRecorder.state === "recording") { clearTimeout(groupRecordTimer); groupMediaRecorder.stop(); groupMicBtn.classList.remove('recording'); return; }
@@ -403,13 +403,16 @@ groupMicBtn.onclick = async () => {
   } catch (err) { showToast("Mic permission denied"); }
 };
 
-function playTing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
+function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
+function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
+
 function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
 
 let mediaRecorder, audioChunks = [], recordTimer;
 micBtn.onclick = async () => {
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   if (mediaRecorder && mediaRecorder.state === "recording") { clearTimeout(recordTimer); mediaRecorder.stop(); micBtn.classList.remove('recording'); return; }
@@ -431,7 +434,8 @@ micBtn.onclick = async () => {
   } catch (err) { showToast("Mic permission denied"); }
 };
 
-privImgFile.onchange = e => {
+privImgFile.onchange = async (e) => {
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send images");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   const file = e.target.files[0]; if(!file) return;
@@ -474,6 +478,7 @@ function applySettingsToUI(){
   toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942';
   toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px';
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  if(username) db.ref(`profiles/${username}`).update({ settings: settings });
 }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
@@ -484,6 +489,8 @@ toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; apply
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
 
 async function startAs(name){
+  const statusSnap = await db.ref(`status/${name}`).once('value');
+  if(statusSnap.exists()) { showToast("Name already in use. Try another."); return; }
   username = name; localStorage.setItem('guestName', name);
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
   loginWrap.style.display = 'none';
@@ -494,7 +501,7 @@ joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); el
 
 function setPresence(){
   db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove();
-  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '' });
+  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', settings: settings });
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
 }
 
@@ -504,7 +511,7 @@ function startGroupListeners(){
   currentGroupRef.on('child_added', snap => {
     const data = snap.val();
     renderGroupMessage(data, snap.key);
-    if(data.name !== username) playTing();
+    if(data.name !== username) playDing();
   });
   currentGroupRef.on('child_changed', snap => {
     const el = document.querySelector(`[data-key="${snap.key}"] .bubble`);
@@ -547,7 +554,15 @@ function listenTypingGroup(){
 }
 
 function listenPresence(){
-  db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); });
+  db.ref('status').on('value', snap=>{ 
+    const val=snap.val()||{}; 
+    onlineCountEl.textContent=`${Object.keys(val).length} online`; 
+    document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
+    if(privateChatWith) {
+        if(val[privateChatWith]) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
+    }
+  });
 }
 
 function watchPrivateChatsInitial(){
@@ -601,9 +616,23 @@ async function refreshPanelList(){
 
 clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); const allChatsSnap = await db.ref('privateChats').once('value'); const allChats = allChatsSnap.val() || {}; const deletePromises = []; Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) { deletePromises.push(db.ref(`privateChats/${chatKey}`).remove()); } }); await Promise.all(deletePromises); showToast("Chat history cleared"); refreshPanelList(); };
 
+async function checkTargetPrivateChatStatus() {
+    if(!privateChatWith) return false;
+    const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value');
+    const targetProf = targetProfSnap.val();
+    if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) {
+        showToast("User has disabled private chat");
+        return false;
+    }
+    return true;
+}
+
 async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
+  const statusSnap = await db.ref(`status/${other}`).once('value');
+  if(statusSnap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+  else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
   const isBlocked = blockedUsers.has(other); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
   const key = chatId(username, other);
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
@@ -639,8 +668,9 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
-privateSend.onclick = () => {
+privateSend.onclick = async () => {
   const text = privateInput.value.trim(); if(!text || !privateChatWith) return;
+  if(!await checkTargetPrivateChatStatus()) return;
   if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send message");
   if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("You cannot send messages to this user");
   const key = chatId(username, privateChatWith);
@@ -653,23 +683,16 @@ closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWit
 bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 
-// --- PRIVATE CALL BUTTON LOGIC ---
 privateCallBtn.onclick = async () => {
     if(!privateChatWith) return;
+    if(!await checkTargetPrivateChatStatus()) return;
     if(!settings.audioCall) return showToast('Audio calls are disabled in settings');
     if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('You cannot call this user');
 
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing' };
-
-    await db.ref(`calls/${callId}`).set({
-        from: username,
-        to: privateChatWith,
-        status: 'ringing',
-        timestamp: Date.now()
-    });
-
+    await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing');
     setupWebRTC(callId, true);
 };
