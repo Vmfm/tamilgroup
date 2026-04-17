@@ -120,7 +120,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
 .unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0b141a;z-index:10000;flex-direction:column;color:#fff}
-.callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;height:100%;max-width:450px;justify-content: space-between;}
+.callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;height:100%;max-width:450px;justify-content: space-between;transition: all 0.3s;}
+.callCard.full { max-width: 100%; height: 100%; border-radius: 0; }
 .callAvatar{width:120px;height:120px;border-radius:50%;background:#2a3942;display:flex;align-items:center;justify-content:center;font-size:50px;overflow:hidden;border:3px solid var(--accent)}
 .callAvatar img{width:100%;height:100%;object-fit:cover}
 .callName{font-size:24px;font-weight:700}
@@ -253,7 +254,26 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
 </div>
 
-<div id="callOverlay"><div class="callCard"><div style="text-align:center"><div id="callTypeText" style="font-size:12px;color:var(--muted);margin-bottom:20px">Incoming call</div><div class="callAvatar" id="callAvatarContainer">?</div><div class="callName" id="callFrom" style="margin-top:15px">User</div><div id="callTimer" class="callStatusText">Ringing...</div></div><div id="activeCallControls" style="display:none; flex-direction: column; align-items: center; gap: 20px;"><div class="callControls"><button class="ctrlBtn" id="muteBtn" title="Mute">🎤</button><button class="ctrlBtn" id="speakerBtn" title="Speaker">🔊</button></div><button class="circleBtn btnDecline" id="endCallBtnBig" style="width:70px; height:70px;">📞</button></div><div class="callBtns" id="inboundCallBtns"><button class="circleBtn btnDecline" id="declineCallBtn">✕</button><button class="circleBtn btnAccept" id="acceptCallBtn">✓</button></div><div class="callBtns" id="outboundCallBtns" style="display:none"><button class="circleBtn btnDecline" id="cancelCallBtn">✕</button></div></div></div>
+<div id="callOverlay">
+    <div class="callCard" id="mainCallCard">
+        <div style="text-align:center">
+            <div id="callTypeText" style="font-size:12px;color:var(--muted);margin-bottom:20px">Incoming call</div>
+            <div class="callAvatar" id="callAvatarContainer">?</div>
+            <div class="callName" id="callFrom" style="margin-top:15px">User</div>
+            <div id="callTimer" class="callStatusText">Ringing...</div>
+        </div>
+        <div id="activeCallControls" style="display:none; flex-direction: column; align-items: center; gap: 20px;">
+            <div class="callControls">
+                <button class="ctrlBtn" id="muteBtn" title="Mute">🎤</button>
+                <button class="ctrlBtn" id="speakerBtn" title="Speaker">🔊</button>
+                <button class="ctrlBtn" id="fullScreenBtn" title="Full Screen">⛶</button>
+            </div>
+            <button class="circleBtn btnDecline" id="endCallBtnBig" style="width:70px; height:70px;">📞</button>
+        </div>
+        <div class="callBtns" id="inboundCallBtns"><button class="circleBtn btnDecline" id="declineCallBtn">✕</button><button class="circleBtn btnAccept" id="acceptCallBtn">✓</button></div>
+        <div class="callBtns" id="outboundCallBtns" style="display:none"><button class="circleBtn btnDecline" id="cancelCallBtn">✕</button></div>
+    </div>
+</div>
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
@@ -293,6 +313,8 @@ const speakerBtn = document.getElementById('speakerBtn');
 const endCallBtnBig = document.getElementById('endCallBtnBig');
 const cancelCallBtn = document.getElementById('cancelCallBtn');
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText');
+const fullScreenBtn = document.getElementById('fullScreenBtn');
+const mainCallCard = document.getElementById('mainCallCard');
 
 const privateCallBtn = document.getElementById('privateCallBtn');
 const profilePreviewOverlay = document.getElementById('profilePreviewOverlay');
@@ -322,6 +344,23 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+// Message Management Logic
+function manageMessageCount(path, limit) {
+    db.ref(path).on('value', snap => {
+        const count = snap.numChildren();
+        if (count > limit) {
+            let deletedCount = 0;
+            const targetCount = count - limit;
+            snap.forEach(child => {
+                if (deletedCount < targetCount) {
+                    db.ref(`${path}/${child.key}`).remove();
+                    deletedCount++;
+                }
+            });
+        }
+    });
+}
 
 async function openProfilePop(targetUser) {
     previewSelectedUser = targetUser;
@@ -495,6 +534,7 @@ async function startAs(name){
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
+  manageMessageCount('messages', 15); // AUTO DELETE GROUP > 15
 }
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); else showToast('Enter a name'); };
@@ -573,6 +613,7 @@ function watchPrivateChatsInitial(){
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
   const chatRef = db.ref(`privateChats/${chatKey}`);
+  manageMessageCount(`privateChats/${chatKey}`, 10); // AUTO DELETE PRIVATE > 10
   const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
@@ -685,6 +726,11 @@ panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getEl
 
 privateCallBtn.onclick = async () => {
     if(!privateChatWith) return;
+    
+    // CHECK IF ONLINE BEFORE CALLING
+    const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
+    if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
+
     if(!await checkTargetPrivateChatStatus()) return;
     if(!settings.audioCall) return showToast('Audio calls are disabled in settings');
     if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
@@ -733,10 +779,26 @@ function startInCallTimer(c){
   callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
 }
 
-function cleanupCall(){ ringtone.pause(); ringtone.currentTime=0; callOverlay.style.display='none'; clearInterval(callTimerInterval); if(peerConnection) { db.ref(`calls/${activeCall?.id}/candidates/${username}`).off(); peerConnection.close(); peerConnection = null; } if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } activeCall = null; callTimer.textContent = "Ringing..."; muteBtn.classList.remove('active'); document.getElementById('remoteAudio').srcObject = null; }
+function cleanupCall(){ 
+    ringtone.pause(); ringtone.currentTime=0; callOverlay.style.display='none'; 
+    clearInterval(callTimerInterval); 
+    mainCallCard.classList.remove('full');
+    if(peerConnection) { db.ref(`calls/${activeCall?.id}/candidates/${username}`).off(); peerConnection.close(); peerConnection = null; } 
+    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
+    activeCall = null; callTimer.textContent = "Ringing..."; muteBtn.classList.remove('active'); 
+    document.getElementById('remoteAudio').srcObject = null; 
+}
 
 muteBtn.onclick = () => { if(localStream) { const audioTrack = localStream.getAudioTracks()[0]; audioTrack.enabled = !audioTrack.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = audioTrack.enabled ? '🎤' : '🔇'; } };
-speakerBtn.onclick = async () => { const audioEl = document.getElementById('remoteAudio'); speakerBtn.classList.toggle('active'); const isSpeakerOn = speakerBtn.classList.contains('active'); if (isSpeakerOn) { showToast("Speaker ON"); audioEl.volume = 1.0; } else { showToast("Speaker OFF"); audioEl.volume = 0.2; } };
+speakerBtn.onclick = () => { 
+    const audioEl = document.getElementById('remoteAudio'); 
+    speakerBtn.classList.toggle('active'); 
+    const isSpeakerOn = speakerBtn.classList.contains('active'); 
+    audioEl.volume = isSpeakerOn ? 1.0 : 0.3; 
+    speakerBtn.textContent = isSpeakerOn ? '🔊' : '🔈';
+    showToast(isSpeakerOn ? "Speaker Mode" : "Normal Mode");
+};
+fullScreenBtn.onclick = () => mainCallCard.classList.toggle('full');
 
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => { blockedUsers = new Set(Object.keys(s.val()||{})); if(privateChatWith) { const isBlocked = blockedUsers.has(privateChatWith); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked'); } refreshPanelList(); }); 
