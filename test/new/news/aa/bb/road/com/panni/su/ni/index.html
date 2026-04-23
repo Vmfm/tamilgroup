@@ -167,24 +167,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     z-index: 10;
 }
-#emojiPicker {
-    position: fixed;
-    background: #202c33;
-    padding: 8px;
-    border-radius: 20px;
-    display: none;
-    gap: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    z-index: 10002;
-    border: 1px solid rgba(255,255,255,0.1);
-}
-.emoji-btn {
-    font-size: 20px;
-    cursor: pointer;
-    transition: transform 0.1s;
-    user-select: none;
-}
-.emoji-btn:hover { transform: scale(1.3); }
 
 @media(max-width:600px){
   #panel{width:100%} 
@@ -197,15 +179,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="loader-wrapper">
     <div class="loader-wheel"></div>
     <div class="loader-text">Loading Group Chat...</div>
-</div>
-
-<div id="emojiPicker">
-    <span class="emoji-btn">❤️</span>
-    <span class="emoji-btn">😂</span>
-    <span class="emoji-btn">😮</span>
-    <span class="emoji-btn">😢</span>
-    <span class="emoji-btn">🙏</span>
-    <span class="emoji-btn">👍</span>
 </div>
 
 <div id="profilePreviewOverlay">
@@ -324,10 +297,6 @@ const closePreviewBtn = document.getElementById('closePreviewBtn');
 const previewMsgBtn = document.getElementById('previewMsgBtn');
 let previewSelectedUser = "";
 
-const emojiPicker = document.getElementById('emojiPicker');
-let longPressTimer;
-let currentReactionRef = null;
-
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
 let blockedUsers = new Set();
@@ -380,35 +349,6 @@ previewMsgBtn.onclick = () => {
     openPrivatePopup(previewSelectedUser);
 };
 
-function showEmojiPicker(x, y, refPath) {
-    currentReactionRef = refPath;
-    emojiPicker.style.left = x + 'px';
-    emojiPicker.style.top = (y - 50) + 'px';
-    emojiPicker.style.display = 'flex';
-}
-document.querySelectorAll('.emoji-btn').forEach(btn => {
-    btn.onclick = () => {
-        if(currentReactionRef) {
-            db.ref(currentReactionRef + '/reactions/' + username).set(btn.textContent);
-        }
-        emojiPicker.style.display = 'none';
-    };
-});
-document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
-function attachLongPress(el, refPath) {
-    const start = (e) => {
-        longPressTimer = setTimeout(() => {
-            const touch = e.touches ? e.touches[0] : e;
-            showEmojiPicker(touch.clientX, touch.clientY, refPath);
-        }, 600);
-    };
-    const cancel = () => clearTimeout(longPressTimer);
-    el.addEventListener('mousedown', start);
-    el.addEventListener('touchstart', start);
-    el.addEventListener('mouseup', cancel);
-    el.addEventListener('mouseleave', cancel);
-    el.addEventListener('touchend', cancel);
-}
 function renderReactions(container, reactionsObj) {
     let existing = container.querySelector('.reaction-container');
     if(existing) existing.remove();
@@ -525,7 +465,7 @@ document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); location.reload(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
 
 async function startAs(name){
   const statusSnap = await db.ref(`status/${name}`).once('value');
@@ -540,11 +480,9 @@ if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); else showToast('Enter a name'); };
 
 function setPresence(){
-  db.ref(`status/${username}`).set(true); 
-  db.ref(`status/${username}`).onDisconnect().remove();
+  db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove();
   db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', settings: settings });
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
-  db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
 }
 
 function startGroupListeners(){
@@ -576,7 +514,6 @@ function renderGroupMessage(data, key){
   if(data.text) bubble.textContent=data.text;
   if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`;
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove());
-  attachLongPress(bubble, `messages/${key}`);
   renderReactions(bubble, data.reactions);
   const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time);
   content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
@@ -600,24 +537,11 @@ function listenPresence(){
     const val=snap.val()||{}; 
     onlineCountEl.textContent=`${Object.keys(val).length} online`; 
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
-    if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]);
-  });
-}
-
-async function updatePrivateHeaderStatus(targetUser, isOnline) {
-    if(isOnline) {
-        headerDot.style.background = 'var(--online)';
-        headerStatusText.textContent = 'online';
-    } else {
-        headerDot.style.background = 'var(--offline)';
-        const profileSnap = await db.ref(`profiles/${targetUser}`).once('value');
-        const profile = profileSnap.val();
-        if(profile && profile.lastSeen) {
-            headerStatusText.textContent = 'Last seen ' + formatTime(profile.lastSeen);
-        } else {
-            headerStatusText.textContent = 'offline';
-        }
+    if(privateChatWith) {
+        if(val[privateChatWith]) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
     }
+  });
 }
 
 function watchPrivateChatsInitial(){
@@ -687,8 +611,8 @@ async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
   const statusSnap = await db.ref(`status/${other}`).once('value');
-  updatePrivateHeaderStatus(other, statusSnap.exists());
-  
+  if(statusSnap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
+  else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
   const isBlocked = blockedUsers.has(other); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
   const key = chatId(username, other);
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
@@ -719,7 +643,6 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`;
   const bubble = row.querySelector('.private-bubble');
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove());
-  attachLongPress(bubble, `privateChats/${chatKey}/${id}`);
   renderReactions(bubble, msg.reactions);
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
@@ -741,12 +664,16 @@ panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getEl
 
 privateCallBtn.onclick = async () => {
     if(!privateChatWith) return;
+    
+    // CHECK IF ONLINE BEFORE CALLING
     const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
     if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
+
     if(!await checkTargetPrivateChatStatus()) return;
     if(!settings.audioCall) return showToast('Audio calls are disabled in settings');
     if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('You cannot call this user');
+
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing' };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', timestamp: Date.now() });
@@ -825,7 +752,7 @@ profileImgInput.onchange = function(){
   reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); showToast('Profile updated'); }; reader.readAsDataURL(file);
 };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`profiles/${username}/lastSeen`).set(firebase.database.ServerValue.TIMESTAMP); } };
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
 </script>
 </body>
 </html>
