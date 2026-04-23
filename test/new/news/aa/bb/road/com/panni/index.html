@@ -525,7 +525,7 @@ document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); location.reload(); };
 
 async function startAs(name){
   const statusSnap = await db.ref(`status/${name}`).once('value');
@@ -540,9 +540,11 @@ if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); else showToast('Enter a name'); };
 
 function setPresence(){
-  db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove();
+  db.ref(`status/${username}`).set(true); 
+  db.ref(`status/${username}`).onDisconnect().remove();
   db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', settings: settings });
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
+  db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
 }
 
 function startGroupListeners(){
@@ -598,11 +600,24 @@ function listenPresence(){
     const val=snap.val()||{}; 
     onlineCountEl.textContent=`${Object.keys(val).length} online`; 
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
-    if(privateChatWith) {
-        if(val[privateChatWith]) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
-        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
-    }
+    if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]);
   });
+}
+
+async function updatePrivateHeaderStatus(targetUser, isOnline) {
+    if(isOnline) {
+        headerDot.style.background = 'var(--online)';
+        headerStatusText.textContent = 'online';
+    } else {
+        headerDot.style.background = 'var(--offline)';
+        const profileSnap = await db.ref(`profiles/${targetUser}`).once('value');
+        const profile = profileSnap.val();
+        if(profile && profile.lastSeen) {
+            headerStatusText.textContent = 'Last seen ' + formatTime(profile.lastSeen);
+        } else {
+            headerStatusText.textContent = 'offline';
+        }
+    }
 }
 
 function watchPrivateChatsInitial(){
@@ -672,8 +687,8 @@ async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
   const statusSnap = await db.ref(`status/${other}`).once('value');
-  if(statusSnap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } 
-  else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
+  updatePrivateHeaderStatus(other, statusSnap.exists());
+  
   const isBlocked = blockedUsers.has(other); blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
   const key = chatId(username, other);
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
@@ -726,16 +741,12 @@ panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getEl
 
 privateCallBtn.onclick = async () => {
     if(!privateChatWith) return;
-    
-    // CHECK IF ONLINE BEFORE CALLING
     const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
     if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
-
     if(!await checkTargetPrivateChatStatus()) return;
     if(!settings.audioCall) return showToast('Audio calls are disabled in settings');
     if(blockedUsers.has(privateChatWith)) return showToast('Unblock user to call');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('You cannot call this user');
-
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing' };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', timestamp: Date.now() });
@@ -814,7 +825,7 @@ profileImgInput.onchange = function(){
   reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); showToast('Profile updated'); }; reader.readAsDataURL(file);
 };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`profiles/${username}/lastSeen`).set(firebase.database.ServerValue.TIMESTAMP); } };
 </script>
 </body>
 </html>
