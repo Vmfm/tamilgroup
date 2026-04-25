@@ -66,16 +66,16 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
 .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word;position:relative}
 .bubble audio{max-width:200px;height:35px;margin-top:5px;display:block}
+.bubble img.sticker-img{max-width:120px;display:block;margin:5px 0}
 .msg-row.self .bubble{background:#005c4b}
 .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
 .read-status{font-size:14px;line-height:1}
 .read-status.read{color:#53bdeb}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px;position:relative}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
 #sendBtn, .groupMediaBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .groupMediaBtn{background:#2a3942;font-size:20px}
-.groupMediaBtn.recording{background:#ff3b30;animation:pulse 1s infinite}
 #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
 #toast.show{opacity:1;bottom:40px}
@@ -186,6 +186,34 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 }
 .emoji-btn:hover { transform: scale(1.3); }
 
+/* --- STICKER PICKER CSS --- */
+#stickerPicker {
+    position: absolute;
+    bottom: 60px;
+    left: 10px;
+    background: #202c33;
+    padding: 10px;
+    border-radius: 12px;
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 100;
+    max-height: 250px;
+    overflow-y: auto;
+    width: 240px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.sticker-item {
+    width: 100%;
+    aspect-ratio: 1;
+    cursor: pointer;
+    object-fit: contain;
+    border-radius: 4px;
+    transition: transform 0.2s;
+}
+.sticker-item:hover { transform: scale(1.1); background: rgba(255,255,255,0.05); }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -225,7 +253,14 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div><div id="inputBar"><button class="groupMediaBtn" id="groupMicBtn" title="Voice Note (10s)">🎤</button><input id="messageInput" placeholder="Type a message" autocomplete="off"/><button id="sendBtn">➤</button></div></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div id="inputBar">
+        <div id="stickerPicker"></div>
+        <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
+        <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
+        <button id="sendBtn">➤</button>
+    </div>
+</div>
 <div id="toast"></div>
 <div id="loginWrap"><div id="loginCard"><div style="font-weight:700;color:#fff">Enter your name</div><input id="nameInput" placeholder="Your name" /><button id="joinBtn">Join</button><div style="font-size:12px;color:var(--muted)">Name is saved locally.</div></div></div>
 
@@ -300,7 +335,7 @@ const loginWrap = document.getElementById('loginWrap'), nameInput = document.get
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
-const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn'), groupMicBtn = document.getElementById('groupMicBtn');
+const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
 const callAvatarContainer = document.getElementById('callAvatarContainer');
 const callTypeText = document.getElementById('callTypeText');
@@ -315,6 +350,16 @@ const cancelCallBtn = document.getElementById('cancelCallBtn');
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
 const mainCallCard = document.getElementById('mainCallCard');
+
+const stickerBtn = document.getElementById('stickerBtn');
+const stickerPicker = document.getElementById('stickerPicker');
+
+const stickerUrls = [
+    '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp',
+    '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp',
+    '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp',
+    '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp'
+];
 
 const privateCallBtn = document.getElementById('privateCallBtn');
 const profilePreviewOverlay = document.getElementById('profilePreviewOverlay');
@@ -344,6 +389,29 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+// Sticker Logic
+stickerUrls.forEach(url => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'sticker-item';
+    img.onclick = () => {
+        db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() });
+        stickerPicker.style.display = 'none';
+    };
+    stickerPicker.appendChild(img);
+});
+
+stickerBtn.onclick = (e) => {
+    e.stopPropagation();
+    stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid';
+};
+
+document.addEventListener('click', (e) => {
+    if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) {
+        stickerPicker.style.display = 'none';
+    }
+});
 
 // Message Management Logic
 function manageMessageCount(path, limit) {
@@ -420,27 +488,6 @@ function renderReactions(container, reactionsObj) {
     div.innerHTML = unique.join('');
     container.appendChild(div);
 }
-
-let groupMediaRecorder, groupAudioChunks = [], groupRecordTimer;
-groupMicBtn.onclick = async () => {
-  if (groupMediaRecorder && groupMediaRecorder.state === "recording") { clearTimeout(groupRecordTimer); groupMediaRecorder.stop(); groupMicBtn.classList.remove('recording'); return; }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    groupMediaRecorder = new MediaRecorder(stream);
-    groupAudioChunks = [];
-    groupMediaRecorder.ondataavailable = e => groupAudioChunks.push(e.data);
-    groupMediaRecorder.onstop = async () => {
-      const blob = new Blob(groupAudioChunks, { type: 'audio/webm' });
-      const reader = new FileReader();
-      reader.onload = e => { db.ref('messages').push({ name: username, profileImage: profileImage || '', voice: e.target.result, time: Date.now() }); };
-      reader.readAsDataURL(blob);
-      stream.getTracks().forEach(track => track.stop());
-    };
-    groupMediaRecorder.start();
-    groupMicBtn.classList.add('recording');
-    groupRecordTimer = setTimeout(() => { if (groupMediaRecorder.state === "recording") { groupMediaRecorder.stop(); groupMicBtn.classList.remove('recording'); showToast("Group recording limit reached (10s)"); } }, 10000);
-  } catch (err) { showToast("Mic permission denied"); }
-};
 
 function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
 function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
@@ -534,7 +581,7 @@ async function startAs(name){
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
-  manageMessageCount('messages', 15); // AUTO DELETE GROUP > 15
+  manageMessageCount('messages', 15);
 }
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); else showToast('Enter a name'); };
@@ -575,6 +622,7 @@ function renderGroupMessage(data, key){
   const bubble=document.createElement('div'); bubble.className='bubble'; 
   if(data.text) bubble.textContent=data.text;
   if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`;
+  if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`;
   if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove());
   attachLongPress(bubble, `messages/${key}`);
   renderReactions(bubble, data.reactions);
@@ -628,7 +676,7 @@ function watchPrivateChatsInitial(){
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
   const chatRef = db.ref(`privateChats/${chatKey}`);
-  manageMessageCount(`privateChats/${chatKey}`, 10); // AUTO DELETE PRIVATE > 10
+  manageMessageCount(`privateChats/${chatKey}`, 10);
   const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
