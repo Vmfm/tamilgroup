@@ -46,6 +46,25 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #notifWrap{display:flex;align-items:center;gap:8px}
 .bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
 .badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
+
+/* ONLINE BUTTON STYLE */
+#onlineCount {
+    background: rgba(37, 211, 102, 0.1);
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid rgba(37, 211, 102, 0.3);
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#onlineCount:hover { background: rgba(37, 211, 102, 0.2); }
+#onlineCount::before { content: ''; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; }
+
 #panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
 #panel.open{transform:translateX(0)}
 .panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
@@ -214,6 +233,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 }
 .sticker-item:hover { transform: scale(1.1); background: rgba(255,255,255,0.05); }
 
+/* ONLINE LIST MODAL CSS */
+#onlineListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; display: none; align-items: center; justify-content: center; }
+.onlineListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; }
+.onlineListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+#onlineUsersContainer { flex: 1; overflow-y: auto; padding: 10px; }
+.onlineUserItem { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+.onlineUserItem:hover { background: rgba(255,255,255,0.05); }
+.onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -225,6 +253,17 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="loader-wrapper">
     <div class="loader-wheel"></div>
     <div class="loader-text">Loading Group Chat...</div>
+</div>
+
+<!-- NEW ONLINE LIST MODAL -->
+<div id="onlineListOverlay">
+    <div class="onlineListCard">
+        <div class="onlineListHeader">
+            <span>Online Users</span>
+            <button onclick="document.getElementById('onlineListOverlay').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div id="onlineUsersContainer"></div>
+    </div>
 </div>
 
 <div id="emojiPicker">
@@ -253,7 +292,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount" style="color:var(--muted);font-size:13px;margin-left:12px"></div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -649,13 +688,41 @@ function listenTypingGroup(){
 }
 
 function listenPresence(){
-  db.ref('status').on('value', snap=>{ 
+  db.ref('status').on('value', async snap=>{ 
     const val=snap.val()||{}; 
-    onlineCountEl.textContent=`${Object.keys(val).length} online`; 
+    const usersCount = Object.keys(val).length;
+    onlineCountEl.textContent=`${usersCount} online`; 
+    
+    // Update Group Avatars
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
+    
+    // Update Private Header
     if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]);
+
+    // Update the Online List Modal Content
+    const container = document.getElementById('onlineUsersContainer');
+    container.innerHTML = '';
+    for(let user in val) {
+        if(user === username) continue;
+        const profSnap = await db.ref(`profiles/${user}`).once('value');
+        const prof = profSnap.val() || {};
+        const userDiv = document.createElement('div');
+        userDiv.className = 'onlineUserItem';
+        let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase();
+        userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`;
+        userDiv.onclick = () => {
+            document.getElementById('onlineListOverlay').style.display = 'none';
+            openPrivatePopup(user);
+        };
+        container.appendChild(userDiv);
+    }
   });
 }
+
+// Open online list on click
+onlineCountEl.onclick = () => {
+    document.getElementById('onlineListOverlay').style.display = 'flex';
+};
 
 async function updatePrivateHeaderStatus(targetUser, isOnline) {
     if(isOnline) {
