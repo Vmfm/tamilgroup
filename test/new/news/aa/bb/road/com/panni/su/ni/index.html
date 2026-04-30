@@ -68,7 +68,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .bubble audio{max-width:200px;height:35px;margin-top:5px;display:block}
 .bubble img.sticker-img{max-width:120px;display:block;margin:5px 0}
 .msg-row.self .bubble{background:#005c4b}
-.meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.meta:hover{text-decoration:underline}
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
 .read-status{font-size:14px;line-height:1}
 .read-status.read{color:#53bdeb}
@@ -418,24 +419,9 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Message Management Logic
-function manageMessageCount(path, limit) {
-    db.ref(path).on('value', snap => {
-        const count = snap.numChildren();
-        if (count > limit) {
-            let deletedCount = 0;
-            const targetCount = count - limit;
-            snap.forEach(child => {
-                if (deletedCount < targetCount) {
-                    db.ref(`${path}/${child.key}`).remove();
-                    deletedCount++;
-                }
-            });
-        }
-    });
-}
-
+// Profile Pop Functions
 async function openProfilePop(targetUser) {
+    if(targetUser === username) return;
     previewSelectedUser = targetUser;
     previewName.textContent = targetUser;
     previewImgBox.innerHTML = targetUser.charAt(0).toUpperCase();
@@ -586,7 +572,6 @@ async function startAs(name){
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage }).catch(()=>{});
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
-  manageMessageCount('messages', 15);
 }
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(n) startAs(n); else showToast('Enter a name'); };
@@ -624,6 +609,7 @@ function renderGroupMessage(data, key){
   else { avatar.textContent=data.name.charAt(0).toUpperCase(); }
   const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
   const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name;
+  meta.onclick = () => { if(!isSelf) openProfilePop(data.name); };
   const bubble=document.createElement('div'); bubble.className='bubble'; 
   if(data.text) bubble.textContent=data.text;
   if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`;
@@ -681,7 +667,6 @@ function watchPrivateChatsInitial(){
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
   const chatRef = db.ref(`privateChats/${chatKey}`);
-  manageMessageCount(`privateChats/${chatKey}`, 10);
   const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
