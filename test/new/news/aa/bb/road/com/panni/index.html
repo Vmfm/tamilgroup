@@ -649,15 +649,23 @@ togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; ap
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); localStorage.removeItem('userAge'); location.reload(); };
 
+// UPDATED STARTAS TO PREVENT SAME NAME LOGIN
 async function startAs(name){
   const statusSnap = await db.ref(`status/${name}`).once('value');
-  if(statusSnap.exists()) { showToast("Name already in use. Try another."); return; }
+  if(statusSnap.exists()) { 
+    showToast("Username already taken/active on another device."); 
+    localStorage.removeItem('guestName'); // Clean up if it was a saved session
+    loginWrap.style.display = 'flex';
+    return; 
+  }
+  
   username = name; localStorage.setItem('guestName', name);
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }).catch(()=>{});
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
   manageMessageCount('messages', 15);
 }
+
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 
 // JOIN LOGIC WITH AGE & PHOTO
@@ -669,11 +677,10 @@ joinBtn.onclick = () => {
   userAge = age;
   localStorage.setItem('userAge', age);
 
-  // If photo selected
   if(loginPhotoInput.files && loginPhotoInput.files[0]) {
       if(age !== '18+') {
           alert("Profile photos are only allowed for 18+ users.");
-          loginPhotoInput.value = ""; // Clear file
+          loginPhotoInput.value = ""; 
           return;
       }
       
@@ -751,14 +758,9 @@ function listenPresence(){
     const val=snap.val()||{}; 
     const usersCount = Object.keys(val).length;
     onlineCountEl.textContent=`${usersCount} online`; 
-    
-    // Update Group Avatars
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
-    
-    // Update Private Header
     if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]);
 
-    // Update the Online List Modal Content
     const container = document.getElementById('onlineUsersContainer');
     container.innerHTML = '';
     for(let user in val) {
@@ -778,7 +780,6 @@ function listenPresence(){
   });
 }
 
-// Open online list on click
 onlineCountEl.onclick = () => {
     document.getElementById('onlineListOverlay').style.display = 'flex';
 };
