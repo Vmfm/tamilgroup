@@ -37,7 +37,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 }
 @keyframes spin {
     0% { transform: rotate(0deg); }
-    100% { transform: rotate(3600deg); }
+    100% { transform: rotate(360deg); }
 }
 
 #app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
@@ -96,12 +96,16 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #sendBtn, .groupMediaBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .groupMediaBtn{background:#2a3942;font-size:20px}
 #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:99999;opacity:0;transition:opacity .25s,bottom .25s}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
 #toast.show{opacity:1;bottom:40px}
+
+/* LOGIN CARD UPDATED */
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
-#loginCard{background:#0b141a;padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:300px;box-shadow: 0 10px 30px rgba(0,0,0,0.5)}
-#loginCard input{padding:10px;border-radius:10px;border:0;background:#162027;color:#fff}
-#loginCard button{padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
+#loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:320px;box-shadow: 0 10px 40px rgba(0,0,0,0.8);border: 1px solid rgba(255,255,255,0.05)}
+#loginCard input, #loginCard select{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff;outline:none}
+#loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
+.login-label {font-size: 13px; color: var(--muted); margin-bottom: -8px; margin-left: 4px;}
+
 #settingsWrap{position:relative}
 #settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
 #settingsPanel{position:absolute;right:0;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.1);padding:12px;border-radius:12px;display:none;z-index:100;min-width:260px;box-shadow: 0 8px 24px rgba(0,0,0,0.5)}
@@ -242,12 +246,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
-/* NEW LOGIN PREVIEW CSS */
-.login-preview {
-    width: 80px; height: 80px; border-radius: 50%; background: #162027; margin: 0 auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #25d366; overflow: hidden; cursor: pointer;
-}
-.login-preview img { width: 100%; height: 100%; object-fit: cover; }
-
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -308,18 +306,25 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </div>
 <div id="toast"></div>
 
-<!-- UPDATED LOGIN CARD -->
+<!-- UPDATED LOGIN UI -->
 <div id="loginWrap">
     <div id="loginCard">
-        <div style="font-weight:700;color:#fff;text-align:center">Create Profile</div>
-        <div class="login-preview" onclick="document.getElementById('loginPhotoInput').click()" id="loginPhotoPreview">
-            <span style="font-size:24px">📷</span>
-        </div>
-        <input type="file" id="loginPhotoInput" accept="image/*" style="display:none">
-        <input id="nameInput" placeholder="Your name" maxlength="15"/>
-        <input id="ageInput" type="number" placeholder="Your age (Must be 18+)" min="1" max="100"/>
+        <div style="font-weight:700;color:#fff;font-size:18px;text-align:center;margin-bottom:5px">Welcome</div>
+        
+        <div class="login-label">Name</div>
+        <input id="nameInput" placeholder="Enter your name" />
+        
+        <div class="login-label">Age</div>
+        <select id="ageSelect">
+            <option value="18+" selected>18+</option>
+            <option value="Under 18">Under 18</option>
+        </select>
+
+        <div class="login-label">Profile Photo (Optional)</div>
+        <input type="file" id="loginPhotoInput" accept="image/*" style="font-size:11px;" />
+        
         <button id="joinBtn">Join Chat</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center">Photo must not contain 18+ content.</div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
     </div>
 </div>
 
@@ -391,8 +396,6 @@ const panelEl = document.getElementById('panel'), panelListEl = document.getElem
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
-const ageInput = document.getElementById('ageInput'), loginPhotoInput = document.getElementById('loginPhotoInput'), loginPhotoPreview = document.getElementById('loginPhotoPreview');
-
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
@@ -411,6 +414,10 @@ const cancelCallBtn = document.getElementById('cancelCallBtn');
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
 const mainCallCard = document.getElementById('mainCallCard');
+
+/* LOGIN FEATURE ELEMENTS */
+const loginPhotoInput = document.getElementById('loginPhotoInput');
+const ageSelect = document.getElementById('ageSelect');
 
 const stickerBtn = document.getElementById('stickerBtn');
 const stickerPicker = document.getElementById('stickerPicker');
@@ -441,7 +448,7 @@ let currentReactionRef = null;
 
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
-let userAge = localStorage.getItem('userAge') || '';
+let userAge = localStorage.getItem('userAge') || '18+';
 
 let blockedUsers = new Set();
 let iHaveBeenBlockedBy = new Set();
@@ -457,18 +464,6 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
-// Login Photo Handling
-loginPhotoInput.onchange = function(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        profileImage = ev.target.result;
-        loginPhotoPreview.innerHTML = `<img src="${profileImage}">`;
-    };
-    reader.readAsDataURL(file);
-};
 
 // Sticker Logic
 stickerUrls.forEach(url => {
@@ -631,7 +626,7 @@ function sendPrivateMedia(data, type) {
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
 }
 
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 2000); }
+function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
@@ -652,53 +647,52 @@ document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); localStorage.removeItem('profileImage'); localStorage.removeItem('userAge'); location.reload(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); localStorage.removeItem('userAge'); location.reload(); };
 
-async function startAs(name, age, photo){
+async function startAs(name){
   const statusSnap = await db.ref(`status/${name}`).once('value');
   if(statusSnap.exists()) { showToast("Name already in use. Try another."); return; }
-  username = name; profileImage = photo; userAge = age;
-  localStorage.setItem('guestName', name);
-  localStorage.setItem('profileImage', photo);
-  localStorage.setItem('userAge', age);
-  
-  db.ref(`profiles/${username}`).update({ profileImage, age: parseInt(age) }).catch(()=>{});
+  username = name; localStorage.setItem('guestName', name);
+  if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }).catch(()=>{});
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
   manageMessageCount('messages', 15);
 }
+if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 
-if(!username) {
-    loginWrap.style.display = 'flex';
-} else {
-    // If returning user, start session with stored data
-    startAs(username, userAge, profileImage);
-}
-
+// JOIN LOGIC WITH AGE & PHOTO
 joinBtn.onclick = () => { 
-    const n = nameInput.value.trim(); 
-    const a = ageInput.value;
-    
-    if(!photoCheckPassed(profileImage)) return showToast("Profile photo not allowed (18+ content detection)");
-    if(!n) return showToast('Enter your name'); 
-    if(!a || a < 18) return showToast('You must be 18 or older to join');
-    if(!profileImage) return showToast('Please upload a profile photo');
+  const n = nameInput.value.trim(); 
+  if(!n) return showToast('Enter a name');
+  
+  const age = ageSelect.value;
+  userAge = age;
+  localStorage.setItem('userAge', age);
 
-    startAs(n, a, profileImage); 
+  // If photo selected
+  if(loginPhotoInput.files && loginPhotoInput.files[0]) {
+      if(age !== '18+') {
+          alert("Profile photos are only allowed for 18+ users.");
+          loginPhotoInput.value = ""; // Clear file
+          return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          profileImage = e.target.result;
+          localStorage.setItem('profileImage', profileImage);
+          startAs(n);
+      };
+      reader.readAsDataURL(loginPhotoInput.files[0]);
+  } else {
+      startAs(n);
+  }
 };
-
-// Simplified Content Check Function (Placeholder for real AI detection)
-function photoCheckPassed(imgData) {
-    if(!imgData) return true;
-    // In a real app, you would send imgData to a backend API like Google Cloud Vision
-    // to detect adult content. Here we return true by default unless logic is added.
-    return true; 
-}
 
 function setPresence(){
   db.ref(`status/${username}`).set(true); 
   db.ref(`status/${username}`).onDisconnect().remove();
-  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', settings: settings, age: userAge });
+  db.ref(`profiles/${username}`).update({ online: true, profileImage: profileImage || '', age: userAge, settings: settings });
   db.ref(`profiles/${username}/online`).onDisconnect().remove();
   db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
 }
@@ -1007,14 +1001,7 @@ reportBtn.onclick = () => { showToast(`User ${privateChatWith} reported to admin
 profileImgInput.onchange = function(){
   const file = this.files[0]; if(!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => { 
-      if(!photoCheckPassed(e.target.result)) return showToast("Profile photo not allowed");
-      profileImage = e.target.result; 
-      localStorage.setItem('profileImage', profileImage); 
-      if(username) db.ref(`profiles/${username}`).update({ profileImage }); 
-      showToast('Profile updated'); 
-  }; 
-  reader.readAsDataURL(file);
+  reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); showToast('Profile updated'); }; reader.readAsDataURL(file);
 };
 
 window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`profiles/${username}/lastSeen`).set(firebase.database.ServerValue.TIMESTAMP); } };
