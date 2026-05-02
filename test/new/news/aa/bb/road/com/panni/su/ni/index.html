@@ -43,17 +43,25 @@
         td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
         
         .btn { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; transition: 0.2s; }
-        .btn-danger { background: var(--danger); color: white; margin-right: 4px; }
+        .btn-danger { background: var(--danger); color: white; }
         .btn-safe { background: var(--accent); color: white; }
         .btn-warn { background: var(--warning); color: white; }
-        .btn-info { background: var(--info); color: white; margin-right: 4px; }
+        .btn-info { background: var(--info); color: white; }
         
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .online { background: var(--accent); }
         .offline { background: #555; }
 
-        .user-info { display: flex; align-items: center; gap: 10px; }
-        .user-pic { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #2a3942; }
+        /* Fixed Profile Image Styling */
+        .user-cell { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { 
+            width: 35px; 
+            height: 35px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            background: #2a3942; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
 
         #auth-overlay {
             position: fixed; inset: 0; background: var(--bg); z-index: 2000;
@@ -62,9 +70,11 @@
         .login-box { background: var(--card); padding: 30px; border-radius: 16px; text-align: center; width: 85%; max-width: 300px; }
         input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #2a3942; background: #111b21; color: white; box-sizing: border-box; }
         
+        .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
+
         @media (max-width: 600px) {
             .hide-mobile { display: none; }
-            .btn-group { display: flex; flex-direction: column; gap: 5px; }
+            .btn-group { flex-direction: column; }
         }
     </style>
 </head>
@@ -79,7 +89,7 @@
 </div>
 
 <header>
-    <div style="font-weight: 700;">🛡️ Admin Panel</div>
+    <div style="font-weight: 700;">🛡️ TAMIL VM ADMIN</div>
     <button class="btn btn-warn" onclick="logout()">Logout</button>
 </header>
 
@@ -91,9 +101,9 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>User</th>
+                            <th>User Profile</th>
                             <th>Status</th>
-                            <th>Last Active & Seen</th>
+                            <th>Last Seen</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -123,7 +133,7 @@
         pass: "admin123", 
         cleanupDays: 20, 
         storageKey: "admin_session",
-        defaultPic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     };
 
     window.onload = () => {
@@ -159,10 +169,11 @@
         loadMessages(db);
     }
 
-    function formatTime(timestamp) {
-        if(!timestamp) return 'Never';
-        const date = new Date(timestamp);
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    // Displays Date and Time for Last Seen[cite: 1]
+    function formatLastSeen(ts) {
+        if(!ts) return "Never";
+        const d = new Date(ts);
+        return d.toLocaleDateString() + " " + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 
     function autoCleanup(db) {
@@ -193,20 +204,24 @@
             Object.keys(users).forEach(u => {
                 const data = users[u];
                 const tr = document.createElement('tr');
-                const userImg = data.pic || CONFIG.defaultPic;
+                
+                // Show profile photo or default if missing[cite: 1]
+                const photoUrl = data.pic || CONFIG.defaultAvatar;
 
                 tr.innerHTML = `
                     <td>
-                        <div class="user-info">
-                            <img src="${userImg}" class="user-pic" onerror="this.src='${CONFIG.defaultPic}'">
+                        <div class="user-cell">
+                            <img src="${photoUrl}" class="user-avatar" onerror="this.src='${CONFIG.defaultAvatar}'">
                             <b>${u}</b>
                         </div>
                     </td>
-                    <td><span class="status-dot ${data.online ? 'online' : 'offline'}"></span> ${data.online ? 'Online' : 'Offline'}</td>
                     <td>
-                        <div style="font-size: 11px;">
-                            <div class="hide-mobile" style="color: var(--muted)">Last Active:</div>
-                            <div>${formatTime(data.lastSeen)}</div>
+                        <span class="status-dot ${data.online ? 'online' : 'offline'}"></span>
+                        <span style="font-size:11px">${data.online ? 'Online' : 'Offline'}</span>
+                    </td>
+                    <td>
+                        <div style="font-size: 11px; line-height: 1.2;">
+                            ${formatLastSeen(data.lastSeen)}
                         </div>
                     </td>
                     <td>
@@ -224,16 +239,17 @@
         });
     }
 
+    // Logic to remove photo by updating Firebase[cite: 1]
     function removePhoto(username) {
         if(confirm(`Remove profile photo for ${username}?`)) {
             firebase.database().ref(`profiles/${username}`).update({
-                pic: CONFIG.defaultPic
-            }).then(() => alert("Photo removed"));
+                pic: "" // Emptying the URL forces the default avatar
+            });
         }
     }
 
     function manualRemove(username) {
-        if(confirm(`Permanently delete ${username} from database?`)) {
+        if(confirm(`Permanently delete ${username}?`)) {
             const db = firebase.database();
             db.ref(`profiles/${username}`).remove();
             db.ref(`status/${username}`).remove();
@@ -272,8 +288,8 @@
                 div.style.display = "flex";
                 div.style.justifyContent = "space-between";
                 div.innerHTML = `
-                    <div style="font-size: 12px;"><b>${m.name}:</b> ${m.text || 'Media'}</div>
-                    <button class="btn btn-danger" onclick="deleteMsg('${id}')">Del</button>
+                    <div style="font-size:12px"><b>${m.name}:</b> ${m.text || 'Media'}</div>
+                    <button class="btn btn-danger" onclick="deleteMsg('${id}')" style="padding:4px 8px">Del</button>
                 `;
                 container.prepend(div);
             });
