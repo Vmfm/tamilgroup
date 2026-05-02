@@ -259,6 +259,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="loader-text">Loading Group Chat...</div>
 </div>
 
+<!-- NEW ONLINE LIST MODAL -->
 <div id="onlineListOverlay">
     <div class="onlineListCard">
         <div class="onlineListHeader">
@@ -311,7 +312,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <div style="font-weight:700;color:#fff;font-size:18px;text-align:center;margin-bottom:5px">Welcome</div>
         
         <div class="login-label">Name</div>
-        <input id="nameInput" placeholder="Enter your name" maxlength="15" />
+        <input id="nameInput" placeholder="Enter your name" />
         
         <div class="login-label">Age</div>
         <select id="ageSelect">
@@ -413,8 +414,11 @@ const cancelCallBtn = document.getElementById('cancelCallBtn');
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
 const mainCallCard = document.getElementById('mainCallCard');
+
+/* LOGIN FEATURE ELEMENTS */
 const loginPhotoInput = document.getElementById('loginPhotoInput');
 const ageSelect = document.getElementById('ageSelect');
+
 const stickerBtn = document.getElementById('stickerBtn');
 const stickerPicker = document.getElementById('stickerPicker');
 
@@ -461,6 +465,7 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
+// Sticker Logic
 stickerUrls.forEach(url => {
     const img = document.createElement('img');
     img.src = url;
@@ -483,6 +488,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Message Management Logic
 function manageMessageCount(path, limit) {
     db.ref(path).on('value', snap => {
         const count = snap.numChildren();
@@ -620,7 +626,7 @@ function sendPrivateMedia(data, type) {
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
 }
 
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 2000); }
+function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
@@ -643,39 +649,30 @@ togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; ap
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); localStorage.removeItem('userAge'); location.reload(); };
 
-// --- FIXED LOGIN LOGIC: NO DUPLICATE NAMES ---
+// UPDATED STARTAS TO PREVENT SAME NAME LOGIN
 async function startAs(name){
-  // Check if name is already online
   const statusSnap = await db.ref(`status/${name}`).once('value');
   if(statusSnap.exists()) { 
-    showToast("This name is already logged in on another device!"); 
+    showToast("Username already taken/active on another device."); 
+    localStorage.removeItem('guestName'); // Clean up if it was a saved session
     loginWrap.style.display = 'flex';
-    localStorage.removeItem('guestName');
     return; 
   }
   
-  username = name; 
-  localStorage.setItem('guestName', name);
+  username = name; localStorage.setItem('guestName', name);
   if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }).catch(()=>{});
-  
   loginWrap.style.display = 'none';
   setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks();
-  manageMessageCount('messages', 25);
+  manageMessageCount('messages', 15);
 }
 
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 
-joinBtn.onclick = async () => { 
+// JOIN LOGIC WITH AGE & PHOTO
+joinBtn.onclick = () => { 
   const n = nameInput.value.trim(); 
   if(!n) return showToast('Enter a name');
-  if(n.length < 3) return showToast('Name too short');
   
-  // Anti-Duplicate Check
-  const statusSnap = await db.ref(`status/${n}`).once('value');
-  if(statusSnap.exists()) {
-      return showToast("Name already in use. Try a different name.");
-  }
-
   const age = ageSelect.value;
   userAge = age;
   localStorage.setItem('userAge', age);
@@ -683,9 +680,10 @@ joinBtn.onclick = async () => {
   if(loginPhotoInput.files && loginPhotoInput.files[0]) {
       if(age !== '18+') {
           alert("Profile photos are only allowed for 18+ users.");
-          loginPhotoInput.value = "";
+          loginPhotoInput.value = ""; 
           return;
       }
+      
       const reader = new FileReader();
       reader.onload = (e) => {
           profileImage = e.target.result;
@@ -762,6 +760,7 @@ function listenPresence(){
     onlineCountEl.textContent=`${usersCount} online`; 
     document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); 
     if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]);
+
     const container = document.getElementById('onlineUsersContainer');
     container.innerHTML = '';
     for(let user in val) {
