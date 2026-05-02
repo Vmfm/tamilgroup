@@ -11,6 +11,7 @@
             --accent: #25d366;
             --danger: #ff3b30;
             --warning: #ff9500;
+            --info: #34b7f1;
             --text: #e9edef;
             --muted: #8696a0;
         }
@@ -39,16 +40,20 @@
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { text-align: left; color: var(--muted); padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
         
         .btn { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; transition: 0.2s; }
         .btn-danger { background: var(--danger); color: white; margin-right: 4px; }
         .btn-safe { background: var(--accent); color: white; }
         .btn-warn { background: var(--warning); color: white; }
+        .btn-info { background: var(--info); color: white; margin-right: 4px; }
         
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .online { background: var(--accent); }
         .offline { background: #555; }
+
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-pic { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #2a3942; }
 
         #auth-overlay {
             position: fixed; inset: 0; background: var(--bg); z-index: 2000;
@@ -88,7 +93,7 @@
                         <tr>
                             <th>User</th>
                             <th>Status</th>
-                            <th class="hide-mobile">Last Active</th>
+                            <th>Last Active & Seen</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -111,14 +116,14 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<!-- Link to your existing config -->
 <script src="https://vmfm.github.io/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
     const CONFIG = {
-        pass: "admin123", // Set your password[cite: 1]
+        pass: "admin123", 
         cleanupDays: 20, 
-        storageKey: "admin_session"
+        storageKey: "admin_session",
+        defaultPic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     };
 
     window.onload = () => {
@@ -148,13 +153,18 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        autoCleanup(db); // Run 20-day auto removal[cite: 1]
+        autoCleanup(db);
         loadUsers(db);
         loadReports(db);
         loadMessages(db);
     }
 
-    // AUTO REMOVE USERS INACTIVE FOR 20 DAYS[cite: 1]
+    function formatTime(timestamp) {
+        if(!timestamp) return 'Never';
+        const date = new Date(timestamp);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
     function autoCleanup(db) {
         const now = Date.now();
         const limit = CONFIG.cleanupDays * 24 * 60 * 60 * 1000;
@@ -183,12 +193,25 @@
             Object.keys(users).forEach(u => {
                 const data = users[u];
                 const tr = document.createElement('tr');
+                const userImg = data.pic || CONFIG.defaultPic;
+
                 tr.innerHTML = `
-                    <td><b>${u}</b></td>
-                    <td><span class="status-dot ${data.online ? 'online' : 'offline'}"></span></td>
-                    <td class="hide-mobile">${data.lastSeen ? new Date(data.lastSeen).toLocaleDateString() : 'Never'}</td>
+                    <td>
+                        <div class="user-info">
+                            <img src="${userImg}" class="user-pic" onerror="this.src='${CONFIG.defaultPic}'">
+                            <b>${u}</b>
+                        </div>
+                    </td>
+                    <td><span class="status-dot ${data.online ? 'online' : 'offline'}"></span> ${data.online ? 'Online' : 'Offline'}</td>
+                    <td>
+                        <div style="font-size: 11px;">
+                            <div class="hide-mobile" style="color: var(--muted)">Last Active:</div>
+                            <div>${formatTime(data.lastSeen)}</div>
+                        </div>
+                    </td>
                     <td>
                         <div class="btn-group">
+                            <button class="btn btn-info" onclick="removePhoto('${u}')">Del Pic</button>
                             <button class="btn btn-danger" onclick="manualRemove('${u}')">Remove</button>
                             <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="toggleBan('${u}', ${data.banned})">
                                 ${data.banned ? 'Unban' : 'Ban'}
@@ -201,7 +224,14 @@
         });
     }
 
-    // MANUAL REMOVE OPTION[cite: 1]
+    function removePhoto(username) {
+        if(confirm(`Remove profile photo for ${username}?`)) {
+            firebase.database().ref(`profiles/${username}`).update({
+                pic: CONFIG.defaultPic
+            }).then(() => alert("Photo removed"));
+        }
+    }
+
     function manualRemove(username) {
         if(confirm(`Permanently delete ${username} from database?`)) {
             const db = firebase.database();
@@ -242,7 +272,7 @@
                 div.style.display = "flex";
                 div.style.justifyContent = "space-between";
                 div.innerHTML = `
-                    <div><b>${m.name}:</b> ${m.text || 'Media'}</div>
+                    <div style="font-size: 12px;"><b>${m.name}:</b> ${m.text || 'Media'}</div>
                     <button class="btn btn-danger" onclick="deleteMsg('${id}')">Del</button>
                 `;
                 container.prepend(div);
