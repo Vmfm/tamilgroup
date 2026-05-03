@@ -1,11 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Just Nothing</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp Live & Chat</title>
+<style>
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* --- LOADER CSS --- */
+#loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
+.loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- LIVE VIDEO STYLES --- */
+#liveSection { display: none; background: #000; width: 100%; position: relative; aspect-ratio: 16/9; border-bottom: 1px solid #333; }
+#remoteVideoLive { width: 100%; height: 100%; object-fit: cover; }
+#localVideoPreview { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.live-overlay { position: absolute; top: 10px; left: 10px; display: flex; gap: 10px; align-items: center; z-index: 10; }
+.live-badge { background: #ff3b30; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.5; } }
+.viewer-count { background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+#closeLiveBtn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: 0; color: #fff; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 11; }
+
+#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
+
+/* LIVE BUTTON */
+#liveBtn { background: #ff3b30; color: white; border: none; padding: 6px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; }
+#liveBtn.active { background: #555; }
+
+#onlineCount { background: rgba(37, 211, 102, 0.1); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(37, 211, 102, 0.3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
+#panel.open{transform:translateX(0)}
+.panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
+.panelList{padding:8px;overflow:auto;flex:1}
+.panelItem{padding:10px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
+
+#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;overflow:hidden}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word;position:relative}
+.msg-row.self .bubble{background:#005c4b}
+.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+
+#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
+#sendBtn {width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer}
+
+#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.9);z-index:999}
+#loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:300px;border: 1px solid #333}
+#loginCard input {padding:12px; border-radius:8px; border:0; background:#162027; color:#fff}
+#loginCard button {padding:12px; border-radius:8px; border:0; background:var(--accent); color:#fff; font-weight:bold}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:40px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;display:none}
+
+@media(max-width:600px){ #panel{width:100%} }
+</style>
 </head>
 <body>
-    <h1>Empty Space</h1>
-    <p>Everything is working. Now, what goes here?</p>
+
+<div id="loader-wrapper">
+    <div class="loader-wheel"></div>
+    <div style="color:#ffeb3b">Connecting...</div>
+</div>
+
+<div id="app">
+    <div id="topBar">
+        <button id="liveBtn">🔴 LIVE</button>
+        <div style="flex:1"></div>
+        <div id="onlineCount">0 online</div>
+    </div>
+
+    <!-- VIDEO STREAMING SECTION -->
+    <div id="liveSection">
+        <button id="closeLiveBtn">✕</button>
+        <div class="live-overlay">
+            <div class="live-badge">LIVE</div>
+            <div class="viewer-count">👁️ <span id="viewCount">0</span></div>
+            <div id="broadcasterName" style="font-size:12px; font-weight:bold"></div>
+        </div>
+        <video id="remoteVideoLive" autoplay playsinline></video>
+        <video id="localVideoPreview" autoplay playsinline muted style="display:none"></video>
+    </div>
+
+    <div id="messages"></div>
+    
+    <div id="inputBar">
+        <input id="messageInput" placeholder="Type a message..." autocomplete="off"/>
+        <button id="sendBtn">➤</button>
+    </div>
+</div>
+
+<div id="loginWrap">
+    <div id="loginCard">
+        <h3 style="margin:0; text-align:center">Tamil Group Chat</h3>
+        <input id="nameInput" placeholder="Your Name" maxlength="15"/>
+        <button id="joinBtn">Join Now</button>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
+
+<script>
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let username = localStorage.getItem('guestName') || '';
+let localStream = null;
+let peerConnection = null;
+let currentLiveBroadcaster = null;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+const msgEl = document.getElementById('messages'), 
+      inputEl = document.getElementById('messageInput'),
+      liveBtn = document.getElementById('liveBtn'),
+      liveSection = document.getElementById('liveSection'),
+      remoteVideo = document.getElementById('remoteVideoLive'),
+      localVideo = document.getElementById('localVideoPreview'),
+      viewCountEl = document.getElementById('viewCount');
+
+// --- AUTH & INITIALIZE ---
+window.onload = () => {
+    document.getElementById('loader-wrapper').style.display = 'none';
+    if(!username) document.getElementById('loginWrap').style.display = 'flex';
+    else startApp();
+};
+
+document.getElementById('joinBtn').onclick = () => {
+    const val = document.getElementById('nameInput').value.trim();
+    if(val) { username = val; localStorage.setItem('guestName', val); startApp(); }
+};
+
+function startApp() {
+    document.getElementById('loginWrap').style.display = 'none';
+    db.ref(`status/${username}`).set(true);
+    db.ref(`status/${username}`).onDisconnect().remove();
+    
+    listenMessages();
+    listenPresence();
+    listenLiveStreams();
+}
+
+// --- MESSAGING ---
+function listenMessages() {
+    db.ref('messages').limitToLast(30).on('child_added', snap => {
+        const data = snap.val();
+        const row = document.createElement('div');
+        row.className = `msg-row ${data.name === username ? 'self' : ''}`;
+        row.innerHTML = `<div class="avatar">${data.name[0]}</div><div class="bubble">${data.text}</div>`;
+        msgEl.appendChild(row);
+        msgEl.scrollTop = msgEl.scrollHeight;
+    });
+}
+
+document.getElementById('sendBtn').onclick = () => {
+    const text = inputEl.value.trim();
+    if(text) {
+        db.ref('messages').push({ name: username, text: text, time: Date.now() });
+        inputEl.value = '';
+    }
+};
+
+// --- PRESENCE ---
+function listenPresence() {
+    db.ref('status').on('value', s => {
+        const count = s.numChildren();
+        document.getElementById('onlineCount').textContent = `${count} online`;
+    });
+}
+
+// --- LIVE STREAMING LOGIC ---
+liveBtn.onclick = () => {
+    if(currentLiveBroadcaster === username) {
+        stopBroadcasting();
+    } else {
+        startBroadcasting();
+    }
+};
+
+async function startBroadcasting() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        localVideo.style.display = 'block';
+        remoteVideo.style.display = 'none';
+        liveSection.style.display = 'block';
+        
+        currentLiveBroadcaster = username;
+        liveBtn.textContent = "⏹ STOP";
+        document.getElementById('broadcasterName').textContent = "Broadcasting: You";
+
+        // Register stream in Firebase
+        db.ref('liveStream').set({ broadcaster: username, startedAt: Date.now() });
+        db.ref('liveStream').onDisconnect().remove();
+
+        // Listen for viewing offers
+        db.ref('streamOffers').on('child_added', async snap => {
+            const offerData = snap.val();
+            if(offerData.to === username) {
+                const pc = createPeerConnection(offerData.from);
+                await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                db.ref(`streamAnswers/${offerData.from}`).set({ answer, from: username });
+            }
+        });
+    } catch (e) {
+        alert("Camera permission required for Live.");
+    }
+}
+
+async function startWatching(broadcaster) {
+    if(broadcaster === username) return;
+    currentLiveBroadcaster = broadcaster;
+    liveSection.style.display = 'block';
+    localVideo.style.display = 'none';
+    remoteVideo.style.display = 'block';
+    document.getElementById('broadcasterName').textContent = `Watching: ${broadcaster}`;
+
+    // Join viewer count
+    const viewerRef = db.ref(`liveViewers/${broadcaster}/${username}`);
+    viewerRef.set(true);
+    viewerRef.onDisconnect().remove();
+
+    // Setup WebRTC connection
+    peerConnection = createPeerConnection(broadcaster);
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    
+    db.ref(`streamOffers/${username}`).set({ offer, from: username, to: broadcaster });
+    
+    db.ref(`streamAnswers/${username}`).on('value', async s => {
+        const data = s.val();
+        if(data && peerConnection.signalingState !== "stable") {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    });
+}
+
+function createPeerConnection(target) {
+    const pc = new RTCPeerConnection(rtcConfig);
+    if(localStream) {
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    }
+    pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };
+    pc.onicecandidate = e => {
+        if(e.candidate) db.ref(`ice/${target}/${username}`).push(e.candidate.toJSON());
+    };
+    db.ref(`ice/${username}/${target}`).on('child_added', s => {
+        pc.addIceCandidate(new RTCIceCandidate(s.val()));
+    });
+    return pc;
+}
+
+function listenLiveStreams() {
+    db.ref('liveStream').on('value', snap => {
+        const stream = snap.val();
+        if(stream) {
+            liveBtn.style.display = 'flex';
+            if(stream.broadcaster !== username) {
+                liveBtn.textContent = "📺 WATCH LIVE";
+                liveBtn.onclick = () => startWatching(stream.broadcaster);
+            }
+            // Sync viewer count
+            db.ref(`liveViewers/${stream.broadcaster}`).on('value', s => {
+                viewCountEl.textContent = s.numChildren();
+            });
+        } else {
+            if(currentLiveBroadcaster !== username) {
+                liveSection.style.display = 'none';
+                liveBtn.textContent = "🔴 LIVE";
+                liveBtn.onclick = startBroadcasting;
+            }
+        }
+    });
+}
+
+function stopBroadcasting() {
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    db.ref('liveStream').remove();
+    db.ref('streamOffers').remove();
+    db.ref('streamAnswers').remove();
+    liveSection.style.display = 'none';
+    liveBtn.textContent = "🔴 LIVE";
+    currentLiveBroadcaster = null;
+}
+
+document.getElementById('closeLiveBtn').onclick = () => {
+    if(currentLiveBroadcaster === username) stopBroadcasting();
+    else {
+        liveSection.style.display = 'none';
+        if(peerConnection) peerConnection.close();
+        db.ref(`liveViewers/${currentLiveBroadcaster}/${username}`).remove();
+    }
+};
+</script>
 </body>
 </html>
