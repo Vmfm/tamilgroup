@@ -37,7 +37,6 @@
         .card { background: var(--card); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
         h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }
         
-        /* Search Bar Styling */
         .search-box {
             width: 100%;
             padding: 10px;
@@ -113,7 +112,6 @@
                 <small id="auto-status" style="font-size: 10px; color: var(--muted);"></small>
             </h2>
             
-            <!-- Search Option -->
             <input type="text" id="userSearch" class="search-box" placeholder="Search by username..." onkeyup="filterUsers()">
 
             <div class="table-wrapper">
@@ -155,7 +153,7 @@
         defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     };
 
-    let allUsersData = {}; // Store users for searching
+    let allUsersData = {}; 
 
     window.onload = () => {
         if(localStorage.getItem(CONFIG.storageKey) === "true") showPanel();
@@ -245,7 +243,7 @@
                     <div class="btn-group">
                         <button class="btn btn-danger" onclick="manualRemove('${u}')">Remove</button>
                         <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="deviceBan('${u}', '${data.deviceId || ''}', ${data.banned || false})">
-                            ${data.banned ? 'Unban & Device' : 'Ban User & Device'}
+                            ${data.banned ? 'Unban' : 'Ban & Clean Chat'}
                         </button>
                     </div>
                 </td>
@@ -254,45 +252,52 @@
         });
     }
 
-    // Search function
     function filterUsers() {
         const query = document.getElementById('userSearch').value.toLowerCase();
         const filtered = {};
         Object.keys(allUsersData).forEach(u => {
-            if(u.toLowerCase().includes(query)) {
-                filtered[u] = allUsersData[u];
-            }
+            if(u.toLowerCase().includes(query)) filtered[u] = allUsersData[u];
         });
         renderUserTable(filtered);
     }
 
-    // Permanent Device Ban Logic
+    // Deletes all messages sent by a specific user from the global chat[cite: 1]
+    function cleanUserMessages(username) {
+        const db = firebase.database();
+        db.ref('messages').once('value', snap => {
+            const msgs = snap.val() || {};
+            Object.keys(msgs).forEach(id => {
+                if(msgs[id].name === username) {
+                    db.ref(`messages/${id}`).remove();
+                }
+            });
+        });
+    }
+
     function deviceBan(username, deviceId, isCurrentlyBanned) {
         const db = firebase.database();
-        const action = isCurrentlyBanned ? "Unban" : "Permanently Ban";
+        const action = isCurrentlyBanned ? "Unban" : "Permanently Ban and Delete Messages for";
         
-        if(confirm(`${action} ${username} and their device?`)) {
-            // 1. Toggle user ban status
+        if(confirm(`${action} ${username}?`)) {
             db.ref(`profiles/${username}`).update({ banned: !isCurrentlyBanned });
 
-            // 2. Manage Device ID Blacklist
-            if(!isCurrentlyBanned && deviceId) {
-                // Add device to banned list
-                db.ref(`banned_devices/${deviceId}`).set(true);
-                // Optional: Kill their current session
+            if(!isCurrentlyBanned) {
+                // Perform permanent ban actions[cite: 1]
+                if(deviceId) db.ref(`banned_devices/${deviceId}`).set(true);
+                cleanUserMessages(username);
                 db.ref(`status/${username}`).update({ online: false });
-            } else if (isCurrentlyBanned && deviceId) {
-                // Remove device from banned list
+            } else if (deviceId) {
                 db.ref(`banned_devices/${deviceId}`).remove();
             }
         }
     }
 
     function manualRemove(username) {
-        if(confirm(`Permanently delete ${username} data?`)) {
+        if(confirm(`Permanently delete ${username} and all their messages?`)) {
             const db = firebase.database();
             db.ref(`profiles/${username}`).remove();
             db.ref(`status/${username}`).remove();
+            cleanUserMessages(username);
         }
     }
 
