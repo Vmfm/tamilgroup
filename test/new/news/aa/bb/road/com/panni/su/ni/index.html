@@ -1,340 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp Full Chat + Live</title>
-<style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0;--live:#ff3b30}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
-
-/* --- LOADER --- */
-#loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
-.loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* --- LIVE STREAM UI --- */
-#liveOverlay { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
-#liveVideo { width: 100%; height: 100%; object-fit: cover; background: #202c33; }
-.live-header { position: absolute; top: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
-.live-badge { background: var(--live); color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; animation: blink 1s infinite; }
-@keyframes blink { 50% { opacity: 0.5; } }
-.viewer-count { background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 5px; }
-.live-comments { position: absolute; bottom: 80px; left: 10px; right: 10px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; pointer-events: none; mask-image: linear-gradient(to top, black 80%, transparent); }
-.live-msg { background: rgba(0,0,0,0.4); padding: 5px 10px; border-radius: 15px; font-size: 13px; width: fit-content; max-width: 80%; }
-.live-msg b { color: var(--accent); margin-right: 5px; }
-.live-input-bar { position: absolute; bottom: 20px; left: 10px; right: 10px; display: flex; gap: 10px; }
-#liveInput { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 25px; padding: 12px 20px; color: #fff; outline: none; backdrop-filter: blur(10px); }
-.exit-live { background: rgba(255,255,255,0.2); border: 0; color: #fff; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
-
-/* --- PROFILE CIRCLES --- */
-#liveUsersStrip { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #0b141a; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.live-user-circle { min-width: 65px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
-.circle-img { width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--live); padding: 2px; }
-.circle-img img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.circle-name { font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 60px; }
-
-/* --- RULES MODAL --- */
-#rulesModal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 6000; display: none; align-items: center; justify-content: center; padding: 20px; }
-.rules-card { background: #111b21; padding: 25px; border-radius: 15px; max-width: 400px; text-align: center; border: 1px solid var(--live); }
-.rules-card h2 { color: var(--live); margin-top: 0; }
-.rules-card p { font-size: 14px; color: var(--muted); line-height: 1.5; }
-.btn-agree { background: var(--live); color: #fff; border: 0; padding: 12px 30px; border-radius: 25px; font-weight: bold; cursor: pointer; margin-top: 20px; }
-
-/* Existing Styles Restored Below... */
-#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative}
-#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
-#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;margin-bottom:5px}
-.avatar{width:36px;height:36px;border-radius:50%;background:#2a3942;display:flex;align-items:center;justify-content:center;margin:0 8px;overflow:hidden}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;position:relative}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-#messageInput{flex:1;padding:12px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b141a;z-index:9999}
-.login-card{background:#111b21;padding:30px;border-radius:20px;width:320px;display:flex;flex-direction:column;gap:15px}
-input, select{padding:12px;background:#2a3942;border:0;border-radius:8px;color:#fff;outline:none}
-button.join-btn{padding:12px;background:var(--accent);border:0;border-radius:8px;color:#fff;font-weight:bold;cursor:pointer}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream Connect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 15px;
+        }
+        .stream-card {
+            position: relative;
+            aspect-ratio: 9/16;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .live-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #ff0050;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        #myVideo { border: 2px solid #00d1ff; }
+        .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; }
+    </style>
 </head>
 <body>
 
-<div id="loader-wrapper"><div class="loader-wheel"></div></div>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Live Discovery</h4>
+        <div id="loader" class="spinner-border spinner-border-sm text-primary" role="status"></div>
+    </div>
 
-<!-- LIVE STREAM UI -->
-<div id="liveOverlay">
-    <div class="live-header">
-        <div style="display:flex; align-items:center; gap:10px">
-            <span class="live-badge">LIVE</span>
-            <div class="viewer-count">👁️ <span id="viewCount">0</span></div>
+    <!-- Self Preview -->
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mx-auto">
+            <div class="stream-card glass-card">
+                <span class="live-badge">YOU</span>
+                <video id="myVideo" autoplay muted playsinline></video>
+            </div>
         </div>
-        <button class="exit-live" onclick="endLive()">✕</button>
     </div>
-    <video id="liveVideo" autoplay playsinline muted></video>
-    <div class="live-comments" id="liveComments"></div>
-    <div class="live-input-bar">
-        <input id="liveInput" placeholder="Say something..." autocomplete="off">
-        <button id="sendLiveMsg" style="background:var(--accent); border:0; border-radius:50%; width:44px; height:44px; color:#fff">➤</button>
+
+    <hr>
+
+    <!-- Live Users Grid -->
+    <div class="video-grid" id="streamsContainer">
+        <!-- Remote streams appear here -->
     </div>
 </div>
 
-<!-- RULES MODAL -->
-<div id="rulesModal">
-    <div class="rules-card">
-        <h2>Live Rules</h2>
-        <p>1. No 18+ or adult content.<br>2. Respect all viewers.<br>3. Offensive language will lead to a permanent ban.</p>
-        <p style="color:var(--live); font-weight:bold">Automatic AI Monitoring is Active.</p>
-        <button class="btn-agree" onclick="startLiveBroadcasting()">I Agree & Start</button>
-    </div>
+<div class="controls">
+    <button id="btnGoLive" class="btn btn-danger rounded-pill px-4 shadow">Go Live</button>
 </div>
 
-<div id="loginWrap">
-    <div class="login-card">
-        <h2 style="text-align:center; margin:0">TAMIL VM</h2>
-        <input id="nameInput" placeholder="Your Name">
-        <select id="ageSelect"><option value="18+">18+</option><option value="Under 18">Under 18</option></select>
-        <input type="file" id="loginPhoto" accept="image/*">
-        <button class="join-btn" onclick="handleLogin()">Join Chat</button>
-    </div>
-</div>
-
-<div id="app">
-    <div id="topBar">
-        <div style="font-weight:700; font-size:18px">Tamil Group</div>
-        <div style="flex:1"></div>
-        <button onclick="checkLiveRules()" style="background:var(--live); border:0; color:#fff; padding:6px 15px; border-radius:20px; font-weight:bold; cursor:pointer">+ Go Live</button>
-    </div>
-    
-    <!-- TOP LIVE USERS STRIP -->
-    <div id="liveUsersStrip"></div>
-
-    <div id="messages"></div>
-    <div id="inputBar">
-        <input id="messageInput" placeholder="Type a message...">
-        <button id="sendBtn" onclick="sendGroupMsg()">➤</button>
-    </div>
-</div>
-
+<!-- Firebase Config & Scripts -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let username = localStorage.getItem('guestName');
-let myPhoto = localStorage.getItem('profileImage') || '';
-let isBroadcasting = false;
-let currentStreamer = null;
-let localStream = null;
-
-// --- LOGIN LOGIC ---
-function handleLogin() {
-    const name = document.getElementById('nameInput').value.trim();
-    if(!name) return alert("Enter name");
-    const photoFile = document.getElementById('loginPhoto').files[0];
-    
-    if(photoFile) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            myPhoto = e.target.result;
-            finishLogin(name);
-        };
-        reader.readAsDataURL(photoFile);
-    } else {
-        finishLogin(name);
+    // Initialize Firebase (Assuming config.js provides firebaseConfig)
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
     }
-}
+    const db = firebase.database();
+    const myId = "user_" + Math.floor(Math.random() * 10000); // Replace with actual Auth ID if available
+    let localStream;
+    let isLive = false;
 
-function finishLogin(name) {
-    username = name;
-    localStorage.setItem('guestName', name);
-    localStorage.setItem('profileImage', myPhoto);
-    document.getElementById('loginWrap').style.display = 'none';
-    initApp();
-}
+    const myVideo = document.getElementById('myVideo');
+    const streamsContainer = document.getElementById('streamsContainer');
+    const btnGoLive = document.getElementById('btnGoLive');
+    const loader = document.getElementById('loader');
 
-if(username) {
-    document.getElementById('loginWrap').style.display = 'none';
-    initApp();
-}
-
-function initApp() {
-    document.getElementById('loader-wrapper').style.display = 'none';
-    
-    // Listen for Group Messages
-    db.ref('messages').limitToLast(20).on('child_added', snap => {
-        renderMsg(snap.val());
-    });
-
-    // Listen for Active Live Streams
-    db.ref('live_streams').on('value', snap => {
-        renderLiveStrip(snap.val());
-    });
-
-    // Presence
-    db.ref(`status/${username}`).set({online: true, photo: myPhoto});
-    db.ref(`status/${username}`).onDisconnect().remove();
-}
-
-// --- LIVE STREAMING LOGIC ---
-function checkLiveRules() {
-    document.getElementById('rulesModal').style.display = 'flex';
-}
-
-async function startLiveBroadcasting() {
-    document.getElementById('rulesModal').style.display = 'none';
-    document.getElementById('liveOverlay').style.display = 'flex';
-    isBroadcasting = true;
-    currentStreamer = username;
-
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-        document.getElementById('liveVideo').srcObject = localStream;
-        document.getElementById('liveVideo').muted = true;
-
-        // Register Stream in Firebase
-        db.ref(`live_streams/${username}`).set({
-            streamer: username,
-            photo: myPhoto,
-            viewers: 0,
-            startedAt: Date.now()
-        });
-        db.ref(`live_streams/${username}`).onDisconnect().remove();
-
-        // Start 18+ Content Simulation Check (Example logic)
-        startModerationCheck();
-        listenToLiveComments(username);
-        listenToViewerCount(username);
-
-    } catch(e) {
-        alert("Camera permission denied");
-        endLive();
-    }
-}
-
-function joinLive(streamerName) {
-    document.getElementById('liveOverlay').style.display = 'flex';
-    currentStreamer = streamerName;
-    isBroadcasting = false;
-    
-    // In a real app, WebRTC Peer connection would happen here
-    // For this demo, we simulate viewing
-    document.getElementById('liveVideo').srcObject = null; 
-    document.getElementById('liveVideo').poster = "https://www.w3schools.com/html/img_chania.jpg"; // Placeholder
-    
-    db.ref(`live_streams/${streamerName}/viewers`).transaction(v => (v || 0) + 1);
-    listenToLiveComments(streamerName);
-    listenToViewerCount(streamerName);
-}
-
-function endLive() {
-    if(isBroadcasting) {
-        db.ref(`live_streams/${username}`).remove();
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-    } else if(currentStreamer) {
-        db.ref(`live_streams/${currentStreamer}/viewers`).transaction(v => (v > 0 ? v - 1 : 0));
-    }
-    
-    document.getElementById('liveOverlay').style.display = 'none';
-    document.getElementById('liveComments').innerHTML = '';
-    currentStreamer = null;
-}
-
-// --- COMMENTS (LOCAL ONLY - NO FIREBASE STORAGE) ---
-// We use 'child_added' on a temporary "live_chat" node that we clear often
-function listenToLiveComments(streamer) {
-    const chatRef = db.ref(`live_chat/${streamer}`);
-    chatRef.off();
-    chatRef.limitToLast(10).on('child_added', snap => {
-        const data = snap.val();
-        const div = document.createElement('div');
-        div.className = 'live-msg';
-        div.innerHTML = `<b>${data.user}:</b> ${data.text}`;
-        const container = document.getElementById('liveComments');
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-        
-        // Auto-delete from Firebase after 5 seconds to save space (MB)
-        setTimeout(() => db.ref(`live_chat/${streamer}/${snap.key}`).remove(), 5000);
-    });
-}
-
-document.getElementById('sendLiveMsg').onclick = () => {
-    const text = document.getElementById('liveInput').value.trim();
-    if(!text || !currentStreamer) return;
-    db.ref(`live_chat/${currentStreamer}`).push({
-        user: username,
-        text: text,
-        time: Date.now()
-    });
-    document.getElementById('liveInput').value = '';
-};
-
-// --- UTILS ---
-function listenToViewerCount(streamer) {
-    db.ref(`live_streams/${streamer}/viewers`).on('value', snap => {
-        document.getElementById('viewCount').textContent = snap.val() || 0;
-    });
-}
-
-function renderLiveStrip(streams) {
-    const strip = document.getElementById('liveUsersStrip');
-    strip.innerHTML = '';
-    if(!streams) return;
-    
-    Object.values(streams).forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'live-user-circle';
-        div.onclick = () => joinLive(s.streamer);
-        div.innerHTML = `
-            <div class="circle-img">
-                <img src="${s.photo || 'https://via.placeholder.com/50'}">
-            </div>
-            <div class="circle-name">${s.streamer}</div>
-        `;
-        strip.appendChild(div);
-    });
-}
-
-function startModerationCheck() {
-    // This is a simulated AI check. 
-    // In a production app, you would send frames to a Cloud Vision API.
-    setInterval(() => {
-        if(!isBroadcasting) return;
-        // Mock detection logic
-        const mockViolation = false; 
-        if(mockViolation) {
-            alert("18+ Content Detected. You are banned.");
-            db.ref(`banned/${username}`).set(true);
-            endLive();
-            location.reload();
+    // 1. Get Camera Permissions
+    async function initCamera() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            myVideo.srcObject = localStream;
+            loader.style.display = 'none';
+        } catch (e) {
+            console.error("Camera access denied", e);
+            alert("Please enable camera to stream.");
         }
-    }, 10000);
-}
+    }
 
-function sendGroupMsg() {
-    const text = document.getElementById('messageInput').value.trim();
-    if(!text) return;
-    db.ref('messages').push({name: username, text, photo: myPhoto, time: Date.now()});
-    document.getElementById('messageInput').value = '';
-}
+    // 2. Toggle Live Status in Firebase
+    btnGoLive.onclick = () => {
+        isLive = !isLive;
+        if (isLive) {
+            btnGoLive.innerText = "Stop Streaming";
+            btnGoLive.classList.replace('btn-danger', 'btn-secondary');
+            
+            // Set user as active in Firebase
+            db.ref(`live_streams/${myId}`).set({
+                id: myId,
+                status: "active",
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
 
-function renderMsg(data) {
-    const div = document.createElement('div');
-    div.className = 'msg-row';
-    div.innerHTML = `
-        <div class="avatar"><img src="${data.photo || ''}" style="width:100%"></div>
-        <div class="bubble">
-            <div style="font-size:11px; color:var(--accent); font-weight:bold">${data.name}</div>
-            ${data.text}
-        </div>
-    `;
-    document.getElementById('messages').appendChild(div);
-    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-}
+            // Auto-remove if user disconnects
+            db.ref(`live_streams/${myId}`).onDisconnect().remove();
+        } else {
+            stopStreaming();
+        }
+    };
+
+    function stopStreaming() {
+        isLive = false;
+        btnGoLive.innerText = "Go Live";
+        btnGoLive.classList.replace('btn-secondary', 'btn-danger');
+        db.ref(`live_streams/${myId}`).remove();
+    }
+
+    // 3. Listen for other Live Users
+    db.ref('live_streams').on('value', snapshot => {
+        streamsContainer.innerHTML = '';
+        snapshot.forEach(child => {
+            const userData = child.val();
+            if (userData.id !== myId) {
+                renderRemoteUser(userData.id);
+            }
+        });
+    });
+
+    function renderRemoteUser(userId) {
+        const card = document.createElement('div');
+        card.className = 'stream-card glass-card';
+        card.innerHTML = `
+            <span class="live-badge">LIVE</span>
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <p class="small text-center">User ${userId}<br><button class="btn btn-sm btn-primary mt-2">Watch</button></p>
+            </div>
+        `;
+        streamsContainer.appendChild(card);
+    }
+
+    // Cleanup on 20 days inactivity (Logic handled by your existing backend script)
+    
+    initCamera();
 </script>
+
 </body>
 </html>
