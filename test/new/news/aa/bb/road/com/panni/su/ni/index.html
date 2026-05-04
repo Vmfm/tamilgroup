@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-    <title>Chat Admin Panel - Pro</title>
+    <title>TAMIL VM Admin - Advanced Control</title>
     <style>
         :root {
             --bg: #0b141a;
@@ -35,8 +35,21 @@
         .container { padding: 10px; max-width: 1200px; margin: 0 auto; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
         .card { background: var(--card); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--accent); display: flex; justify-content: space-between; }
+        h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }
         
+        /* Search Bar Styling */
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid #2a3942;
+            background: #111b21;
+            color: white;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { text-align: left; color: var(--muted); padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -52,7 +65,6 @@
         .online { background: var(--accent); }
         .offline { background: #555; }
 
-        /* Fixed Profile Image Styling */
         .user-cell { display: flex; align-items: center; gap: 10px; }
         .user-avatar { 
             width: 35px; 
@@ -68,7 +80,7 @@
             display: flex; align-items: center; justify-content: center;
         }
         .login-box { background: var(--card); padding: 30px; border-radius: 16px; text-align: center; width: 85%; max-width: 300px; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #2a3942; background: #111b21; color: white; box-sizing: border-box; }
+        input.login-input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #2a3942; background: #111b21; color: white; box-sizing: border-box; }
         
         .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
 
@@ -83,7 +95,7 @@
 <div id="auth-overlay">
     <div class="login-box">
         <h3>Admin Secure Login</h3>
-        <input type="password" id="adminPass" placeholder="Password">
+        <input type="password" id="adminPass" class="login-input" placeholder="Password">
         <button class="btn btn-safe" style="width:100%; padding: 12px;" onclick="attemptLogin()">Access Console</button>
     </div>
 </div>
@@ -96,7 +108,14 @@
 <div class="container">
     <div class="grid">
         <div class="card" style="grid-column: span 2;">
-            <h2>User Management <small id="auto-status" style="font-size: 10px; color: var(--muted);"></small></h2>
+            <h2>
+                User Management 
+                <small id="auto-status" style="font-size: 10px; color: var(--muted);"></small>
+            </h2>
+            
+            <!-- Search Option -->
+            <input type="text" id="userSearch" class="search-box" placeholder="Search by username..." onkeyup="filterUsers()">
+
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -136,6 +155,8 @@
         defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     };
 
+    let allUsersData = {}; // Store users for searching
+
     window.onload = () => {
         if(localStorage.getItem(CONFIG.storageKey) === "true") showPanel();
     };
@@ -169,7 +190,6 @@
         loadMessages(db);
     }
 
-    // Displays Date and Time for Last Seen in English (US)[cite: 1]
     function formatLastSeen(ts) {
         if(!ts) return "Never";
         const d = new Date(ts);
@@ -179,85 +199,101 @@
     function autoCleanup(db) {
         const now = Date.now();
         const limit = CONFIG.cleanupDays * 24 * 60 * 60 * 1000;
-        let count = 0;
-
         db.ref('profiles').once('value', snap => {
             const users = snap.val() || {};
+            let count = 0;
             Object.keys(users).forEach(u => {
-                const lastSeen = users[u].lastSeen || 0;
-                if(now - lastSeen > limit) {
+                if(now - (users[u].lastSeen || 0) > limit) {
                     db.ref(`profiles/${u}`).remove();
                     db.ref(`status/${u}`).remove();
                     count++;
                 }
             });
-            document.getElementById('auto-status').innerText = `(Auto-cleaned: ${count} users)`;
+            document.getElementById('auto-status').innerText = `(Auto-cleaned: ${count})`;
         });
     }
 
     function loadUsers(db) {
         db.ref('profiles').on('value', snap => {
-            const list = document.getElementById('userList');
-            list.innerHTML = '';
-            const users = snap.val() || {};
-            
-            Object.keys(users).forEach(u => {
-                const data = users[u];
-                const tr = document.createElement('tr');
-                
-                // Show profile photo or default if missing[cite: 1]
-                const photoUrl = data.pic || CONFIG.defaultAvatar;
-
-                tr.innerHTML = `
-                    <td>
-                        <div class="user-cell">
-                            <img src="${photoUrl}" class="user-avatar" onerror="this.src='${CONFIG.defaultAvatar}'">
-                            <b>${u}</b>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-dot ${data.online ? 'online' : 'offline'}"></span>
-                        <span style="font-size:11px">${data.online ? 'Online' : 'Offline'}</span>
-                    </td>
-                    <td>
-                        <div style="font-size: 11px; line-height: 1.2;">
-                            ${formatLastSeen(data.lastSeen)}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-info" onclick="removePhoto('${u}')">Del Pic</button>
-                            <button class="btn btn-danger" onclick="manualRemove('${u}')">Remove</button>
-                            <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="toggleBan('${u}', ${data.banned})">
-                                ${data.banned ? 'Unban' : 'Ban'}
-                            </button>
-                        </div>
-                    </td>
-                `;
-                list.appendChild(tr);
-            });
+            allUsersData = snap.val() || {};
+            renderUserTable(allUsersData);
         });
     }
 
-    // Logic to remove photo by updating Firebase[cite: 1]
-    function removePhoto(username) {
-        if(confirm(`Remove profile photo for ${username}?`)) {
-            firebase.database().ref(`profiles/${username}`).update({
-                pic: "" // Emptying the URL forces the default avatar
-            });
+    function renderUserTable(users) {
+        const list = document.getElementById('userList');
+        list.innerHTML = '';
+        
+        Object.keys(users).forEach(u => {
+            const data = users[u];
+            const tr = document.createElement('tr');
+            const photoUrl = data.pic || CONFIG.defaultAvatar;
+
+            tr.innerHTML = `
+                <td>
+                    <div class="user-cell">
+                        <img src="${photoUrl}" class="user-avatar" onerror="this.src='${CONFIG.defaultAvatar}'">
+                        <b>${u}</b>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-dot ${data.online ? 'online' : 'offline'}"></span>
+                    <span style="font-size:11px">${data.online ? 'Online' : 'Offline'}</span>
+                </td>
+                <td><div style="font-size: 11px;">${formatLastSeen(data.lastSeen)}</div></td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-danger" onclick="manualRemove('${u}')">Remove</button>
+                        <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="deviceBan('${u}', '${data.deviceId || ''}', ${data.banned || false})">
+                            ${data.banned ? 'Unban & Device' : 'Ban User & Device'}
+                        </button>
+                    </div>
+                </td>
+            `;
+            list.appendChild(tr);
+        });
+    }
+
+    // Search function
+    function filterUsers() {
+        const query = document.getElementById('userSearch').value.toLowerCase();
+        const filtered = {};
+        Object.keys(allUsersData).forEach(u => {
+            if(u.toLowerCase().includes(query)) {
+                filtered[u] = allUsersData[u];
+            }
+        });
+        renderUserTable(filtered);
+    }
+
+    // Permanent Device Ban Logic
+    function deviceBan(username, deviceId, isCurrentlyBanned) {
+        const db = firebase.database();
+        const action = isCurrentlyBanned ? "Unban" : "Permanently Ban";
+        
+        if(confirm(`${action} ${username} and their device?`)) {
+            // 1. Toggle user ban status
+            db.ref(`profiles/${username}`).update({ banned: !isCurrentlyBanned });
+
+            // 2. Manage Device ID Blacklist
+            if(!isCurrentlyBanned && deviceId) {
+                // Add device to banned list
+                db.ref(`banned_devices/${deviceId}`).set(true);
+                // Optional: Kill their current session
+                db.ref(`status/${username}`).update({ online: false });
+            } else if (isCurrentlyBanned && deviceId) {
+                // Remove device from banned list
+                db.ref(`banned_devices/${deviceId}`).remove();
+            }
         }
     }
 
     function manualRemove(username) {
-        if(confirm(`Permanently delete ${username}?`)) {
+        if(confirm(`Permanently delete ${username} data?`)) {
             const db = firebase.database();
             db.ref(`profiles/${username}`).remove();
             db.ref(`status/${username}`).remove();
         }
-    }
-
-    function toggleBan(u, status) {
-        firebase.database().ref(`profiles/${u}`).update({ banned: !status });
     }
 
     function loadReports(db) {
