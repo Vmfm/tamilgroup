@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#0b141a;--panel:#202c33;--accent:#25d366;--live:#ff3b30;--glass:rgba(255, 255, 255, 0.05)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* --- TOP BAR --- */
 #topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass);z-index:100}
@@ -41,7 +41,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .btn-close{background:rgba(255,255,255,0.2)}
 .btn-stop{background:var(--live)}
 
-/* --- NAV --- */
+/* --- NAVIGATION --- */
 #navBar{display:flex;background:#0b141a;border-top:1px solid var(--glass);padding:10px 0}
 .nav-item{flex:1;text-align:center;font-size:11px;color:#8696a0;cursor:pointer}
 .nav-item.active{color:var(--accent)}
@@ -82,6 +82,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="toast"></div>
 
+<!-- Firebase and Config -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
@@ -139,7 +140,7 @@ goLiveBtn.onclick = async () => {
 
         showToast("You are now LIVE!");
     } catch (err) {
-        showToast("Camera access denied.");
+        showToast("Error: Enable camera access");
     }
 };
 
@@ -182,13 +183,13 @@ async function joinStream(hostId, hostName) {
     });
 }
 
-// --- UI HELPERS ---
+// --- APP LOGIC ---
 function listenForLiveUsers() {
     db.ref('liveStreams').on('value', snap => {
         streamGrid.innerHTML = '';
         const data = snap.val();
         if (!data) {
-            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;">No streams found.</div>';
+            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;">No active streams.</div>';
             return;
         }
         Object.keys(data).forEach(uid => {
