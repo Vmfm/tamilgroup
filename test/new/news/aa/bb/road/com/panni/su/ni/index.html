@@ -1,11 +1,135 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Just Nothing</title>
-</head>
-<body>
-    <h1>Empty Space</h1>
-    <p>Everything is working. Now, what goes here?</p>
-</body>
-</html>
+<!-- Replace your current <script> section with this improved version -->
+<script>
+// Use a more reliable Unique ID to prevent multiple devices with same name from overwriting each other
+const userId = localStorage.getItem('userId') || 'user_' + Math.floor(Math.random()*1000000);
+localStorage.setItem('userId', userId);
+
+const username = localStorage.getItem('guestName') || 'Guest_' + userId.substring(0,4);
+const profileImg = localStorage.getItem('profileImage') || '';
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const streamGrid = document.getElementById('streamGrid');
+const goLiveBtn = document.getElementById('goLiveBtn');
+const streamOverlay = document.getElementById('streamOverlay');
+const mainVideo = document.getElementById('mainVideo');
+const stopStreaming = document.getElementById('stopStreaming');
+const closeOverlay = document.getElementById('closeOverlay');
+const streamerNameDisp = document.getElementById('streamerName');
+
+let localStream = null;
+
+// --- BROADCAST LOGIC ---
+goLiveBtn.onclick = async () => {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        mainVideo.srcObject = localStream;
+        mainVideo.muted = true; 
+        streamOverlay.style.display = 'flex';
+        stopStreaming.style.display = 'flex';
+        streamerNameDisp.textContent = "You are Live";
+
+        // Register in Firebase using the Unique userId
+        const streamRef = db.ref(`liveStreams/${userId}`);
+        streamRef.set({
+            uid: userId,
+            username: username,
+            image: profileImg,
+            startTime: Date.now(),
+            active: true
+        });
+
+        // CRITICAL: Ensure data is wiped when user leaves
+        streamRef.onDisconnect().remove();
+        showToast("Started Broadcasting...");
+    } catch (err) {
+        console.error(err);
+        showToast("Error: Please enable camera access");
+    }
+};
+
+// --- STOP/CLOSE LOGIC ---
+function endStream() {
+    if(localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    db.ref(`liveStreams/${userId}`).remove();
+    streamOverlay.style.display = 'none';
+}
+
+stopStreaming.onclick = () => {
+    endStream();
+    showToast("Stream Ended");
+};
+
+closeOverlay.onclick = () => {
+    endStream();
+};
+
+// --- REAL-TIME GRID UPDATE ---
+function listenForLiveUsers() {
+    // This listens for any changes in the 'liveStreams' node across all devices
+    db.ref('liveStreams').on('value', snap => {
+        streamGrid.innerHTML = '';
+        const data = snap.val();
+        
+        if (!data) {
+            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No active streams found.</div>';
+            return;
+        }
+
+        Object.keys(data).forEach(id => {
+            const stream = data[id];
+            const card = document.createElement('div');
+            card.className = 'live-card';
+            
+            const imgHtml = stream.image 
+                ? `<img src="${stream.image}">` 
+                : `<div class="no-img">${stream.username.charAt(0).toUpperCase()}</div>`;
+
+            card.innerHTML = `
+                <div class="live-tag">LIVE</div>
+                ${imgHtml}
+                <div class="card-info">${stream.username}</div>
+            `;
+
+            // Prevent clicking your own card
+            card.onclick = () => {
+                if(id === userId) {
+                    showToast("This is your stream");
+                } else {
+                    joinStream(id, stream.username);
+                }
+            };
+            streamGrid.appendChild(card);
+        });
+    });
+}
+
+function joinStream(id, name) {
+    showToast(`Joining ${name}'s stream...`);
+    streamOverlay.style.display = 'flex';
+    stopStreaming.style.display = 'none';
+    streamerNameDisp.textContent = `Watching ${name}`;
+    
+    mainVideo.srcObject = null; 
+    mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; 
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2000);
+}
+
+// Start listener
+listenForLiveUsers();
+
+// Safety removal
+window.onbeforeunload = () => {
+    db.ref(`liveStreams/${userId}`).remove();
+};
+</script>
