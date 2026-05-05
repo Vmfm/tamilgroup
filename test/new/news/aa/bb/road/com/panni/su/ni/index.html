@@ -21,26 +21,31 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
 
-/* --- LIVE GRID (3 COLUMNS) --- */
+/* --- LIVE GRID --- */
 #streamSection{flex:1;padding:10px;overflow-y:auto}
 .grid-title{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;text-transform:uppercase}
 #streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
 
-.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;border:1px solid var(--glass);transition:transform 0.2s}
+.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;border:1px solid var(--glass);transition:transform 0.2s;cursor:pointer}
 .live-card:active{transform:scale(0.95)}
 .live-card img{width:100%;height:100%;object-fit:cover}
 .live-card .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#2a3942;font-size:30px;color:var(--accent)}
 .live-tag{position:absolute;top:6px;left:6px;background:var(--live);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:bold}
 .card-info{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent, rgba(0,0,0,0.9));font-size:11px;font-weight:600}
 
-/* --- FULLSCREEN STREAM OVERLAY --- */
+/* --- OVERLAY --- */
 #streamOverlay{position:fixed;inset:0;background:#000;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center}
-#mainVideo{width:100%;height:100%;object-fit:cover}
+#mainVideo{width:100%;height:100%;object-fit:cover;background:#000}
 .stream-header{position:absolute;top:0;left:0;right:0;padding:20px;background:linear-gradient(rgba(0,0,0,0.8), transparent);display:flex;justify-content:space-between;z-index:1001}
 .stream-footer{position:absolute;bottom:30px;display:flex;gap:20px;z-index:1001}
 .round-btn{width:56px;height:56px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff}
 .btn-close{background:rgba(255,255,255,0.2)}
 .btn-stop{background:var(--live)}
+
+/* --- LOADER --- */
+#loader{position:absolute;display:none;flex-direction:column;align-items:center;gap:10px;z-index:1002}
+.spinner-border{width:3rem;height:3rem;border:0.25em solid var(--accent);border-right-color:transparent;border-radius:50%;animation:rotate 0.75s linear infinite}
+@keyframes rotate{to{transform:rotate(360deg)}}
 
 /* --- NAVIGATION --- */
 #navBar{display:flex;background:#0b141a;border-top:1px solid var(--glass);padding:10px 0}
@@ -61,9 +66,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
     <div id="streamSection">
         <div class="grid-title">Active Streamers</div>
-        <div id="streamGrid">
-            <!-- Live users will appear here -->
-        </div>
+        <div id="streamGrid"></div>
     </div>
 
     <div id="navBar">
@@ -74,11 +77,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </div>
 
 <div id="streamOverlay">
+    <div id="loader">
+        <div class="spinner-border"></div>
+        <div style="color:white; font-size: 14px;">Loading Stream...</div>
+    </div>
     <div class="stream-header">
         <div id="streamerName" style="font-weight:bold">Live Stream</div>
         <div style="background:rgba(255,59,48,0.8);padding:2px 10px;border-radius:4px;font-size:12px">LIVE</div>
     </div>
-    <video id="mainVideo" autoplay playsinline muted></video>
+    <video id="mainVideo" autoplay playsinline></video>
     <div class="stream-footer">
         <button class="round-btn btn-close" id="closeOverlay">✕</button>
         <button class="round-btn btn-stop" id="stopStreaming" style="display:none">⏹</button>
@@ -95,8 +102,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Persistent User Data
-const username = localStorage.getItem('guestName') || 'User' + Math.floor(Math.random()*9999);
+// Generate a truly unique ID for this session to prevent device overlap[cite: 1]
+const myId = 'ID_' + Math.random().toString(36).substr(2, 9);
+const username = localStorage.getItem('guestName') || 'User_' + myId.substr(0,4);
 const profileImg = localStorage.getItem('profileImage') || '';
 
 const streamGrid = document.getElementById('streamGrid');
@@ -106,21 +114,21 @@ const mainVideo = document.getElementById('mainVideo');
 const stopStreaming = document.getElementById('stopStreaming');
 const closeOverlay = document.getElementById('closeOverlay');
 const streamerNameDisp = document.getElementById('streamerName');
+const loader = document.getElementById('loader');
 
 let localStream = null;
 
-// --- BROADCAST LOGIC ---
+// --- GO LIVE ---
 goLiveBtn.onclick = async () => {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         mainVideo.srcObject = localStream;
-        mainVideo.muted = true; // Don't hear yourself
+        mainVideo.muted = true; 
         streamOverlay.style.display = 'flex';
         stopStreaming.style.display = 'flex';
         streamerNameDisp.textContent = "You are Live";
 
-        // Register in Firebase
-        const streamRef = db.ref(`liveStreams/${username}`);
+        const streamRef = db.ref(`liveStreams/${myId}`);
         streamRef.set({
             username: username,
             image: profileImg,
@@ -128,39 +136,53 @@ goLiveBtn.onclick = async () => {
             active: true
         });
 
-        // Auto-remove when user closes browser
-        streamRef.onDisconnect().remove();
-        showToast("Started Broadcasting...");
+        streamRef.onDisconnect().remove();[cite: 1]
+        showToast("You are now broadcasting!");
     } catch (err) {
-        showToast("Error: Please enable camera access");
+        showToast("Camera access denied.");
     }
 };
 
-stopStreaming.onclick = () => {
+// --- JOIN STREAM ---
+function joinStream(uid, name) {
+    if(uid === myId) return; 
+    
+    streamOverlay.style.display = 'flex';
+    stopStreaming.style.display = 'none';
+    loader.style.display = 'flex';
+    streamerNameDisp.textContent = `Watching ${name}`;
+    
+    // Simulate connection delay for UI smoothness
+    setTimeout(() => {
+        loader.style.display = 'none';
+        mainVideo.srcObject = null;
+        // Use your working GIF link as a placeholder for the live feed
+        mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; 
+    }, 1500);
+}
+
+// --- STOP/EXIT ---
+function closeStream() {
     if(localStream) {
         localStream.getTracks().forEach(track => track.stop());
-        db.ref(`liveStreams/${username}`).remove();
-        streamOverlay.style.display = 'none';
-        showToast("Stream Ended");
+        db.ref(`liveStreams/${myId}`).remove();
     }
-};
-
-closeOverlay.onclick = () => {
     streamOverlay.style.display = 'none';
-    if(localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        db.ref(`liveStreams/${username}`).remove();
-    }
-};
+    mainVideo.srcObject = null;
+    mainVideo.poster = "";
+}
 
-// --- REAL-TIME GRID UPDATE ---
-function listenForLiveUsers() {
+stopStreaming.onclick = closeStream;
+closeOverlay.onclick = closeStream;
+
+// --- REAL-TIME UPDATES ---
+function listenForStreams() {
     db.ref('liveStreams').on('value', snap => {
         streamGrid.innerHTML = '';
         const data = snap.val();
         
         if (!data) {
-            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No active streams found.</div>';
+            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No one is live. Be the first!</div>';
             return;
         }
 
@@ -179,23 +201,10 @@ function listenForLiveUsers() {
                 <div class="card-info">${stream.username}</div>
             `;
 
-            card.onclick = () => joinStream(uid, stream.username);
+            card.onclick = () => joinStream(uid, stream.username);[cite: 1]
             streamGrid.appendChild(card);
         });
     });
-}
-
-function joinStream(uid, name) {
-    if(uid === username) return; // Don't join your own
-    showToast(`Joining ${name}'s stream...`);
-    streamOverlay.style.display = 'flex';
-    stopStreaming.style.display = 'none';
-    streamerNameDisp.textContent = `Watching ${name}`;
-    
-    // In a full WebRTC setup, you would exchange offers here.
-    // For this UI demo, we simulate joining.
-    mainVideo.srcObject = null; 
-    mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; // Placeholder for stream connection
 }
 
 function showToast(msg) {
@@ -205,12 +214,11 @@ function showToast(msg) {
     setTimeout(() => t.style.display = 'none', 2000);
 }
 
-// Initializing[cite: 1]
-listenForLiveUsers();
+listenForStreams();[cite: 1]
 
-// Clean up on exit[cite: 1]
+// Final cleanup[cite: 1]
 window.onbeforeunload = () => {
-    if(username) db.ref(`liveStreams/${username}`).remove();
+    db.ref(`liveStreams/${myId}`).remove();
 };
 </script>
 </body>
