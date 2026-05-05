@@ -3,80 +3,85 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tamil Group - Live Stream</title>
+<title>Tamil Group Live</title>
 <style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0;--live:#ff3b30}
+:root{--bg:#0b141a;--panel:#202c33;--accent:#25d366;--live:#ff3b30;--glass:rgba(255, 255, 255, 0.05)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;overflow-x:hidden}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
 
-/* --- LOADER --- */
-#loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
-.loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* --- TOP BAR --- */
+#topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass);z-index:100}
+.logo{font-weight:700;font-size:18px;letter-spacing:1px}
+.logo span{color:var(--accent)}
+#goLiveBtn{background:var(--live);color:#fff;border:none;padding:8px 16px;border-radius:20px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;animation:pulse 2s infinite}
 
-/* --- APP LAYOUT --- */
-#app{max-width:1100px;margin:0 auto;height:100vh;display:flex;flex-direction:column;position:relative}
-#topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;z-index:5;border-bottom:1px solid rgba(255,255,255,0.05)}
-.top-btn{background:rgba(255,255,255,0.05);border:none;color:#fff;padding:8px 12px;border-radius:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px}
-.live-indicator{width:8px;height:8px;background:var(--live);border-radius:50%;display:inline-block;animation:blink 1s infinite}
-@keyframes blink{50%{opacity:0.3}}
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+}
 
-/* --- STREAM GRID --- */
-#streamSection{flex:1;padding:15px;overflow-y:auto;background:#071215}
-.section-title{font-size:18px;font-weight:bold;margin-bottom:15px;display:flex;align-items:center;gap:10px}
-#streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px}
-.stream-card{background:var(--panel);border-radius:12px;overflow:hidden;position:relative;aspect-ratio:3/4;cursor:pointer;border:1px solid rgba(255,255,255,0.05)}
-.stream-card img, .stream-card video{width:100%;height:100%;object-fit:cover}
-.stream-info{position:absolute;bottom:0;left:0;right:0;padding:10px;background:linear-gradient(transparent, rgba(0,0,0,0.8));font-size:12px}
-.stream-tag{position:absolute;top:8px;left:8px;background:var(--live);padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold}
+/* --- LIVE GRID (3 COLUMNS) --- */
+#streamSection{flex:1;padding:10px;overflow-y:auto}
+.grid-title{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;text-transform:uppercase}
+#streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
 
-/* --- STREAM OVERLAY --- */
-#streamOverlay{position:fixed;inset:0;background:#000;z-index:5000;display:none;flex-direction:column}
-#mainVideo{width:100%;height:100%;object-fit:contain}
-.stream-controls{position:absolute;bottom:30px;left:0;right:0;display:flex;justify-content:center;gap:20px;z-index:5001}
-.round-btn{width:60px;height:60px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.5)}
-.btn-stop{background:var(--live);color:#fff}
-.btn-close{background:rgba(255,255,255,0.2);color:#fff}
+.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;border:1px solid var(--glass);transition:transform 0.2s}
+.live-card:active{transform:scale(0.95)}
+.live-card img{width:100%;height:100%;object-fit:cover}
+.live-card .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#2a3942;font-size:30px;color:var(--accent)}
+.live-tag{position:absolute;top:6px;left:6px;background:var(--live);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:bold}
+.card-info{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent, rgba(0,0,0,0.9));font-size:11px;font-weight:600}
 
-/* --- MOBILE TABS --- */
-#navBar{display:flex;background:var(--panel);border-top:1px solid rgba(255,255,255,0.05);padding:10px 0}
-.nav-item{flex:1;text-align:center;font-size:11px;color:var(--muted);cursor:pointer}
+/* --- FULLSCREEN STREAM OVERLAY --- */
+#streamOverlay{position:fixed;inset:0;background:#000;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center}
+#mainVideo{width:100%;height:100%;object-fit:cover}
+.stream-header{position:absolute;top:0;left:0;right:0;padding:20px;background:linear-gradient(rgba(0,0,0,0.8), transparent);display:flex;justify-content:space-between;z-index:1001}
+.stream-footer{position:absolute;bottom:30px;display:flex;gap:20px;z-index:1001}
+.round-btn{width:56px;height:56px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff}
+.btn-close{background:rgba(255,255,255,0.2)}
+.btn-stop{background:var(--live)}
+
+/* --- NAVIGATION --- */
+#navBar{display:flex;background:#0b141a;border-top:1px solid var(--glass);padding:10px 0}
+.nav-item{flex:1;text-align:center;font-size:11px;color:#8696a0;cursor:pointer}
 .nav-item.active{color:var(--accent)}
-.nav-icon{font-size:20px;display:block;margin-bottom:4px}
+.nav-icon{font-size:22px;display:block;margin-bottom:4px}
 
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2a3942;padding:10px 20px;border-radius:20px;z-index:9999;display:none}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;display:none;z-index:10000}
 </style>
 </head>
 <body>
 
-<div id="loader-wrapper"><div class="loader-wheel"></div><div style="color:#ffeb3b">Connecting to Stream Hub...</div></div>
-
 <div id="app">
     <div id="topBar">
-        <div style="font-weight:700;font-size:18px">TAMIL <span style="color:var(--accent)">VM</span></div>
-        <button class="top-btn" id="goLiveBtn"><span class="live-indicator"></span> Go Live</button>
+        <div class="logo">TAMIL <span>LIVE</span></div>
+        <button id="goLiveBtn">● GO LIVE</button>
     </div>
 
     <div id="streamSection">
-        <div class="section-title">🔥 Live Users</div>
+        <div class="grid-title">Active Streamers</div>
         <div id="streamGrid">
-            <!-- Dynamic Streamers List -->
+            <!-- Live users will appear here -->
         </div>
     </div>
 
     <div id="navBar">
-        <div class="nav-item active"><span class="nav-icon">📺</span>Live</div>
+        <div class="nav-item active"><span class="nav-icon">🎥</span>Live</div>
         <div class="nav-item" onclick="location.href='index.html'"><span class="nav-icon">💬</span>Chat</div>
         <div class="nav-item"><span class="nav-icon">👤</span>Profile</div>
     </div>
 </div>
 
 <div id="streamOverlay">
-    <div id="viewerCount" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.5);padding:5px 12px;border-radius:15px;font-size:12px;z-index:5001">👁️ 0</div>
-    <video id="mainVideo" autoplay playsinline></video>
-    <div class="stream-controls">
-        <button class="round-btn btn-close" id="closeStream">✕</button>
-        <button class="round-btn btn-stop" id="stopLive" style="display:none">⏹</button>
+    <div class="stream-header">
+        <div id="streamerName" style="font-weight:bold">Live Stream</div>
+        <div style="background:rgba(255,59,48,0.8);padding:2px 10px;border-radius:4px;font-size:12px">LIVE</div>
+    </div>
+    <video id="mainVideo" autoplay playsinline muted></video>
+    <div class="stream-footer">
+        <button class="round-btn btn-close" id="closeOverlay">✕</button>
+        <button class="round-btn btn-stop" id="stopStreaming" style="display:none">⏹</button>
     </div>
 </div>
 
@@ -89,107 +94,124 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;ove
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const username = localStorage.getItem('guestName') || 'Guest' + Math.floor(Math.random()*1000);
+
+// Persistent User Data
+const username = localStorage.getItem('guestName') || 'User' + Math.floor(Math.random()*9999);
 const profileImg = localStorage.getItem('profileImage') || '';
 
-let localStream = null;
-let peerConnection = null;
-const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
-// --- UI LOGIC ---
-window.onload = () => {
-    setTimeout(() => document.getElementById('loader-wrapper').style.display='none', 1000);
-    listenForStreams();
-};
-
-function showToast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2000); }
-
-// --- LIVE STREAMING LOGIC ---
+const streamGrid = document.getElementById('streamGrid');
 const goLiveBtn = document.getElementById('goLiveBtn');
 const streamOverlay = document.getElementById('streamOverlay');
 const mainVideo = document.getElementById('mainVideo');
-const stopLive = document.getElementById('stopLive');
-const closeStream = document.getElementById('closeStream');
+const stopStreaming = document.getElementById('stopStreaming');
+const closeOverlay = document.getElementById('closeOverlay');
+const streamerNameDisp = document.getElementById('streamerName');
 
+let localStream = null;
+
+// --- BROADCAST LOGIC ---
 goLiveBtn.onclick = async () => {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         mainVideo.srcObject = localStream;
+        mainVideo.muted = true; // Don't hear yourself
         streamOverlay.style.display = 'flex';
-        stopLive.style.display = 'flex';
-        
-        // Register stream in Firebase
-        db.ref(`liveStreams/${username}`).set({
-            name: username,
+        stopStreaming.style.display = 'flex';
+        streamerNameDisp.textContent = "You are Live";
+
+        // Register in Firebase
+        const streamRef = db.ref(`liveStreams/${username}`);
+        streamRef.set({
+            username: username,
             image: profileImg,
-            status: 'online',
-            startedAt: Date.now()
+            startTime: Date.now(),
+            active: true
         });
-        
-        db.ref(`liveStreams/${username}`).onDisconnect().remove();
-        showToast("You are now LIVE!");
-    } catch (e) {
-        showToast("Camera permission denied");
+
+        // Auto-remove when user closes browser
+        streamRef.onDisconnect().remove();
+        showToast("Started Broadcasting...");
+    } catch (err) {
+        showToast("Error: Please enable camera access");
     }
 };
 
-stopLive.onclick = () => {
+stopStreaming.onclick = () => {
     if(localStream) {
-        localStream.getTracks().forEach(t => t.stop());
+        localStream.getTracks().forEach(track => track.stop());
         db.ref(`liveStreams/${username}`).remove();
         streamOverlay.style.display = 'none';
-        showToast("Stream ended");
+        showToast("Stream Ended");
     }
 };
 
-closeStream.onclick = () => {
+closeOverlay.onclick = () => {
     streamOverlay.style.display = 'none';
-    if(peerConnection) peerConnection.close();
-    mainVideo.srcObject = null;
+    if(localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        db.ref(`liveStreams/${username}`).remove();
+    }
 };
 
-// --- WATCHER LOGIC ---
-function listenForStreams() {
-    const grid = document.getElementById('streamGrid');
+// --- REAL-TIME GRID UPDATE ---
+function listenForLiveUsers() {
     db.ref('liveStreams').on('value', snap => {
-        grid.innerHTML = '';
-        const streams = snap.val();
-        if(!streams) {
-            grid.innerHTML = '<div style="grid-column:span 3;text-align:center;color:var(--muted);margin-top:20px">No active streams</div>';
+        streamGrid.innerHTML = '';
+        const data = snap.val();
+        
+        if (!data) {
+            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No active streams found.</div>';
             return;
         }
-        
-        Object.keys(streams).forEach(userId => {
-            const data = streams[userId];
+
+        Object.keys(data).forEach(uid => {
+            const stream = data[uid];
             const card = document.createElement('div');
-            card.className = 'stream-card';
+            card.className = 'live-card';
+            
+            const imgHtml = stream.image 
+                ? `<img src="${stream.image}">` 
+                : `<div class="no-img">${stream.username.charAt(0).toUpperCase()}</div>`;
+
             card.innerHTML = `
-                <div class="stream-tag">LIVE</div>
-                ${data.image ? `<img src="${data.image}">` : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:#2a3942">${data.name[0]}</div>`}
-                <div class="stream-info">
-                    <b>${data.name}</b>
-                </div>
+                <div class="live-tag">LIVE</div>
+                ${imgHtml}
+                <div class="card-info">${stream.username}</div>
             `;
-            card.onclick = () => joinStream(userId);
-            grid.appendChild(card);
+
+            card.onclick = () => joinStream(uid, stream.username);
+            streamGrid.appendChild(card);
         });
     });
 }
 
-async function joinStream(streamerId) {
-    if(streamerId === username) return;
+function joinStream(uid, name) {
+    if(uid === username) return; // Don't join your own
+    showToast(`Joining ${name}'s stream...`);
     streamOverlay.style.display = 'flex';
-    stopLive.style.display = 'none';
-    showToast(`Joining ${streamerId}'s stream...`);
+    stopStreaming.style.display = 'none';
+    streamerNameDisp.textContent = `Watching ${name}`;
     
-    peerConnection = new RTCPeerConnection(rtcConfig);
-    peerConnection.ontrack = (e) => { mainVideo.srcObject = e.streams[0]; };
-    
-    // WebRTC signaling via Firebase (simplified for direct code integration)
-    const offerSnap = await db.ref(`calls/stream_${streamerId}`).once('value');
-    // In a full implementation, you would handle the Offer/Answer exchange here
-    // similar to your private call logic.
+    // In a full WebRTC setup, you would exchange offers here.
+    // For this UI demo, we simulate joining.
+    mainVideo.srcObject = null; 
+    mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; // Placeholder for stream connection
 }
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2000);
+}
+
+// Initializing[cite: 1]
+listenForLiveUsers();
+
+// Clean up on exit[cite: 1]
+window.onbeforeunload = () => {
+    if(username) db.ref(`liveStreams/${username}`).remove();
+};
 </script>
 </body>
 </html>
