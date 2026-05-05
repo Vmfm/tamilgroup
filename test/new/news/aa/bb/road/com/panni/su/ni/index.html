@@ -1,111 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tamil Group Live</title>
-<style>
-:root{--bg:#0b141a;--panel:#202c33;--accent:#25d366;--live:#ff3b30;--glass:rgba(255, 255, 255, 0.05)}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-
-/* --- TOP BAR --- */
-#topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass);z-index:100}
-.logo{font-weight:700;font-size:18px;letter-spacing:1px}
-.logo span{color:var(--accent)}
-#goLiveBtn{background:var(--live);color:#fff;border:none;padding:8px 16px;border-radius:20px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;animation:pulse 2s infinite}
-
-@keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
-    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
-}
-
-/* --- LIVE GRID --- */
-#streamSection{flex:1;padding:10px;overflow-y:auto}
-.grid-title{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;text-transform:uppercase}
-#streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
-
-.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;border:1px solid var(--glass);transition:transform 0.2s;cursor:pointer}
-.live-card:active{transform:scale(0.95)}
-.live-card img{width:100%;height:100%;object-fit:cover}
-.live-card .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#2a3942;font-size:30px;color:var(--accent)}
-.live-tag{position:absolute;top:6px;left:6px;background:var(--live);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:bold}
-.card-info{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent, rgba(0,0,0,0.9));font-size:11px;font-weight:600}
-
-/* --- OVERLAY --- */
-#streamOverlay{position:fixed;inset:0;background:#000;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center}
-#mainVideo{width:100%;height:100%;object-fit:cover;background:#000}
-.stream-header{position:absolute;top:0;left:0;right:0;padding:20px;background:linear-gradient(rgba(0,0,0,0.8), transparent);display:flex;justify-content:space-between;z-index:1001}
-.stream-footer{position:absolute;bottom:30px;display:flex;gap:20px;z-index:1001}
-.round-btn{width:56px;height:56px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff}
-.btn-close{background:rgba(255,255,255,0.2)}
-.btn-stop{background:var(--live)}
-
-/* --- LOADER --- */
-#loader{position:absolute;display:none;flex-direction:column;align-items:center;gap:10px;z-index:1002}
-.spinner-border{width:3rem;height:3rem;border:0.25em solid var(--accent);border-right-color:transparent;border-radius:50%;animation:rotate 0.75s linear infinite}
-@keyframes rotate{to{transform:rotate(360deg)}}
-
-/* --- NAVIGATION --- */
-#navBar{display:flex;background:#0b141a;border-top:1px solid var(--glass);padding:10px 0}
-.nav-item{flex:1;text-align:center;font-size:11px;color:#8696a0;cursor:pointer}
-.nav-item.active{color:var(--accent)}
-.nav-icon{font-size:22px;display:block;margin-bottom:4px}
-
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;display:none;z-index:10000}
-</style>
-</head>
-<body>
-
-<div id="app">
-    <div id="topBar">
-        <div class="logo">TAMIL <span>LIVE</span></div>
-        <button id="goLiveBtn">● GO LIVE</button>
-    </div>
-
-    <div id="streamSection">
-        <div class="grid-title">Active Streamers</div>
-        <div id="streamGrid"></div>
-    </div>
-
-    <div id="navBar">
-        <div class="nav-item active"><span class="nav-icon">🎥</span>Live</div>
-        <div class="nav-item" onclick="location.href='index.html'"><span class="nav-icon">💬</span>Chat</div>
-        <div class="nav-item"><span class="nav-icon">👤</span>Profile</div>
-    </div>
-</div>
-
-<div id="streamOverlay">
-    <div id="loader">
-        <div class="spinner-border"></div>
-        <div style="color:white; font-size: 14px;">Loading Stream...</div>
-    </div>
-    <div class="stream-header">
-        <div id="streamerName" style="font-weight:bold">Live Stream</div>
-        <div style="background:rgba(255,59,48,0.8);padding:2px 10px;border-radius:4px;font-size:12px">LIVE</div>
-    </div>
-    <video id="mainVideo" autoplay playsinline></video>
-    <div class="stream-footer">
-        <button class="round-btn btn-close" id="closeOverlay">✕</button>
-        <button class="round-btn btn-stop" id="stopStreaming" style="display:none">⏹</button>
-    </div>
-</div>
-
-<div id="toast"></div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
-
+<!-- Replace your current <script> section with this improved version -->
 <script>
+// Use a more reliable Unique ID to prevent multiple devices with same name from overwriting each other
+const userId = localStorage.getItem('userId') || 'user_' + Math.floor(Math.random()*1000000);
+localStorage.setItem('userId', userId);
+
+const username = localStorage.getItem('guestName') || 'Guest_' + userId.substring(0,4);
+const profileImg = localStorage.getItem('profileImage') || '';
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
-// Generate a truly unique ID for this session to prevent device overlap[cite: 1]
-const myId = 'ID_' + Math.random().toString(36).substr(2, 9);
-const username = localStorage.getItem('guestName') || 'User_' + myId.substr(0,4);
-const profileImg = localStorage.getItem('profileImage') || '';
 
 const streamGrid = document.getElementById('streamGrid');
 const goLiveBtn = document.getElementById('goLiveBtn');
@@ -114,11 +17,10 @@ const mainVideo = document.getElementById('mainVideo');
 const stopStreaming = document.getElementById('stopStreaming');
 const closeOverlay = document.getElementById('closeOverlay');
 const streamerNameDisp = document.getElementById('streamerName');
-const loader = document.getElementById('loader');
 
 let localStream = null;
 
-// --- GO LIVE ---
+// --- BROADCAST LOGIC ---
 goLiveBtn.onclick = async () => {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -128,66 +30,58 @@ goLiveBtn.onclick = async () => {
         stopStreaming.style.display = 'flex';
         streamerNameDisp.textContent = "You are Live";
 
-        const streamRef = db.ref(`liveStreams/${myId}`);
+        // Register in Firebase using the Unique userId
+        const streamRef = db.ref(`liveStreams/${userId}`);
         streamRef.set({
+            uid: userId,
             username: username,
             image: profileImg,
             startTime: Date.now(),
             active: true
         });
 
-        streamRef.onDisconnect().remove();[cite: 1]
-        showToast("You are now broadcasting!");
+        // CRITICAL: Ensure data is wiped when user leaves
+        streamRef.onDisconnect().remove();
+        showToast("Started Broadcasting...");
     } catch (err) {
-        showToast("Camera access denied.");
+        console.error(err);
+        showToast("Error: Please enable camera access");
     }
 };
 
-// --- JOIN STREAM ---
-function joinStream(uid, name) {
-    if(uid === myId) return; 
-    
-    streamOverlay.style.display = 'flex';
-    stopStreaming.style.display = 'none';
-    loader.style.display = 'flex';
-    streamerNameDisp.textContent = `Watching ${name}`;
-    
-    // Simulate connection delay for UI smoothness
-    setTimeout(() => {
-        loader.style.display = 'none';
-        mainVideo.srcObject = null;
-        // Use your working GIF link as a placeholder for the live feed
-        mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; 
-    }, 1500);
-}
-
-// --- STOP/EXIT ---
-function closeStream() {
+// --- STOP/CLOSE LOGIC ---
+function endStream() {
     if(localStream) {
         localStream.getTracks().forEach(track => track.stop());
-        db.ref(`liveStreams/${myId}`).remove();
+        localStream = null;
     }
+    db.ref(`liveStreams/${userId}`).remove();
     streamOverlay.style.display = 'none';
-    mainVideo.srcObject = null;
-    mainVideo.poster = "";
 }
 
-stopStreaming.onclick = closeStream;
-closeOverlay.onclick = closeStream;
+stopStreaming.onclick = () => {
+    endStream();
+    showToast("Stream Ended");
+};
 
-// --- REAL-TIME UPDATES ---
-function listenForStreams() {
+closeOverlay.onclick = () => {
+    endStream();
+};
+
+// --- REAL-TIME GRID UPDATE ---
+function listenForLiveUsers() {
+    // This listens for any changes in the 'liveStreams' node across all devices
     db.ref('liveStreams').on('value', snap => {
         streamGrid.innerHTML = '';
         const data = snap.val();
         
         if (!data) {
-            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No one is live. Be the first!</div>';
+            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;font-size:12px;">No active streams found.</div>';
             return;
         }
 
-        Object.keys(data).forEach(uid => {
-            const stream = data[uid];
+        Object.keys(data).forEach(id => {
+            const stream = data[id];
             const card = document.createElement('div');
             card.className = 'live-card';
             
@@ -201,10 +95,27 @@ function listenForStreams() {
                 <div class="card-info">${stream.username}</div>
             `;
 
-            card.onclick = () => joinStream(uid, stream.username);[cite: 1]
+            // Prevent clicking your own card
+            card.onclick = () => {
+                if(id === userId) {
+                    showToast("This is your stream");
+                } else {
+                    joinStream(id, stream.username);
+                }
+            };
             streamGrid.appendChild(card);
         });
     });
+}
+
+function joinStream(id, name) {
+    showToast(`Joining ${name}'s stream...`);
+    streamOverlay.style.display = 'flex';
+    stopStreaming.style.display = 'none';
+    streamerNameDisp.textContent = `Watching ${name}`;
+    
+    mainVideo.srcObject = null; 
+    mainVideo.poster = "https://www.icegif.com/wp-content/uploads/2023/07/icegif-1262.gif"; 
 }
 
 function showToast(msg) {
@@ -214,12 +125,11 @@ function showToast(msg) {
     setTimeout(() => t.style.display = 'none', 2000);
 }
 
-listenForStreams();[cite: 1]
+// Start listener
+listenForLiveUsers();
 
-// Final cleanup[cite: 1]
+// Safety removal
 window.onbeforeunload = () => {
-    db.ref(`liveStreams/${myId}`).remove();
+    db.ref(`liveStreams/${userId}`).remove();
 };
 </script>
-</body>
-</html>
