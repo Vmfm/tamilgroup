@@ -3,46 +3,24 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tamil Group Live - Fixed</title>
+<title>Tamil Group Live - Fully Fixed</title>
 <style>
 :root{--bg:#0b141a;--panel:#202c33;--accent:#25d366;--live:#ff3b30;--glass:rgba(255, 255, 255, 0.05)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
-
-/* --- TOP BAR --- */
-#topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass);z-index:100}
-.logo{font-weight:700;font-size:18px;letter-spacing:1px}
-.logo span{color:var(--accent)}
-#goLiveBtn{background:var(--live);color:#fff;border:none;padding:8px 16px;border-radius:20px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;animation:pulse 2s infinite}
-
-@keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
-    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
-}
-
-/* --- LIVE GRID --- */
-#streamSection{flex:1;padding:10px;overflow-y:auto}
-.grid-title{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;text-transform:uppercase}
-#streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px}
-
-.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;border:1px solid var(--glass);transition:transform 0.2s;cursor:pointer}
-.live-card:active{transform:scale(0.95)}
+#topBar{padding:12px;background:#0b141a;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass)}
+.logo{font-weight:700;font-size:18px;letter-spacing:1px}.logo span{color:var(--accent)}
+#goLiveBtn{background:var(--live);color:#fff;border:none;padding:8px 16px;border-radius:20px;font-weight:600;cursor:pointer}
+#streamGrid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;padding:10px}
+.live-card{background:var(--panel);border-radius:12px;aspect-ratio:1/1.4;position:relative;overflow:hidden;cursor:pointer}
 .live-card img{width:100%;height:100%;object-fit:cover}
-.live-card .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#2a3942;font-size:30px;color:var(--accent)}
 .live-tag{position:absolute;top:6px;left:6px;background:var(--live);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:bold}
-.card-info{position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent, rgba(0,0,0,0.9));font-size:11px;font-weight:600}
-
-/* --- FULLSCREEN STREAM OVERLAY --- */
 #streamOverlay{position:fixed;inset:0;background:#000;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center}
 #mainVideo{width:100%;height:100%;object-fit:cover;background:#000}
-.stream-header{position:absolute;top:0;left:0;right:0;padding:20px;background:linear-gradient(rgba(0,0,0,0.8), transparent);display:flex;justify-content:space-between;z-index:1001}
-.stream-footer{position:absolute;bottom:30px;display:flex;gap:20px;z-index:1001}
-.round-btn{width:56px;height:56px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:#fff}
-.btn-close{background:rgba(255,255,255,0.2)}
-.btn-stop{background:var(--live)}
-
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;display:none;z-index:10000}
+.stream-footer{position:absolute;bottom:30px;display:flex;gap:20px}
+.round-btn{width:56px;height:56px;border-radius:50%;border:none;color:#fff;font-size:20px;cursor:pointer}
+.btn-close{background:rgba(255,255,255,0.2)}.btn-stop{background:var(--live)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;padding:10px 20px;border-radius:20px;display:none}
 </style>
 </head>
 <body>
@@ -52,18 +30,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <div class="logo">TAMIL <span>LIVE</span></div>
         <button id="goLiveBtn">● GO LIVE</button>
     </div>
-
-    <div id="streamSection">
-        <div class="grid-title">Active Streamers</div>
-        <div id="streamGrid"></div>
-    </div>
+    <div id="streamGrid"></div>
 </div>
 
 <div id="streamOverlay">
-    <div class="stream-header">
-        <div id="streamerName" style="font-weight:bold">Live Stream</div>
-        <div style="background:var(--live);padding:2px 10px;border-radius:4px;font-size:12px">LIVE</div>
-    </div>
     <video id="mainVideo" autoplay playsinline></video>
     <div class="stream-footer">
         <button class="round-btn btn-close" id="closeOverlay">✕</button>
@@ -80,126 +50,110 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 const username = localStorage.getItem('guestName') || 'User' + Math.floor(Math.random()*9999);
-const profileImg = localStorage.getItem('profileImage') || '';
+const pcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-const streamGrid = document.getElementById('streamGrid');
-const goLiveBtn = document.getElementById('goLiveBtn');
-const streamOverlay = document.getElementById('streamOverlay');
-const mainVideo = document.getElementById('mainVideo');
-const stopStreaming = document.getElementById('stopStreaming');
-const closeOverlay = document.getElementById('closeOverlay');
-const streamerNameDisp = document.getElementById('streamerName');
-
-let peerConnection = null;
+let pc = null;
 let localStream = null;
 
-const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
 // --- BROADCASTER SIDE ---
-goLiveBtn.onclick = async () => {
+document.getElementById('goLiveBtn').onclick = async () => {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        mainVideo.srcObject = localStream;
-        mainVideo.muted = true;
-        streamOverlay.style.display = 'flex';
-        stopStreaming.style.display = 'flex';
-        streamerNameDisp.textContent = "You are Live";
+        document.getElementById('mainVideo').srcObject = localStream;
+        document.getElementById('streamOverlay').style.display = 'flex';
+        document.getElementById('stopStreaming').style.display = 'flex';
 
         const streamRef = db.ref(`liveStreams/${username}`);
-        streamRef.set({ username, image: profileImg, active: true });
+        await streamRef.set({ username, active: true });
         streamRef.onDisconnect().remove();
 
-        // Listen for Viewers joining (Signaling)
-        db.ref(`liveStreams/${username}/signal`).on('value', async (snap) => {
-            const signal = snap.val();
-            if (signal && signal.type === 'offer' && !peerConnection) {
-                await handleViewerOffer(signal.offer, username);
+        // Listen for viewer's Offer
+        streamRef.child('offer').on('value', async snap => {
+            const offer = snap.val();
+            if (offer && !pc) {
+                pc = new RTCPeerConnection(pcConfig);
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                
+                pc.onicecandidate = e => {
+                    if (e.candidate) streamRef.child('hostCandidates').push(e.candidate.toJSON());
+                };
+
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                streamRef.update({ answer });
+
+                // Listen for Viewer's Candidates
+                streamRef.child('viewerCandidates').on('child_added', s => {
+                    pc.addIceCandidate(new RTCIceCandidate(s.val()));
+                });
             }
         });
-
-        showToast("Broadcasting...");
-    } catch (err) {
-        showToast("Camera Access Denied");
-    }
+        showToast("Broadcasting Live...");
+    } catch (e) { showToast("Error accessing camera"); }
 };
 
-async function handleViewerOffer(offer, broadcasterId) {
-    peerConnection = new RTCPeerConnection(rtcConfig);
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-    
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    
-    db.ref(`liveStreams/${broadcasterId}/signal`).update({ type: 'answer', answer });
-}
-
 // --- VIEWER SIDE ---
-async function joinStream(broadcasterId, name) {
+async function joinStream(broadcasterId) {
     if (broadcasterId === username) return;
-    showToast(`Connecting to ${name}...`);
-    streamOverlay.style.display = 'flex';
-    stopStreaming.style.display = 'none';
-    streamerNameDisp.textContent = `Watching ${name}`;
+    document.getElementById('streamOverlay').style.display = 'flex';
+    document.getElementById('stopStreaming').style.display = 'none';
 
-    peerConnection = new RTCPeerConnection(rtcConfig);
+    pc = new RTCPeerConnection(pcConfig);
+    pc.ontrack = e => { document.getElementById('mainVideo').srcObject = e.streams[0]; };
+
+    const streamRef = db.ref(`liveStreams/${broadcasterId}`);
     
-    peerConnection.ontrack = (event) => {
-        mainVideo.srcObject = event.streams[0];
-        mainVideo.muted = false;
+    pc.onicecandidate = e => {
+        if (e.candidate) streamRef.child('viewerCandidates').push(e.candidate.toJSON());
     };
 
-    const offer = await peerConnection.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
-    await peerConnection.setLocalDescription(offer);
+    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
+    await pc.setLocalDescription(offer);
+    streamRef.update({ offer });
 
-    const signalRef = db.ref(`liveStreams/${broadcasterId}/signal`);
-    signalRef.set({ type: 'offer', offer });
-
-    // Wait for Broadcaster's answer
-    signalRef.on('value', async (snap) => {
-        const signal = snap.val();
-        if (signal && signal.type === 'answer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.answer));
+    // Listen for Answer
+    streamRef.child('answer').on('value', async snap => {
+        const answer = snap.val();
+        if (answer && !pc.remoteDescription) {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
         }
+    });
+
+    // Listen for Broadcaster's Candidates
+    streamRef.child('hostCandidates').on('child_added', s => {
+        pc.addIceCandidate(new RTCIceCandidate(s.val()));
     });
 }
 
-// --- UTILS & UI ---
 function listenForLiveUsers() {
     db.ref('liveStreams').on('value', snap => {
-        streamGrid.innerHTML = '';
+        const grid = document.getElementById('streamGrid');
+        grid.innerHTML = '';
         const data = snap.val();
-        if (!data) {
-            streamGrid.innerHTML = '<div style="grid-column:span 3;text-align:center;padding:40px;color:#8696a0;">No active streams.</div>';
-            return;
-        }
-        Object.keys(data).forEach(uid => {
-            const stream = data[uid];
+        if (!data) return;
+        Object.keys(data).forEach(id => {
             const card = document.createElement('div');
             card.className = 'live-card';
-            const img = stream.image ? `<img src="${stream.image}">` : `<div class="no-img">${stream.username[0]}</div>`;
-            card.innerHTML = `<div class="live-tag">LIVE</div>${img}<div class="card-info">${stream.username}</div>`;
-            card.onclick = () => joinStream(uid, stream.username);
-            streamGrid.appendChild(card);
+            card.innerHTML = `<div class="live-tag">LIVE</div><div style="padding:40px;text-align:center">${data[id].username}</div>`;
+            card.onclick = () => joinStream(id);
+            grid.appendChild(card);
         });
     });
 }
 
-stopStreaming.onclick = closeOverlay.onclick = () => {
+document.getElementById('closeOverlay').onclick = () => {
+    if (pc) pc.close(); pc = null;
     if (localStream) localStream.getTracks().forEach(t => t.stop());
-    if (peerConnection) peerConnection.close();
-    peerConnection = null;
     db.ref(`liveStreams/${username}`).remove();
-    streamOverlay.style.display = 'none';
-    mainVideo.srcObject = null;
+    document.getElementById('streamOverlay').style.display = 'none';
 };
 
-function showToast(msg) {
+function showToast(m) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.style.display = 'block';
-    setTimeout(() => t.style.display = 'none', 2500);
+    t.innerText = m; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
 }
 
 listenForLiveUsers();
