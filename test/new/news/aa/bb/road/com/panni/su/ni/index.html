@@ -372,9 +372,9 @@ cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAct
 
 micBtn.onclick = async () => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); micBtn.classList.remove('recording'); return; } try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const blob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.onload = e => sendPrivateMedia(e.target.result, 'voice'); reader.readAsDataURL(blob); stream.getTracks().forEach(t => t.stop()); }; mediaRecorder.start(); micBtn.classList.add('recording'); setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); micBtn.classList.remove('recording'); }, 10000); } catch (err) { showToast("Mic error"); } };
 
-privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
+privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
 
-function sendPrivateMedia(data, type) { if(!privateChatWith) return; const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
+function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
@@ -421,14 +421,21 @@ clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remov
 async function checkTargetPrivateChatStatus() { if(!privateChatWith) return false; const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value'); const targetProf = targetProfSnap.val(); if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) { showToast("User disabled private chat"); return false; } return true; }
 
 async function openPrivatePopup(other){ if(!settings.privateChat) return showToast('Private chat disabled'); privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`; const statusSnap = await db.ref(`status/${other}`).once('value'); updatePrivateHeaderStatus(other, statusSnap.exists()); 
-    // Initial block status for the popup
     updateBlockUI(blockedUsers.has(other));
-
     const key = chatId(username, other); const snapshot = await db.ref(`privateChats/${key}`).once('value'); snapshot.forEach(child => { if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); }); db.ref(`unread/${username}/${other}`).set(0); if(currentPrivateRef) currentPrivateRef.off(); renderedPrivateMsgIds.set(key, new Set()); currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(50); currentPrivateRef.on('child_added', snap => { renderPrivateMessageWithId(key, snap.key, snap.val()); if(snap.val().name === other && !snap.val().read) db.ref(`privateChats/${key}/${snap.key}`).update({read: true}); }); panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; }
 
-function renderPrivateMessageWithId(chatKey, id, msg){ let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } if(set.has(id)) return; set.add(id); const isSelf = msg.name === username; const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; const bubble = row.querySelector('.private-bubble'); if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); attachLongPress(bubble, `privateChats/${chatKey}/${id}`); renderReactions(bubble, msg.reactions); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); }
+function renderPrivateMessageWithId(chatKey, id, msg){ 
+    if(msg.name !== username && blockedUsers.has(msg.name)) return; 
+    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } if(set.has(id)) return; set.add(id); const isSelf = msg.name === username; const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; const bubble = row.querySelector('.private-bubble'); if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); attachLongPress(bubble, `privateChats/${chatKey}/${id}`); renderReactions(bubble, msg.reactions); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
+}
 
-privateSend.onclick = async () => { const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; };
+privateSend.onclick = async () => { 
+    const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
+    if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); 
+    if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); 
+    const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
+};
+
 closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; if(currentPrivateRef) currentPrivateRef.off(); };
 bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
@@ -445,6 +452,7 @@ async function initiateCall(type) {
     if(type === 'audio' && !settings.audioCall) return showToast('Audio calls disabled');
     if(type === 'video' && !settings.videoCall) return showToast('Video calls disabled');
     if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
+    if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
@@ -465,7 +473,7 @@ async function setupWebRTC(callId, isCaller, isVideo) {
       if(activeCall && activeCall.type === 'video') { 
           remoteVideo.srcObject = event.streams[0]; 
           remoteVideo.style.display = 'block'; 
-          mainCallCard.classList.add('connected-video'); // Hide info when connected
+          mainCallCard.classList.add('connected-video'); 
       } else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
   };
   peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
@@ -478,7 +486,7 @@ function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
-          if(blockedUsers.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
+          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
           activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
       } 
   });
@@ -528,10 +536,7 @@ function showTemporaryControls() {
     }, 4000);
 }
 
-// Tap screen to show controls
-callOverlay.onclick = (e) => {
-    if(activeCall && activeCall.type === 'video') showTemporaryControls();
-};
+callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') showTemporaryControls(); };
 
 function cleanupCall(callId){ 
     ringtone.pause(); callOverlay.style.display='none'; clearInterval(callTimerInterval); 
@@ -562,7 +567,11 @@ fullScreenBtn.onclick = (e) => { e.stopPropagation(); mainCallCard.classList.tog
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => { 
       blockedUsers = new Set(Object.keys(s.val()||{})); 
-      if(privateChatWith) updateBlockUI(blockedUsers.has(privateChatWith));
+      if(privateChatWith) {
+          updateBlockUI(blockedUsers.has(privateChatWith));
+          // Re-render chat to hide newly blocked messages
+          openPrivatePopup(privateChatWith); 
+      }
       refreshPanelList(); 
   }); 
   db.ref('blocks').on('value', snap => { const all = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(all).forEach(u => { if(all[u][username]) iHaveBeenBlockedBy.add(u); }); });
@@ -577,13 +586,7 @@ blockBtn.onclick = () => {
     if(!privateChatWith) return;
     const ref = db.ref(`blocks/${username}/${privateChatWith}`); 
     ref.once('value', s => { 
-        if(s.exists()) {
-            ref.remove(); 
-            showToast("User Unblocked");
-        } else {
-            ref.set(true); 
-            showToast("User Blocked");
-        }
+        if(s.exists()) { ref.remove(); showToast("User Unblocked"); } else { ref.set(true); showToast("User Blocked"); }
     }); 
 };
 
