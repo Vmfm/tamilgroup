@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-    <title>TAMIL VM Admin - Advanced Control</title>
+    <title>TAMIL VM Admin - Final Ultra Control</title>
     <style>
         :root {
             --bg: #0b141a;
@@ -14,6 +14,7 @@
             --info: #34b7f1;
             --text: #e9edef;
             --muted: #8696a0;
+            --admin-bg: #056162;
         }
         body {
             margin: 0;
@@ -39,7 +40,7 @@
         
         .search-box, .admin-input {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
             border-radius: 8px;
             border: 1px solid #2a3942;
@@ -66,8 +67,8 @@
 
         .user-cell { display: flex; align-items: center; gap: 10px; }
         .user-avatar { 
-            width: 35px; 
-            height: 35px; 
+            width: 38px; 
+            height: 38px; 
             border-radius: 50%; 
             object-fit: cover; 
             background: #2a3942; 
@@ -81,7 +82,7 @@
         .login-box { background: var(--card); padding: 30px; border-radius: 16px; text-align: center; width: 85%; max-width: 300px; }
         
         .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
-        .call-log-item { 
+        .item-row { 
             padding: 10px; 
             border-bottom: 1px solid #2a3942; 
             display: flex; 
@@ -90,16 +91,14 @@
             font-size: 12px;
         }
 
-        @media (max-width: 600px) {
-            .hide-mobile { display: none; }
-            .btn-group { flex-direction: column; }
-        }
+        .admin-msg { border-left: 4px solid var(--accent); background: rgba(37, 211, 102, 0.05); }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay">
     <div class="login-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/6024/6024190.png" style="width:60px; margin-bottom:15px;">
         <h3>Admin Secure Login</h3>
         <input type="password" id="adminPass" class="search-box" placeholder="Password">
         <button class="btn btn-safe" style="width:100%; padding: 12px;" onclick="attemptLogin()">Access Console</button>
@@ -107,7 +106,10 @@
 </div>
 
 <header>
-    <div style="font-weight: 700;">🛡️ TAMIL VM ADMIN</div>
+    <div style="font-weight: 700; display: flex; align-items: center; gap: 10px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/6024/6024190.png" style="width:25px;">
+        TAMIL VM ADMIN
+    </div>
     <button class="btn btn-warn" onclick="logout()">Logout</button>
 </header>
 
@@ -118,15 +120,15 @@
                 User Management 
                 <small id="auto-status" style="font-size: 10px; color: var(--muted);"></small>
             </h2>
-            <input type="text" id="userSearch" class="search-box" placeholder="Search by name or Device ID..." onkeyup="filterUsers()">
+            <input type="text" id="userSearch" class="search-box" placeholder="Search users or device IDs..." onkeyup="filterUsers()">
             <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
                             <th>User Profile</th>
-                            <th>Status / Device</th>
-                            <th>Last Seen</th>
-                            <th>Actions</th>
+                            <th>Status/Device</th>
+                            <th>Activity</th>
+                            <th>Management</th>
                         </tr>
                     </thead>
                     <tbody id="userList"></tbody>
@@ -135,24 +137,26 @@
         </div>
 
         <div class="card">
-            <h2>📢 Admin Notifications</h2>
-            <textarea id="notifyText" class="admin-input" placeholder="Type message to all users..."></textarea>
-            <button class="btn btn-safe" style="width: 100%" onclick="sendGlobalAlert()">Broadcast to All</button>
-            <hr style="border:0; border-top:1px solid #2a3942; margin: 15px 0;">
-            <h2>Call History <button class="btn btn-danger" style="font-size: 9px; padding: 4px;" onclick="clearAllCalls()">Clear</button></h2>
-            <div id="callList" style="max-height: 200px; overflow-y: auto;"></div>
+            <h2>📢 System Broadcast</h2>
+            <textarea id="notifyText" class="admin-input" rows="4" placeholder="Type announcement for all users..."></textarea>
+            <button class="btn btn-safe" style="width: 100%; padding: 10px;" onclick="sendGlobalAlert()">Send Broadcast</button>
+            
+            <hr style="border:0; border-top:1px solid #2a3942; margin: 20px 0;">
+            
+            <h2>Call Signaling Logs <button class="btn btn-danger" style="font-size: 9px; padding: 4px;" onclick="clearAllCalls()">Clear All</button></h2>
+            <div id="callList" style="max-height: 250px; overflow-y: auto;"></div>
         </div>
     </div>
 
     <div class="grid" style="margin-top: 20px;">
         <div class="card">
-            <h2>Recent Reports</h2>
+            <h2>Abuse Reports</h2>
             <div id="reportList"></div>
         </div>
 
         <div class="card">
-            <h2>Global Message Log</h2>
-            <div id="msgLogs" style="max-height: 400px; overflow-y: auto;"></div>
+            <h2>Live Chat Monitoring</h2>
+            <div id="msgLogs" style="max-height: 450px; overflow-y: auto;"></div>
         </div>
     </div>
 </div>
@@ -164,8 +168,9 @@
 <script>
     const CONFIG = {
         pass: "veera123", 
-        cleanupDays: 20, 
         storageKey: "admin_session",
+        // System Admin Profile Image
+        adminAvatar: "https://cdn-icons-png.flaticon.com/512/6024/6024190.png",
         defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     };
 
@@ -180,7 +185,7 @@
             localStorage.setItem(CONFIG.storageKey, "true");
             showPanel();
         } else {
-            alert("Wrong Password");
+            alert("Incorrect Admin Password");
         }
     }
 
@@ -191,87 +196,98 @@
 
     function showPanel() {
         document.getElementById('auth-overlay').style.display = 'none';
-        startDashboard();
+        initFirebase();
     }
 
-    function startDashboard() {
+    function initFirebase() {
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        autoCleanup(db);
+        // Listeners
         loadUsers(db);
         loadReports(db);
         loadMessages(db);
         loadCallHistory(db);
     }
 
-    // --- ENHANCED BANNED LOGIC ---
+    // --- BAN & PURGE LOGIC ---
     function deviceBan(username, deviceId, isCurrentlyBanned) {
         const db = firebase.database();
-        const action = isCurrentlyBanned ? "Unban" : "PERMANENTLY BAN (Device + User) and CLEAR ALL DATA for";
+        const actionText = isCurrentlyBanned ? "Unban" : "PERMANENTLY BAN and CLEAR ALL DATA for";
         
-        if(confirm(`${action} ${username}?`)) {
-            // 1. Toggle profile ban status
+        if(confirm(`${actionText} ${username}?`)) {
+            // Update profile ban status
             db.ref(`profiles/${username}`).update({ banned: !isCurrentlyBanned });
             
             if(!isCurrentlyBanned) {
-                // 2. Hardware Block: Blocks this phone from logging into ANY account
-                if(deviceId) db.ref(`banned_devices/${deviceId}`).set({
-                    owner: username,
-                    date: Date.now()
+                // 1. Hardware ID Ban: Blocks phone from logging into ANY ID
+                if(deviceId) {
+                    db.ref(`banned_devices/${deviceId}`).set({
+                        bannedUser: username,
+                        timestamp: Date.now()
+                    });
+                }
+
+                // 2. Clear Messages (Group/Public)
+                db.ref('messages').once('value', snap => {
+                    const msgs = snap.val() || {};
+                    Object.keys(msgs).forEach(id => {
+                        if(msgs[id].name === username) db.ref(`messages/${id}`).remove();
+                    });
                 });
 
-                // 3. Purge: Clear all content
-                cleanUserActivity(username);
+                // 3. Clear Signaling (Private/Calls)
+                db.ref('calls').once('value', snap => {
+                    const calls = snap.val() || {};
+                    Object.keys(calls).forEach(id => {
+                        if(calls[id].caller === username || calls[id].receiver === username) {
+                            db.ref(`calls/${id}`).remove();
+                        }
+                    });
+                });
                 
-                // 4. Force Offline
+                // 4. Force Logout
                 db.ref(`status/${username}`).update({ online: false });
-                alert(`${username} banned. All messages and device access removed.`);
+                alert(`${username} has been fully purged and device blocked.`);
             } else {
-                // Unban Logic
                 if(deviceId) db.ref(`banned_devices/${deviceId}`).remove();
-                alert(`${username} access restored.`);
+                alert(`${username} access has been restored.`);
             }
         }
     }
 
-    function cleanUserActivity(username) {
-        const db = firebase.database();
-        
-        // Clear Group Messages
-        db.ref('messages').once('value', snap => {
-            const msgs = snap.val() || {};
-            Object.keys(msgs).forEach(id => {
-                if(msgs[id].name === username) db.ref(`messages/${id}`).remove();
-            });
-        });
-
-        // Clear Private/Signaling Activity (if any in 'calls')
-        db.ref('calls').once('value', snap => {
-            const calls = snap.val() || {};
-            Object.keys(calls).forEach(id => {
-                if(calls[id].caller === username || calls[id].receiver === username) {
-                    db.ref(`calls/${id}`).remove();
-                }
-            });
-        });
-    }
-
+    // --- ADMIN BROADCAST LOGIC ---
     function sendGlobalAlert() {
         const text = document.getElementById('notifyText').value;
         if(!text) return;
         
         firebase.database().ref('messages').push({
             name: "SYSTEM ADMIN",
-            text: "📢 " + text,
+            text: "🚨 OFFICIAL: " + text,
+            pic: CONFIG.adminAvatar, // Using Admin Image
             timestamp: Date.now(),
-            isAdmin: true
+            isAdmin: true,
+            type: "broadcast"
         });
+        
         document.getElementById('notifyText').value = '';
-        alert("Notification sent!");
+        alert("Broadcast sent successfully with Admin Profile Image.");
     }
 
-    // --- EXISTING DASHBOARD LOGIC ---
+    function directNotify(u) {
+        const msg = prompt(`Send system warning to ${u}:`);
+        if(msg) {
+            firebase.database().ref('messages').push({
+                name: "ADMIN",
+                text: `@${u} ⚠️ ${msg}`,
+                pic: CONFIG.adminAvatar,
+                timestamp: Date.now(),
+                isAdmin: true
+            });
+        }
+    }
+
+    // --- DATA DISPLAY ---
     function loadUsers(db) {
         db.ref('profiles').on('value', snap => {
             allUsersData = snap.val() || {};
@@ -290,21 +306,23 @@
                 <td>
                     <div class="user-cell">
                         <img src="${data.pic || CONFIG.defaultAvatar}" class="user-avatar">
-                        <b>${u}</b>
+                        <div>
+                            <b>${u}</b><br>
+                            <small style="color:var(--muted)">ID: ${data.deviceId ? data.deviceId.substring(0,10) : 'N/A'}</small>
+                        </div>
                     </div>
                 </td>
                 <td>
                     <span class="status-dot ${data.online ? 'online' : 'offline'}"></span>
-                    <small>${data.deviceId ? 'Device: ' + data.deviceId.substring(0,8) : 'No Device ID'}</small>
+                    <small>${data.online ? 'Active' : 'Offline'}</small>
                 </td>
-                <td><small>${formatLastSeen(data.lastSeen)}</small></td>
+                <td><small>${formatTime(data.lastSeen)}</small></td>
                 <td>
                     <div class="btn-group">
-                        <button class="btn btn-danger" onclick="manualRemove('${u}')">Del</button>
-                        <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="deviceBan('${u}', '${data.deviceId || ''}', ${data.banned || false})">
+                        <button class="btn ${data.banned ? 'btn-safe' : 'btn-danger'}" onclick="deviceBan('${u}', '${data.deviceId || ''}', ${data.banned || false})">
                             ${data.banned ? 'Unban' : 'Ban & Purge'}
                         </button>
-                        <button class="btn btn-info" onclick="directMessage('${u}')">Notify</button>
+                        <button class="btn btn-info" onclick="directNotify('${u}')">Warn</button>
                     </div>
                 </td>
             `;
@@ -312,56 +330,39 @@
         });
     }
 
-    function directMessage(u) {
-        const msg = prompt(`Send notification to ${u}:`);
-        if(msg) {
-            firebase.database().ref('messages').push({
-                name: "ADMIN",
-                text: `@${u} ${msg}`,
-                timestamp: Date.now()
-            });
-        }
-    }
-
-    function manualRemove(username) {
-        if(confirm(`Permanently delete ${username}?`)) {
-            const db = firebase.database();
-            db.ref(`profiles/${username}`).remove();
-            db.ref(`status/${username}`).remove();
-            cleanUserActivity(username);
-        }
-    }
-
-    function loadCallHistory(db) {
-        db.ref('calls').limitToLast(15).on('value', snap => {
-            const container = document.getElementById('callList');
-            container.innerHTML = '';
-            const calls = snap.val() || {};
-            Object.keys(calls).reverse().forEach(id => {
-                const c = calls[id];
-                const div = document.createElement('div');
-                div.className = 'call-log-item';
-                div.innerHTML = `<span>📞 ${c.caller} ⮕ ${c.receiver}</span><button class="btn btn-danger" style="padding:2px 5px" onclick="deleteNode('calls/${id}')">X</button>`;
-                container.appendChild(div);
-            });
-        });
-    }
-
     function loadMessages(db) {
-        db.ref('messages').limitToLast(30).on('value', snap => {
+        db.ref('messages').limitToLast(40).on('value', snap => {
             const container = document.getElementById('msgLogs');
             container.innerHTML = '';
             const msgs = snap.val() || {};
             Object.keys(msgs).reverse().forEach(id => {
                 const m = msgs[id];
                 const div = document.createElement('div');
-                div.style.padding = "8px";
-                div.style.borderBottom = "1px solid #2a3942";
-                div.style.display = "flex";
-                div.style.justifyContent = "space-between";
+                div.className = `item-row ${m.isAdmin ? 'admin-msg' : ''}`;
                 div.innerHTML = `
-                    <div style="font-size:12px"><b>${m.name}:</b> ${m.text || 'Media'}</div>
-                    <button class="btn btn-danger" onclick="deleteNode('messages/${id}')" style="padding:2px 5px">X</button>
+                    <div style="font-size:12px">
+                        <img src="${m.pic || CONFIG.defaultAvatar}" style="width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:5px;">
+                        <b>${m.name}:</b> ${m.text || '[Media]'}
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteNode('messages/${id}')" style="padding:2px 6px">X</button>
+                `;
+                container.appendChild(div);
+            });
+        });
+    }
+
+    function loadCallHistory(db) {
+        db.ref('calls').limitToLast(20).on('value', snap => {
+            const container = document.getElementById('callList');
+            container.innerHTML = '';
+            const calls = snap.val() || {};
+            Object.keys(calls).reverse().forEach(id => {
+                const c = calls[id];
+                const div = document.createElement('div');
+                div.className = 'item-row';
+                div.innerHTML = `
+                    <span>📞 <b>${c.caller}</b> ➜ ${c.receiver}</span>
+                    <button class="btn btn-danger" style="padding:2px 6px" onclick="deleteNode('calls/${id}')">X</button>
                 `;
                 container.appendChild(div);
             });
@@ -369,60 +370,44 @@
     }
 
     function deleteNode(path) {
-        if(confirm("Delete this?")) firebase.database().ref(path).remove();
+        if(confirm("Confirm deletion?")) firebase.database().ref(path).remove();
     }
 
     function clearAllCalls() {
-        if(confirm("Clear all logs?")) firebase.database().ref('calls').remove();
-    }
-
-    function autoCleanup(db) {
-        const now = Date.now();
-        const limit = CONFIG.cleanupDays * 24 * 60 * 60 * 1000;
-        db.ref('profiles').once('value', snap => {
-            const users = snap.val() || {};
-            let count = 0;
-            Object.keys(users).forEach(u => {
-                if(now - (users[u].lastSeen || 0) > limit) {
-                    db.ref(`profiles/${u}`).remove();
-                    db.ref(`status/${u}`).remove();
-                    count++;
-                }
-            });
-            document.getElementById('auto-status').innerText = `(Auto-cleaned: ${count})`;
-        });
-    }
-
-    function filterUsers() {
-        const query = document.getElementById('userSearch').value.toLowerCase();
-        const filtered = {};
-        Object.keys(allUsersData).forEach(u => {
-            if(u.toLowerCase().includes(query) || (allUsersData[u].deviceId && allUsersData[u].deviceId.includes(query))) {
-                filtered[u] = allUsersData[u];
-            }
-        });
-        renderUserTable(filtered);
+        if(confirm("Permanently wipe all call signaling logs?")) firebase.database().ref('calls').remove();
     }
 
     function loadReports(db) {
-        db.ref('reports').limitToLast(5).on('value', snap => {
+        db.ref('reports').limitToLast(10).on('value', snap => {
             const container = document.getElementById('reportList');
             container.innerHTML = '';
             const data = snap.val() || {};
             Object.keys(data).reverse().forEach(id => {
                 const r = data[id];
                 const div = document.createElement('div');
-                div.style.marginBottom = "8px";
-                div.innerHTML = `<small>🚩 <b>${r.reported}</b> by ${r.by}</small>`;
+                div.className = 'item-row';
+                div.style.color = "var(--warning)";
+                div.innerHTML = `<small>🚩 <b>${r.reported}</b> reported by ${r.by}</small>`;
                 container.appendChild(div);
             });
         });
     }
 
-    function formatLastSeen(ts) {
-        if(!ts) return "Never";
+    function filterUsers() {
+        const q = document.getElementById('userSearch').value.toLowerCase();
+        const filtered = {};
+        Object.keys(allUsersData).forEach(u => {
+            if(u.toLowerCase().includes(q) || (allUsersData[u].deviceId && allUsersData[u].deviceId.toLowerCase().includes(q))) {
+                filtered[u] = allUsersData[u];
+            }
+        });
+        renderUserTable(filtered);
+    }
+
+    function formatTime(ts) {
+        if(!ts) return "---";
         const d = new Date(ts);
-        return d.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+        return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 </script>
 </body>
