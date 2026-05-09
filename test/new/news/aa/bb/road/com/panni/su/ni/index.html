@@ -168,7 +168,8 @@
         pass: "veera123", 
         cleanupDays: 20, 
         storageKey: "admin_session",
-        defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        defaultAvatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+        adminName: "ADMIN"
     };
 
     let allUsersData = {}; 
@@ -204,12 +205,10 @@
         loadUsers(db);
         loadReports(db);
         loadMessages(db);
-        loadCallHistory(db); // Initializing Call management
+        loadCallHistory(db); 
     }
 
-    // Call History Management Functions
     function loadCallHistory(db) {
-        // Listening to 'calls' or 'signaling' node
         db.ref('calls').limitToLast(20).on('value', snap => {
             const container = document.getElementById('callList');
             container.innerHTML = '';
@@ -239,13 +238,13 @@
     }
 
     function deleteCallRecord(id) {
-        if(confirm("Delete this call log and its signaling data?")) {
+        if(confirm("Delete this call log?")) {
             firebase.database().ref(`calls/${id}`).remove();
         }
     }
 
     function clearAllCalls() {
-        if(confirm("Are you sure you want to PERMANENTLY clear all call history from Firebase?")) {
+        if(confirm("Are you sure you want to PERMANENTLY clear all call history?")) {
             firebase.database().ref('calls').remove();
         }
     }
@@ -297,15 +296,31 @@
                 <td><div style="font-size: 11px;">${formatLastSeen(data.lastSeen)}</div></td>
                 <td>
                     <div class="btn-group">
+                        <button class="btn btn-info" onclick="sendPrivateAdminMsg('${u}')">Chat</button>
                         <button class="btn btn-danger" onclick="manualRemove('${u}')">Remove</button>
                         <button class="btn ${data.banned ? 'btn-safe' : 'btn-warn'}" onclick="deviceBan('${u}', '${data.deviceId || ''}', ${data.banned || false})">
-                            ${data.banned ? 'Unban' : 'Ban & Clean Chat'}
+                            ${data.banned ? 'Unban' : 'Ban & Name Blacklist'}
                         </button>
                     </div>
                 </td>
             `;
             list.appendChild(tr);
         });
+    }
+
+    // NEW FUNCTION: Send Direct Private Message to User
+    function sendPrivateAdminMsg(username) {
+        const msg = prompt(`Send a private message to ${username}:`);
+        if(msg && msg.trim() !== "") {
+            const db = firebase.database();
+            const chatKey = [CONFIG.adminName, username].sort().join("_");
+            db.ref(`private_messages/${chatKey}`).push({
+                sender: CONFIG.adminName,
+                text: msg,
+                timestamp: Date.now()
+            });
+            alert("Message sent!");
+        }
     }
 
     function filterUsers() {
@@ -331,16 +346,22 @@
 
     function deviceBan(username, deviceId, isCurrentlyBanned) {
         const db = firebase.database();
-        const action = isCurrentlyBanned ? "Unban" : "Permanently Ban and Delete Messages for";
+        const action = isCurrentlyBanned ? "Unban" : "Permanently Ban Name & Device for";
         
         if(confirm(`${action} ${username}?`)) {
             db.ref(`profiles/${username}`).update({ banned: !isCurrentlyBanned });
+            
             if(!isCurrentlyBanned) {
+                // Add to Name Blacklist so they can't login with this name again
+                db.ref(`banned_names/${username}`).set(true);
+                
                 if(deviceId) db.ref(`banned_devices/${deviceId}`).set(true);
                 cleanUserMessages(username);
                 db.ref(`status/${username}`).update({ online: false });
-            } else if (deviceId) {
-                db.ref(`banned_devices/${deviceId}`).remove();
+            } else {
+                // Remove from Name Blacklist
+                db.ref(`banned_names/${username}`).remove();
+                if (deviceId) db.ref(`banned_devices/${deviceId}`).remove();
             }
         }
     }
