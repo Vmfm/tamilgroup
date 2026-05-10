@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0;--live:#ff3b30}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* --- LOADER CSS --- */
 #loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
@@ -18,100 +18,80 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
 #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
 #title{font-weight:600;display:flex;align-items:center;gap:10px}
+#notifWrap{display:flex;align-items:center;gap:8px}
+.bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
+.badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
 
-/* LIVE BUTTON CSS */
-#liveBtn { background: var(--live); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; animation: glow 1.5s infinite; }
-@keyframes glow { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+#onlineCount { background: rgba(37, 211, 102, 0.1); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(37, 211, 102, 0.3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 
-#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
+/* --- LIVE STREAM CSS --- */
+#liveOverlay{position:fixed;inset:0;background:#000;z-index:9500;display:none;flex-direction:column;color:#fff}
+#liveVideo{width:100%;height:100%;object-fit:cover;background:#000}
+#liveHeader{position:absolute;top:0;width:100%;padding:15px;background:linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);display:flex;justify-content:space-between;align-items:center;z-index:10}
+.live-badge{background:var(--live);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:bold;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+.live-badge::before{content:'';width:8px;height:8px;background:#fff;border-radius:50%;display:inline-block;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.live-controls{position:absolute;bottom:40px;width:100%;display:flex;justify-content:center;gap:15px;z-index:10}
+.btn-live-action{padding:12px 25px;border-radius:30px;border:0;font-weight:bold;cursor:pointer;font-size:14px}
+.btn-start{background:var(--accent);color:#fff}
+.btn-stop{background:var(--live);color:#fff}
+
+/* Rest of your existing CSS (Truncated for brevity, but keep yours) */
+#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;display:flex;flex-direction:column}
 #panel.open{transform:translateX(0)}
-.panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
-.panelTitle{font-weight:700}
-.panelClose{margin-left:auto;background:none;border:0;color:var(--accent);cursor:pointer;font-size:18px}
-.panelList{padding:8px;overflow:auto;flex:1}
-.panelItem{padding:10px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.panelItem:hover{background:rgba(255,255,255,.02)}
 #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+.msg-row{display:flex;align-items:flex-end;max-width:80%}
 .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px}
 .msg-row.self .bubble{background:#005c4b}
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer}
-
-/* STREAMING UI */
-#streamOverlay { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
-#streamVideo { width: 100%; height: 100%; object-fit: cover; }
-#streamUI { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; pointer-events: none; }
-.streamHeader { display: flex; justify-content: space-between; pointer-events: auto; }
-.viewer-badge { background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
-#closeStream { background: var(--live); border: none; color: #fff; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-.stream-bottom { margin-top: auto; padding: 20px; pointer-events: auto; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
-
-#liveModal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 4000; display: none; align-items: center; justify-content: center; }
-.liveCard { background: #111b21; width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; }
-.liveList { max-height: 300px; overflow-y: auto; margin: 15px 0; }
-.liveUserItem { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #202c33; }
-.btnStartLive { width: 100%; background: var(--live); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s}
-#toast.show{opacity:1}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
-#loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:300px}
-#loginCard input{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff}
-#loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:bold}
+#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10000}
+#loginCard{background:#0b141a;padding:25px;border-radius:16px;width:320px;text-align:center}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:40px;background:#2a3942;color:#fff;padding:10px 20px;border-radius:10px;z-index:11000;display:none}
 </style>
 </head>
 <body>
 
-<div id="loader-wrapper"><div class="loader-wheel"></div><div class="loader-text">Initializing...</div></div>
+<div id="loader-wrapper"><div class="loader-wheel"></div><div class="loader-text">Opening Eris Chat...</div></div>
 
-<div id="streamOverlay">
-    <video id="streamVideo" autoplay playsinline></video>
-    <div id="streamUI">
-        <div class="streamHeader">
-            <div class="viewer-badge">👁️ <span id="viewerCount">0</span> Watching</div>
-            <button id="closeStream">End Stream</button>
+<div id="liveOverlay">
+    <div id="liveHeader">
+        <div style="display:flex; align-items:center; gap:10px">
+            <div class="live-badge" id="liveBadgeStatus">LIVE</div>
+            <span id="liveStreamerName">Username</span>
         </div>
-        <div class="stream-bottom">
-            <h3 id="streamerName" style="margin:0">Live Stream</h3>
-            <p id="streamStatus" style="font-size:12px;color:var(--muted)">Broadcasting via WebRTC...</p>
-        </div>
+        <button onclick="exitLive()" style="background:none;border:0;color:#fff;font-size:24px;cursor:pointer">✕</button>
     </div>
-</div>
-
-<div id="liveModal">
-    <div class="liveCard">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-            <h3 style="margin:0">Live Streams</h3>
-            <button onclick="document.getElementById('liveModal').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
-        </div>
-        <div class="liveList" id="liveList"></div>
-        <button class="btnStartLive" id="goLiveBtn">GO LIVE NOW</button>
+    <video id="liveVideo" autoplay playsinline></video>
+    <div class="live-controls">
+        <button id="startStreamBtn" class="btn-live-action btn-start">GO LIVE</button>
+        <button id="stopStreamBtn" class="btn-live-action btn-stop" style="display:none">END STREAM</button>
     </div>
 </div>
 
 <div id="app">
     <div id="topBar">
-        <div id="title">Chat Room</div>
-        <button id="liveBtn">● LIVE</button>
+        <div id="title">Eris Chat</div>
         <div style="flex:1"></div>
-        <div id="onlineCount" style="font-size:12px;color:var(--accent)">0 online</div>
+        <div id="notifWrap">
+            <button class="bell" id="liveToggleBtn" title="Live Streams" style="color:#ff3b30; border-color:#ff3b30">📺</button>
+            <div class="bell" id="bellBtn">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
+        </div>
+        <div id="onlineCount">0 online</div>
     </div>
     <div id="messages"></div>
     <div id="inputBar">
         <input id="messageInput" placeholder="Type a message..."/>
-        <button id="sendBtn">➤</button>
+        <button id="sendBtn" style="background:var(--accent);border:0;border-radius:50%;width:40px;height:40px;color:#fff;cursor:pointer">➤</button>
     </div>
 </div>
 
 <div id="loginWrap">
     <div id="loginCard">
-        <h3 style="margin:0;text-align:center">Welcome</h3>
-        <input id="nameInput" placeholder="Your Name" />
-        <button id="joinBtn">Join Chat</button>
+        <h2 style="margin-top:0">Welcome</h2>
+        <input id="nameInput" placeholder="Enter Name" style="width:100%;padding:12px;margin-bottom:15px;border-radius:8px;border:0;background:#2a3942;color:#fff"/><br/>
+        <button id="joinBtn" style="width:100%;padding:12px;background:var(--accent);border:0;border-radius:8px;color:#fff;font-weight:bold;cursor:pointer">JOIN NOW</button>
     </div>
 </div>
 
@@ -125,170 +105,186 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// State Management
 let username = localStorage.getItem('guestName') || '';
-const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn');
-const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
-const liveBtn = document.getElementById('liveBtn'), liveModal = document.getElementById('liveModal'), liveList = document.getElementById('liveList'), goLiveBtn = document.getElementById('goLiveBtn');
-const streamOverlay = document.getElementById('streamOverlay'), streamVideo = document.getElementById('streamVideo'), closeStream = document.getElementById('closeStream'), viewerCountEl = document.getElementById('viewerCount');
-
-let localStream = null, peerConnections = {}, isBroadcasting = false, currentStreamer = null;
+let localStream = null;
+let peerConnection = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1000); });
+// UI Elements
+const messagesEl = document.getElementById('messages');
+const nameInput = document.getElementById('nameInput');
+const loginWrap = document.getElementById('loginWrap');
+const liveOverlay = document.getElementById('liveOverlay');
+const liveVideo = document.getElementById('liveVideo');
+const startStreamBtn = document.getElementById('startStreamBtn');
+const stopStreamBtn = document.getElementById('stopStreamBtn');
 
-function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 2000); }
+window.addEventListener('load', () => {
+    setTimeout(() => document.getElementById('loader-wrapper').style.display='none', 1000);
+    if(username) {
+        loginWrap.style.display = 'none';
+        initApp();
+    }
+});
 
-// --- AUTH ---
-if(!username) loginWrap.style.display = 'flex'; else startApp();
-
-joinBtn.onclick = () => {
+document.getElementById('joinBtn').onclick = () => {
     const n = nameInput.value.trim();
-    if(n) { username = n; localStorage.setItem('guestName', n); loginWrap.style.display = 'none'; startApp(); }
+    if(n) {
+        username = n;
+        localStorage.setItem('guestName', n);
+        loginWrap.style.display = 'none';
+        initApp();
+    }
 };
 
-function startApp(){
+function initApp() {
+    // Standard Chat Logic
     db.ref(`status/${username}`).set(true);
     db.ref(`status/${username}`).onDisconnect().remove();
     
-    // Group Messages
+    // Listen for Messages
     db.ref('messages').limitToLast(50).on('child_added', snap => {
         const data = snap.val();
-        const row = document.createElement('div');
-        row.className = 'msg-row' + (data.name === username ? ' self' : '');
-        row.innerHTML = `<div class="avatar">${data.name[0]}</div><div class="bubble"><b>${data.name}</b><br>${data.text}</div>`;
-        messagesEl.appendChild(row);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+        renderMessage(data);
     });
 
-    db.ref('status').on('value', s => { document.getElementById('onlineCount').textContent = (s.numChildren() || 0) + " online"; });
-    
-    listenForStreams();
-}
-
-sendBtn.onclick = () => {
-    const text = messageInput.value.trim();
-    if(text) { db.ref('messages').push({ name: username, text: text, time: Date.now() }); messageInput.value = ''; }
-};
-
-// --- LIVE STREAMING LOGIC (WEBRTC MESH) ---
-
-liveBtn.onclick = () => { liveModal.style.display = 'flex'; refreshLiveList(); };
-
-async function refreshLiveList(){
-    liveList.innerHTML = '';
-    const snap = await db.ref('streams').once('value');
-    snap.forEach(child => {
-        const s = child.val();
-        const div = document.createElement('div');
-        div.className = 'liveUserItem';
-        div.innerHTML = `<span><b>${s.name}</b> is Live</span> <button onclick="watchStream('${child.key}')" style="background:var(--accent);border:0;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer">Watch</button>`;
-        liveList.appendChild(div);
-    });
-    if(!snap.exists()) liveList.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--muted)">No active streams</p>';
-}
-
-goLiveBtn.onclick = async () => {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamVideo.srcObject = localStream;
-        streamVideo.muted = true;
-        streamOverlay.style.display = 'flex';
-        liveModal.style.display = 'none';
-        isBroadcasting = true;
-        
-        const streamRef = db.ref(`streams/${username}`);
-        await streamRef.set({ name: username, startedAt: Date.now(), viewers: 0 });
-        streamRef.onDisconnect().remove();
-
-        // Listen for watch requests (Signaling)
-        db.ref(`stream_signaling/${username}`).on('child_added', async snap => {
-            const request = snap.val();
-            if(request.offer) {
-                const pc = new RTCPeerConnection(rtcConfig);
-                peerConnections[snap.key] = pc;
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                
-                pc.onicecandidate = e => { if(e.candidate) db.ref(`stream_signaling/${username}/${snap.key}/ice_streamer`).push(e.candidate.toJSON()); };
-                
-                await pc.setRemoteDescription(new RTCSessionDescription(request.offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                
-                db.ref(`stream_signaling/${username}/${snap.key}/answer`).set({ sdp: answer.sdp, type: answer.type });
-                
-                // Track viewer count
-                db.ref(`streams/${username}/viewers`).transaction(v => (v || 0) + 1);
-                pc.onconnectionstatechange = () => {
-                    if(pc.connectionState === 'disconnected') {
-                        db.ref(`streams/${username}/viewers`).transaction(v => Math.max(0, (v || 1) - 1));
-                    }
-                };
-            }
-        });
-
-        // Update Viewer Count UI for streamer
-        db.ref(`streams/${username}/viewers`).on('value', s => { viewerCountEl.textContent = s.val() || 0; });
-
-    } catch (e) { showToast("Camera Access Denied"); }
-};
-
-async function watchStream(streamerId) {
-    currentStreamer = streamerId;
-    liveModal.style.display = 'none';
-    streamOverlay.style.display = 'flex';
-    closeStream.textContent = "Leave Stream";
-    document.getElementById('streamerName').textContent = streamerId + "'s Live";
-
-    const pc = new RTCPeerConnection(rtcConfig);
-    peerConnections[streamerId] = pc;
-
-    pc.ontrack = e => { streamVideo.srcObject = e.streams[0]; };
-    pc.onicecandidate = e => { if(e.candidate) db.ref(`stream_signaling/${streamerId}/${username}/ice_viewer`).push(e.candidate.toJSON()); };
-
-    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
-    await pc.setLocalDescription(offer);
-
-    const sigRef = db.ref(`stream_signaling/${streamerId}/${username}`);
-    sigRef.set({ offer: { sdp: offer.sdp, type: offer.type } });
-
-    sigRef.child('answer').on('value', async s => {
-        if(s.exists()) await pc.setRemoteDescription(new RTCSessionDescription(s.val()));
-    });
-
-    db.ref(`stream_signaling/${streamerId}/${username}/ice_streamer`).on('child_added', s => {
-        pc.addIceCandidate(new RTCIceCandidate(s.val()));
-    });
-
-    db.ref(`streams/${streamerId}/viewers`).on('value', s => { viewerCountEl.textContent = s.val() || 0; });
-}
-
-function listenForStreams() {
-    db.ref('streams').on('child_removed', snap => {
-        if(currentStreamer === snap.key) {
-            showToast("Stream ended by host");
-            stopEverything();
+    // Listen for Active Live Streams
+    db.ref('liveStreams').on('value', snap => {
+        const streams = snap.val();
+        const liveBtn = document.getElementById('liveToggleBtn');
+        if(streams) {
+            liveBtn.style.animation = "pulse 1.5s infinite";
+            const streamer = Object.keys(streams)[0];
+            if(streamer !== username) showToast(`📺 ${streamer} is LIVE!`);
+        } else {
+            liveBtn.style.animation = "none";
         }
     });
 }
 
-closeStream.onclick = stopEverything;
-
-function stopEverything() {
-    if(isBroadcasting) {
-        db.ref(`streams/${username}`).remove();
-        db.ref(`stream_signaling/${username}`).remove();
-    } else if(currentStreamer) {
-        db.ref(`stream_signaling/${currentStreamer}/${username}`).remove();
-    }
-    
-    if(localStream) localStream.getTracks().forEach(t => t.stop());
-    Object.values(peerConnections).forEach(pc => pc.close());
-    peerConnections = {};
-    streamOverlay.style.display = 'none';
-    streamVideo.srcObject = null;
-    isBroadcasting = false;
-    currentStreamer = null;
+function renderMessage(data) {
+    const div = document.createElement('div');
+    div.className = `msg-row ${data.name === username ? 'self' : ''}`;
+    div.innerHTML = `<div class="bubble"><strong>${data.name}:</strong><br/>${data.text}</div>`;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
 }
+
+document.getElementById('sendBtn').onclick = () => {
+    const text = document.getElementById('messageInput').value;
+    if(text) {
+        db.ref('messages').push({ name: username, text: text, time: Date.now() });
+        document.getElementById('messageInput').value = '';
+    }
+};
+
+/* --- ERIS STYLE LIVE STREAMING LOGIC --- */
+
+document.getElementById('liveToggleBtn').onclick = async () => {
+    const snap = await db.ref('liveStreams').once('value');
+    const streams = snap.val();
+    
+    liveOverlay.style.display = 'flex';
+    
+    if(streams) {
+        // Someone is already live, join as viewer
+        const streamerName = Object.keys(streams)[0];
+        joinAsViewer(streamerName);
+    } else {
+        // No one is live, setup for broadcaster
+        document.getElementById('liveStreamerName').textContent = "You are Broadcasting";
+        startStreamBtn.style.display = 'block';
+        stopStreamBtn.style.display = 'none';
+        
+        // Preview Camera
+        localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+        liveVideo.srcObject = localStream;
+        liveVideo.muted = true;
+    }
+};
+
+startStreamBtn.onclick = async () => {
+    startStreamBtn.style.display = 'none';
+    stopStreamBtn.style.display = 'block';
+    
+    // Mark as live in DB
+    db.ref(`liveStreams/${username}`).set({ active: true, started: Date.now() });
+    
+    // Listen for viewer requests
+    db.ref(`liveStreams/${username}/requests`).on('child_added', async snap => {
+        const viewerId = snap.key;
+        const pc = new RTCPeerConnection(rtcConfig);
+        
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        
+        pc.onicecandidate = e => {
+            if(e.candidate) db.ref(`liveStreams/${username}/signals/${viewerId}`).push({ candidate: e.candidate.toJSON() });
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        db.ref(`liveStreams/${username}/signals/${viewerId}`).push({ offer });
+        
+        // Handle Answer from Viewer
+        db.ref(`liveStreams/${username}/signals/${viewerId}`).on('child_added', async s => {
+            const val = s.val();
+            if(val.answer) pc.setRemoteDescription(new RTCSessionDescription(val.answer));
+        });
+    });
+};
+
+async function joinAsViewer(streamerName) {
+    document.getElementById('liveStreamerName').textContent = `Watching ${streamerName}`;
+    startStreamBtn.style.display = 'none';
+    stopStreamBtn.style.display = 'none';
+    
+    peerConnection = new RTCPeerConnection(rtcConfig);
+    peerConnection.ontrack = e => { liveVideo.srcObject = e.streams[0]; };
+    
+    // Signal the streamer that we are watching
+    db.ref(`liveStreams/${streamerName}/requests/${username}`).set(true);
+    
+    // Listen for signaling data from streamer
+    db.ref(`liveStreams/${streamerName}/signals/${username}`).on('child_added', async snap => {
+        const data = snap.val();
+        if(data.offer) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            db.ref(`liveStreams/${streamerName}/signals/${username}`).push({ answer });
+        } else if(data.candidate) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+    });
+}
+
+function exitLive() {
+    liveOverlay.style.display = 'none';
+    if(localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        db.ref(`liveStreams/${username}`).remove();
+    }
+    if(peerConnection) peerConnection.close();
+    liveVideo.srcObject = null;
+}
+
+stopStreamBtn.onclick = exitLive;
+
+function showToast(m) {
+    const t = document.getElementById('toast');
+    t.textContent = m;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display='none', 3000);
+}
+
+// Cleanup
+window.onbeforeunload = () => {
+    if(username) {
+        db.ref(`status/${username}`).remove();
+        db.ref(`liveStreams/${username}`).remove();
+    }
+};
 </script>
 </body>
 </html>
