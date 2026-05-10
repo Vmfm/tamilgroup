@@ -1,653 +1,284 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tamil VM FM - Live Radio</title>
-<style>
-/* Loader */
-#loader {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-#content { display: none; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamil VM FM - Premium Live Radio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b1120;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --fav-color: #fbbf24;
+            --transition: all 0.3s ease;
+        }
 
-/* General styles */
-body {
-    background-color: #072859;
-    color: white;
-    font-family: 'Poppins', sans-serif;
-    transition: background 0.3s, color 0.3s;
-}
-img {
-    border-radius: 5px;
-}
+        .light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --accent-color: #0284c7;
+        }
 
-/* Station grid - Always 3 per row */
-.station-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 15px;
-}
-.station {
-    position: relative;
-    text-align: center;
-    flex: 1 1 calc(33.33% - 10px);
-}
-.favorite-btn {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    cursor: pointer;
-    font-size: 24px;
-    background: rgba(0,0,0,0.5);
-    border-radius: 50%;
-    padding: 2px 6px;
-}
-.station-name {
-    margin-top: 5px;
-    font-size: 14px;
-}
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-/* Light mode */
-.light-mode {
-    background-color: white;
-    color: black;
-}
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: var(--transition);
+        }
 
-/* Toggle Buttons */
-.toggle-btn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: #ffcc00;
-    color: black;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    z-index: 10000;
-}
-.fav-page-btn {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    background: #ff6600;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    z-index: 10000;
-}
-</style>
+        /* --- Loader --- */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+
+        #loader img { width: 80px; filter: drop-shadow(0 0 10px var(--accent-color)); }
+
+        /* --- Header & Navigation --- */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(11, 17, 32, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo { font-weight: 600; font-size: 1.2rem; color: var(--accent-color); }
+
+        .nav-buttons { display: flex; gap: 10px; }
+
+        button {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-fav { background: var(--fav-color); color: #000; }
+        .btn-mode { background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(255,255,255,0.1); }
+        button:active { transform: scale(0.95); }
+
+        /* --- Grid System --- */
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .station-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Force 3 columns */
+            gap: 15px;
+        }
+
+        .station-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 10px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .station-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .station-card img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .station-info {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .favorite-heart {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            transition: var(--transition);
+        }
+
+        .favorite-heart:hover { transform: scale(1.2); }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 30px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* Responsive tweak for very small screens */
+        @media (max-width: 360px) {
+            .station-grid { gap: 8px; }
+            .station-info { font-size: 9px; }
+        }
+    </style>
 </head>
 <body>
 
-<!-- Loader -->
 <div id="loader">
-    <img src="https://vmfm.github.io/tamil/Images/loading3.gif" alt="Loading..." />
+    <img src="https://vmfm.github.io/tamil/Images/loading3.gif" alt="Loading">
 </div>
 
-<div id="content">
-
-<!-- Buttons -->
-<button class="fav-page-btn" onclick="window.location.href='go:fave'">⭐ Favorites</button>
-<button class="toggle-btn" onclick="toggleMode()">☀️ Light / 🌙 Dark</button>
-
-<!-- ====== STATION ROWS ====== -->
-<!-- First Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:kaarai">
-            <img src="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="KARAIKAL FM" data-img="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg" data-link="go:kaarai">☆</span>
-        <div class="station-name">KARAIKAL FM</div>
+<header>
+    <div class="logo">TAMIL VM FM</div>
+    <div class="nav-buttons">
+        <button class="btn-fav" onclick="window.location.href='go:fave'">⭐ Favs</button>
+        <button class="btn-mode" onclick="toggleMode()">🌓</button>
     </div>
+</header>
 
-    <div class="station">
-        <a href="go:trichy">
-            <img src="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TRICHY FM" data-img="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" data-link="go:trichy">☆</span>
-        <div class="station-name">TRICHY FM</div>
-    </div>
+<div class="container" id="content" style="display:none;">
+    <div class="station-grid" id="main-grid">
+        </div>
 
-    <div class="station">
-        <a href="go:dharm">
-            <img src="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="DHARMA FM" data-img="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg" data-link="go:dharm">☆</span>
-        <div class="station-name">DHARMA FM</div>
-    </div>
+    <footer>
+        &copy; 2026 Designed by TAMILVM
+    </footer>
 </div>
-
-<!-- Second Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:nagerfm">
-            <img src="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="KUMARI FM" data-img="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg" data-link="go:nagerfm">☆</span>
-        <div class="station-name">KUMARI FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:chennaifm">
-            <img src="https://vmfm.github.io/tamil/Images/airchennaifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="CHENNAI FM" data-img="https://vmfm.github.io/tamil/Images/airchennaifm.jpg" data-link="go:chennaifm">☆</span>
-        <div class="station-name">CHENNAI FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:nellaifm">
-            <img src="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="NELLAI FM" data-img="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg" data-link="go:nellaifm">☆</span>
-        <div class="station-name">NELLAI FM</div>
-    </div>
-</div>
-  
-<!-- Third Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:trichyfm">
-            <img src="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TRICHY FM" data-img="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" data-link="go:trichyfm">⭐</span>
-        <div class="station-name">TRICHY FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:covaifm">
-            <img src="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="COVAI FM" data-img="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg" data-link="go:covaifm">⭐</span>
-        <div class="station-name">COVAI FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:ootyfm">
-            <img src="https://vmfm.github.io/tamil/Images/airootyfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="OOTY FM" data-img="https://vmfm.github.io/tamil/Images/airootyfm.jpg" data-link="go:ootyfm">⭐</span>
-        <div class="station-name">OOTY FM</div>
-    </div>
-</div>
-
-<!-- Fourth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:Fmmadu">
-            <img src="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="MADURAI FM" data-img="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg" data-link="go:Fmmadu">⭐</span>
-        <div class="station-name">MADURAI FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:airtamilna">
-            <img src="https://vmfm.github.io/tamil/Images/airtamilnadufm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TAMILNA FM" data-img="https://vmfm.github.io/tamil/Images/airtamilnadufm.jpg" data-link="go:airtamilna">⭐</span>
-        <div class="station-name">TAMILNA FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:airtamil">
-            <img src="https://vmfm.github.io/tamil/Images/airtamillivefm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="AIR TAMIL" data-img="https://vmfm.github.io/tamil/Images/airtamillivefm.jpg" data-link="go:airtamil">⭐</span>
-        <div class="station-name">AIR TAMIL </div>
-    </div>
-</div>
-
-<!-- Fifth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:airgold">
-            <img src="https://vmfm.github.io/tamil/Images/airgoldfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="AIRGOLD FM" data-img="https://vmfm.github.io/tamil/Images/airgoldfm.jpg" data-link="go:airgold">⭐</span>
-        <div class="station-name">AIRGOLD FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:vividhbhar">
-            <img src="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="VIVIDH FM" data-img="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" data-link="go:vividhbhar">⭐</span>
-        <div class="station-name">VIVIDH FM</div>
-    </div>
-
-    <div class="station">
-        <a href="go:kodai">
-            <img src="https://vmfm.github.io/tamil/Images/airKodaikanalfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="KODAI FM" data-img="https://vmfm.github.io/tamil/Images/airKodaikanalfm.jpg" data-link="go:kodai">⭐</span>
-        <div class="station-name">KODAI FM</div>
-    </div>
-</div>
-<!-- Sixth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:tnvibefm">
-            <img src="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TNVIBE FM" data-img="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg" data-link="go:tnvibefm">⭐</span>
-        <div class="station-name">TNVIBE FM</div>
-    </div>
-    <div class="station">
-        <a href="go:pudugaicit">
-            <img src="https://vmfm.github.io/tamil/Images/pudhugai.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="PUDUGAI CITY" data-img="https://vmfm.github.io/tamil/Images/pudhugai.jpg" data-link="go:pudugaicit">⭐</span>
-        <div class="station-name">PUDUGAI CITY</div>
-    </div>
-    <div class="station">
-        <a href="go:RadioPett">
-            <img src="https://vmfm.github.io/tamil/Images/radiopetti1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="RADIOPETTI" data-img="https://vmfm.github.io/tamil/Images/radiopetti1.jpg" data-link="go:RadioPett">⭐</span>
-        <div class="station-name">RADIOPETTI</div>
-    </div>
-</div>
-
-<!-- Seventh Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:thenifm">
-            <img src="https://vmfm.github.io/tamil/Images/thenifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="THENI FM" data-img="https://vmfm.github.io/tamil/Images/thenifm.jpg" data-link="go:thenifm">⭐</span>
-        <div class="station-name">THENI FM</div>
-    </div>
-    <div class="station">
-        <a href="go:sivaganga">
-            <img src="https://vmfm.github.io/tamil/Images/ssradiosivagangai.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="SIVAGA FM" data-img="https://vmfm.github.io/tamil/Images/ssradiosivagangai.png" data-link="go:sivaganga">⭐</span>
-        <div class="station-name">SIVAGA FM</div>
-    </div>
-    <div class="station">
-        <a href="go:peram">
-            <img src="https://vmfm.github.io/tamil/Images/perambalurfm.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="PERAMB FM" data-img="https://vmfm.github.io/tamil/Images/perambalurfm.png" data-link="go:peram">⭐</span>
-        <div class="station-name">PERAMB FM</div>
-    </div>
-</div>
-
-<!-- Eighth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:thirudan">
-            <img src="https://vmfm.github.io/tamil/Images/thirudanfm.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="THIRUDAN FM" data-img="https://vmfm.github.io/tamil/Images/thirudanfm.png" data-link="go:thirudan">⭐</span>
-        <div class="station-name">THIRUDAN FM</div>
-    </div>
-    <div class="station">
-        <a href="go:virudhai">
-            <img src="https://vmfm.github.io/tamil/Images/virudhairadio.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="VIRUDHA FM" data-img="https://vmfm.github.io/tamil/Images/virudhairadio.jpg" data-link="go:virudhai">⭐</span>
-        <div class="station-name">VIRUDHA FM</div>
-    </div>
-    <div class="station">
-        <a href="go:PSTamilR">
-            <img src="https://vmfm.github.io/tamil/Images/pstamilradio.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="PSTAMIL FM" data-img="https://vmfm.github.io/tamil/Images/pstamilradio.png" data-link="go:PSTamilR">⭐</span>
-        <div class="station-name">PSTAMIL FM</div>
-    </div>
-</div>
-
-<!-- Ninth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:erodejai">
-            <img src="https://vmfm.github.io/tamil/Images/erodejaifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="JAI FM" data-img="https://vmfm.github.io/tamil/Images/erodejaifm.jpg" data-link="go:erodejai">⭐</span>
-        <div class="station-name">JAI FM</div>
-    </div>
-    <div class="station">
-        <a href="go:isaiparava">
-            <img src="https://vmfm.github.io/tamil/Images/isaiparavai-1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="ISAIPA FM" data-img="https://vmfm.github.io/tamil/Images/isaiparavai-1.jpg" data-link="go:isaiparava">⭐</span>
-        <div class="station-name">ISAIPA FM</div>
-    </div>
-    <div class="station">
-        <a href="go:tamilaifm">
-            <img src="https://vmfm.github.io/tamil/Images/tamilaifm-1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TAMILAI FM" data-img="https://vmfm.github.io/tamil/Images/tamilaifm-1.jpg" data-link="go:tamilaifm">⭐</span>
-        <div class="station-name">TAMILAI FM</div>
-    </div>
-</div>
-
-<!-- Tenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:Tamizen">
-            <img src="https://vmfm.github.io/tamil/Images/tamizenradio.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TAMIZ FM" data-img="https://vmfm.github.io/tamil/Images/tamizenradio.png" data-link="go:Tamizen">⭐</span>
-        <div class="station-name">TAMIZ FM</div>
-    </div>
-    <div class="station">
-        <a href="go:Tamilnadu">
-            <img src="https://vmfm.github.io/tamil/Images/tamilnadufm.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TAMILNA FM" data-img="https://vmfm.github.io/tamil/Images/tamilnadufm.png" data-link="go:Tamilnadu">⭐</span>
-        <div class="station-name">TAMILNA FM</div>
-    </div>
-    <div class="station">
-        <a href="go:NTMRadio">
-            <img src="https://vmfm.github.io/tamil/Images/mathamradio.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="SSNATHAM FM" data-img="https://vmfm.github.io/tamil/Images/mathamradio.jpeg" data-link="go:NTMRadio">⭐</span>
-        <div class="station-name">SSNATHAM FM</div>
-    </div>
-</div>
-
-<!-- Eleventh Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:harifm">
-            <img src="https://vmfm.github.io/tamil/Images/haritamilfm-1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="HARI FM" data-img="https://vmfm.github.io/tamil/Images/haritamilfm-1.jpg" data-link="go:harifm">⭐</span>
-        <div class="station-name">HARI FM</div>
-    </div>
-    <div class="station">
-        <a href="go:TamilRemi">
-            <img src="https://vmfm.github.io/tamil/Images/tamilremixhitsfm.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="REMIX FM" data-img="https://vmfm.github.io/tamil/Images/tamilremixhitsfm.jpeg" data-link="go:TamilRemi">⭐</span>
-        <div class="station-name">REMIX FM</div>
-    </div>
-    <div class="station">
-        <a href="go:megazon">
-            <img src="https://vmfm.github.io/tamil/Images/megazonesouthnew-1.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="MEGAZON FM" data-img="https://vmfm.github.io/tamil/Images/megazonesouthnew-1.jpg" data-link="go:megazon">⭐</span>
-        <div class="station-name">MEGAZON FM</div>
-    </div>
-</div>
-
-<!-- Twelfth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:Dindigul">
-            <img src="https://vmfm.github.io/tamil/Images/dindugalfm.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="DINDUGAL FM" data-img="https://vmfm.github.io/tamil/Images/dindugalfm.jpeg" data-link="go:Dindigul">⭐</span>
-        <div class="station-name">DINDUGAL FM</div>
-    </div>
-    <div class="station">
-        <a href="go:FMKottara">
-            <img src="https://vmfm.github.io/tamil/Images/FM%20Kottarakkara.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="KOTTAR FM" data-img="https://vmfm.github.io/tamil/Images/FM%20Kottarakkara.png" data-link="go:FMKottara">⭐</span>
-        <div class="station-name">KOTTAR FM</div>
-    </div>
-    <div class="station">
-        <a href="go:GingeeFm">
-            <img src="https://vmfm.github.io/tamil/Images/gingeefm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="GINGEE FM" data-img="https://vmfm.github.io/tamil/Images/gingeefm.jpg" data-link="go:GingeeFm">⭐</span>
-        <div class="station-name">GINGEE FM</div>
-    </div>
-</div> 
-
-<!-- Thirteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:subagee">
-            <img src="https://vmfm.github.io/tamil/Images/subageetham.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="SUBAG FM" data-img="https://vmfm.github.io/tamil/Images/subageetham.jpeg" data-link="go:subagee">⭐</span>
-        <div class="station-name">SUBAG FM</div>
-    </div>
-  <div class="station">
-        <a href="go:nammaradio">
-            <img src="https://vmfm.github.io/tamil/Images/nammaradio.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="NAMMA FM" data-img="https://vmfm.github.io/tamil/Images/nammaradio.png" data-link="go:nammaradio">⭐</span>
-        <div class="station-name">NAMMA FM</div>
-    </div>
- <div class="station">
-        <a href="go:vaanavil2">
-            <img src="https://vmfm.github.io/tamil/Images/vaanavilvaanoli-1.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="VAANAVIL2 FM" data-img="https://vmfm.github.io/tamil/Images/vaanavilvaanoli-1.png" data-link="go:vaanavil2">⭐</span>
-        <div class="station-name">VAANAVIL2 FM</div>
-    </div>
-</div>
-
-<!-- Fourteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:mannaifm">
-            <img src="https://vmfm.github.io/tamil/Images/mannaifm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="MANNAI FM" data-img="https://vmfm.github.io/tamil/Images/mannaifm.jpg" data-link="go:mannaifm">⭐</span>
-        <div class="station-name">MANNAI FM</div>
-    </div>
-<div class="station">
-        <a href="go:British">
-            <img src="https://vmfm.github.io/tamil/Images/British%20Indian%20Tamil%20Radio%202-1.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="BRITISH FM" data-img="https://vmfm.github.io/tamil/Images/British%20Indian%20Tamil%20Radio%202-1.png" data-link="go:British">⭐</span>
-        <div class="station-name">BRITISH FM</div>
-    </div>
- <div class="station">
-        <a href="go:tthanga">
-            <img src="https://vmfm.github.io/tamil/Images/tamilthangamgm.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="TTHANGA FM" data-img="https://vmfm.github.io/tamil/Images/tamilthangamgm.jpeg" data-link="go:tthanga">⭐</span>
-        <div class="station-name">TTHANGA FM</div>
-    </div>
-</div>
-
-<!-- Fifteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:amuplush">
-            <img src="https://vmfm.github.io/tamil/Images/amuthamhdplush.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="AMU PLUSAH" data-img="https://vmfm.github.io/tamil/Images/amuthamhdplush.jpg" data-link="go:amuplush">⭐</span>
-        <div class="station-name">AMU PLUSH</div>
-    </div>
-<div class="station">
-        <a href="go:chillax">
-            <img src="https://vmfm.github.io/tamil/Images/chillaxfm1.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="CHILLAX FM" data-img="https://vmfm.github.io/tamil/Images/chillaxfm1.png" data-link="go:chillax">⭐</span>
-        <div class="station-name">CHILLAX FM</div>
-    </div>
-<div class="station">
-        <a href="go:Kingtamil">
-            <img src="https://vmfm.github.io/tamil/Images/King%20fm%20tamil%201.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="KINGTAMIL FM" data-img="https://vmfm.github.io/tamil/Images/King%20fm%20tamil%201.png" data-link="go:Kingtamil">⭐</span>
-        <div class="station-name">KINGTAMIL FM</div>
-    </div>
-</div>
-
-<!-- Sixteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:Vallioor">
-            <img src="https://vmfm.github.io/tamil/Images/vallioorminnalfm.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="MINNAL FM" data-img="https://vmfm.github.io/tamil/Images/vallioorminnalfm.png" data-link="go:Vallioor">⭐</span>
-        <div class="station-name">MINNAL FM</div>
-    </div>
-<div class="station">
-        <a href="go:Amaravathi">
-            <img src="https://vmfm.github.io/tamil/Images/amaravathiradio.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="AMARAVA FM" data-img="https://vmfm.github.io/tamil/Images/amaravathiradio.png" data-link="go:Amaravathi">⭐</span>
-        <div class="station-name">AMARAVA FM</div>
-    </div>
-<div class="station">
-        <a href="go:cheemai">
-            <img src="https://vmfm.github.io/tamil/Images/cheemaifm.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="CHEEMAI FM" data-img="https://vmfm.github.io/tamil/Images/cheemaifm.png" data-link="go:cheemai">⭐</span>
-        <div class="station-name">CHEEMAI FM</div>
-    </div>
-</div>
-
-<!-- Seventeenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:Magizh">
-            <img src="https://vmfm.github.io/tamil/Images/magizhfm.jpeg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="MAGIZH FM" data-img="https://vmfm.github.io/tamil/Images/magizhfm.jpeg" data-link="go:Magizh">⭐</span>
-        <div class="station-name">MAGIZH FM</div>
-    </div>
-<div class="station">
-        <a href="go:ammaCuddN">
-            <img src="https://vmfm.github.io/tamil/Images/nammacuddalorefm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="CUDDALOU FM" data-img="https://vmfm.github.io/tamil/Images/nammacuddalorefm.jpg" data-link="go:ammaCuddN">⭐</span>
-        <div class="station-name">CUDDALOU FM</div>
-    </div>
- <div class="station">
-        <a href="go:Thiruthani">
-            <img src="https://vmfm.github.io/tamil/Images/thiruthanicityfm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="THIRUTHANI FM" data-img="https://vmfm.github.io/tamil/Images/thiruthanicityfm.jpg" data-link="go:Thiruthani">⭐</span>
-        <div class="station-name">THIRUTHANI FM</div>
-    </div>
-</div>
- 
-<!-- Eighteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:numfm">
-            <img src="https://vmfm.github.io/tamil/Images/Namma%20Radio.png" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="NAMMA FM" data-img="https://vmfm.github.io/tamil/Images/Namma%20Radio.png" data-link="go:numfm">⭐</span>
-        <div class="station-name">NAMMA FM</div>
-    </div>
-<div class="station">
-        <a href="go:TamilRaga">
-            <img src="https://vmfm.github.io/tamil/Images/tamilragam.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="RAGAM FM" data-img="https://vmfm.github.io/tamil/Images/tamilragam.jpg" data-link="go:TamilRaga">⭐</span>
-        <div class="station-name">RAGAM FM</div>
-    </div>
- <div class="station">
-        <a href="go:Nathifm">
-            <img src="https://vmfm.github.io/tamil/Images/Nathi%20FM.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="NATHI FM" data-img="https://vmfm.github.io/tamil/Images/Nathi%20FM.jpg" data-link="go:Nathifm">⭐</span>
-        <div class="station-name">NATHI FM</div>
-    </div>
-</div>
-
-<!-- Nineteenth Row -->
-<div class="station-row">
-    <div class="station">
-        <a href="go:rjtamil">
-            <img src="https://vmfm.github.io/tamil/Images/rjtamil-pudugai.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="RJ TAMIL" data-img="https://vmfm.github.io/tamil/Images/rjtamil-pudugai.jpg" data-link="go:rjtamil">⭐</span>
-        <div class="station-name">RJ TAMIL</div>
-    </div>
-    <div class="station">
-        <a href="go:saaralfm">
-            <img src="https://vmfm.github.io/tamil/Images/saaral-fm.jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="SAARAL FM" data-img="https://vmfm.github.io/tamil/Images/saaral-fm.jpg" data-link="go:saaralfm">⭐</span>
-        <div class="station-name">SAARAL FM</div>
-    </div>
-    <div class="station">
-        <a href="go:Skyway">
-            <img src="https://vmfm.github.io/tamil/Images/Skyway Tamil FM (1).jpg" width="100%" height="auto">
-        </a>
-        <span class="favorite-btn" data-name="SKYWAY FM" data-img="https://vmfm.github.io/tamil/Images/Skyway Tamil FM (1).jpg" data-link="go:Skyway">⭐</span>
-        <div class="station-name">SKYWAY FM</div>
-    </div>
-</div>
-
-
-
-                                                                                                                                                                             
-
-<!-- Footer -->
-<div style="background-color:black;color:white;text-align:center;margin-top:20px;padding:5px;">
-    Designed by TAMILVM
-</div>
-
-</div> <!-- End Content -->
 
 <script>
-// Loader delay
-window.onload = function () {
-    setTimeout(() => {
-        document.getElementById("loader").style.display = "none";
-        document.getElementById("content").style.display = "block";
-        loadFavorites();
-    }, 2000);
-};
+    // Station Data Array (Easier to manage than repeating HTML)
+    const stations = [
+        { name: "KARAIKAL FM", img: "airkaaraikalfm1.jpg", link: "go:kaarai" },
+        { name: "TRICHY FM", img: "airtrichyfm.jpg", link: "go:trichy" },
+        { name: "DHARMA FM", img: "airdharmaburifm.jpg", link: "go:dharm" },
+        { name: "KUMARI FM", img: "airnagercovilfm.jpg", link: "go:nagerfm" },
+        { name: "CHENNAI FM", img: "airchennaifm.jpg", link: "go:chennaifm" },
+        { name: "NELLAI FM", img: "airtrinelvelyfm.jpg", link: "go:nellaifm" },
+        { name: "COVAI FM", img: "aircoimbaturefm.jpg", link: "go:covaifm" },
+        { name: "OOTY FM", img: "airootyfm.jpg", link: "go:ootyfm" },
+        { name: "MADURAI FM", img: "airmaduraifm.jpg", link: "go:Fmmadu" },
+        { name: "TAMILNA FM", img: "airtamilnadufm.jpg", link: "go:airtamilna" },
+        { name: "AIR TAMIL", img: "airtamillivefm.jpg", link: "go:airtamil" },
+        { name: "AIRGOLD FM", img: "airgoldfm.jpg", link: "go:airgold" },
+        { name: "VIVIDH FM", img: "airtrichyfm.jpg", link: "go:vividhbhar" },
+        { name: "KODAI FM", img: "airKodaikanalfm.jpg", link: "go:kodai" },
+        { name: "TNVIBE FM", img: "tnvibefm-1.jpg", link: "go:tnvibefm" },
+        { name: "PUDUGAI CITY", img: "pudhugai.jpg", link: "go:pudugaicit" },
+        { name: "RADIOPETTI", img: "radiopetti1.jpg", link: "go:RadioPett" },
+        { name: "THENI FM", img: "thenifm.jpg", link: "go:thenifm" },
+        { name: "SIVAGA FM", img: "ssradiosivagangai.png", link: "go:sivaganga" },
+        { name: "PERAMB FM", img: "perambalurfm.png", link: "go:peram" },
+        { name: "THIRUDAN FM", img: "thirudanfm.png", link: "go:thirudan" },
+        { name: "VIRUDHA FM", img: "virudhairadio.jpg", link: "go:virudhai" },
+        { name: "PSTAMIL FM", img: "pstamilradio.png", link: "go:PSTamilR" },
+        { name: "JAI FM", img: "erodejaifm.jpg", link: "go:erodejai" },
+        { name: "ISAIPA FM", img: "isaiparavai-1.jpg", link: "go:isaiparava" },
+        { name: "TAMILAI FM", img: "tamilaifm-1.jpg", link: "go:tamilaifm" },
+        { name: "TAMIZ FM", img: "tamizenradio.png", link: "go:Tamizen" },
+        { name: "SSNATHAM FM", img: "mathamradio.jpeg", link: "go:NTMRadio" },
+        { name: "HARI FM", img: "haritamilfm-1.jpg", link: "go:harifm" },
+        { name: "REMIX FM", img: "tamilremixhitsfm.jpeg", link: "go:TamilRemi" },
+        { name: "MEGAZON FM", img: "megazonesouthnew-1.jpg", link: "go:megazon" },
+        { name: "DINDUGAL FM", img: "dindugalfm.jpeg", link: "go:Dindigul" },
+        { name: "KOTTAR FM", img: "FM%20Kottarakkara.png", link: "go:FMKottara" },
+        { name: "GINGEE FM", img: "gingeefm.jpg", link: "go:GingeeFm" },
+        { name: "SUBAG FM", img: "subageetham.jpeg", link: "go:subagee" },
+        { name: "NAMMA FM", img: "nammaradio.png", link: "go:nammaradio" },
+        { name: "VAANAVIL2 FM", img: "vaanavilvaanoli-1.png", link: "go:vaanavil2" },
+        { name: "MANNAI FM", img: "mannaifm.jpg", link: "go:mannaifm" },
+        { name: "BRITISH FM", img: "British%20Indian%20Tamil%20Radio%202-1.png", link: "go:British" },
+        { name: "CHILLAX FM", img: "chillaxfm1.png", link: "go:chillax" },
+        { name: "MINNAL FM", img: "vallioorminnalfm.png", link: "go:Vallioor" },
+        { name: "MAGIZH FM", img: "magizhfm.jpeg", link: "go:Magizh" },
+        { name: "SKYWAY FM", img: "Skyway%20Tamil%20FM%20(1).jpg", link: "go:Skyway" }
+    ];
 
-// Favorites System
-let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+    const baseUrl = "https://vmfm.github.io/tamil/Images/";
+    let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
 
-document.addEventListener("click", function(e) {
-    if (e.target.classList.contains("favorite-btn")) {
-        let btn = e.target;
-        let stationName = btn.dataset.name;
-        let stationImg = btn.dataset.img;
-        let stationLink = btn.dataset.link;
+    // Initialize Page
+    window.onload = function () {
+        renderStations();
+        setTimeout(() => {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("content").style.display = "block";
+        }, 1200);
+    };
 
-        let exists = favorites.find(fav => fav.name === stationName);
+    function renderStations() {
+        const grid = document.getElementById("main-grid");
+        grid.innerHTML = stations.map(s => {
+            const isFav = favorites.some(f => f.name === s.name);
+            const fullImgUrl = s.img.startsWith('http') ? s.img : baseUrl + s.img;
+            return `
+                <div class="station-card">
+                    <span class="favorite-heart" 
+                          onclick="toggleFav(this, '${s.name}', '${fullImgUrl}', '${s.link}')">
+                          ${isFav ? '⭐' : '☆'}
+                    </span>
+                    <a href="${s.link}">
+                        <img src="${fullImgUrl}" loading="lazy" alt="${s.name}">
+                        <div class="station-info">${s.name}</div>
+                    </a>
+                </div>
+            `;
+        }).join('');
+    }
 
-        if (exists) {
-            favorites = favorites.filter(fav => fav.name !== stationName);
-            btn.textContent = "☆"; // unfilled star
+    function toggleFav(element, name, img, link) {
+        let exists = favorites.findIndex(fav => fav.name === name);
+        if (exists > -1) {
+            favorites.splice(exists, 1);
+            element.textContent = "☆";
         } else {
-            favorites.push({ name: stationName, img: stationImg, link: stationLink });
-            btn.textContent = "⭐"; // filled golden star
+            favorites.push({ name, img, link });
+            element.textContent = "⭐";
         }
         localStorage.setItem("favorites", JSON.stringify(favorites));
     }
-});
 
-// Load saved favorites
-function loadFavorites() {
-    document.querySelectorAll(".favorite-btn").forEach(btn => {
-        let stationName = btn.dataset.name;
-        if (favorites.find(fav => fav.name === stationName)) {
-            btn.textContent = "⭐"; // show filled star
-        } else {
-            btn.textContent = "☆"; // show empty star
-        }
-    });
-}
-
-// Dark / Light mode toggle
-function toggleMode() {
-    document.body.classList.toggle("light-mode");
-}
+    function toggleMode() {
+        document.body.classList.toggle("light-mode");
+    }
 </script>
 
 </body>
