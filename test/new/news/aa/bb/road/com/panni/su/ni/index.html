@@ -3,285 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tamil VM FM - Premium Radio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Tamil VM FM - Premium Live Radio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0b1120;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --text: #f8fafc;
-            --accent: #38bdf8;
-            --fav: #fbbf24;
-            --glass: rgba(15, 23, 42, 0.95);
+            --bg-color: #051937;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --text-color: #ffffff;
+            --accent-color: #ffcc00;
+            --fav-color: #ff6600;
         }
 
         .light-mode {
-            --bg: #f1f5f9;
+            --bg-color: #f4f7f6;
             --card-bg: #ffffff;
-            --text: #1e293b;
-            --accent: #0284c7;
-            --glass: rgba(255, 255, 255, 0.95);
+            --text-color: #333333;
+            --accent-color: #004e92;
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
+            transition: all 0.3s ease;
         }
 
-        /* --- Fixed Loader --- */
-        #loader {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            transition: opacity 0.5s ease;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top: 4px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* --- Header --- */
+        /* Header & Navigation */
         header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(128,128,128,0.1);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); }
-        .nav-group { display: flex; gap: 10px; }
+        .logo { font-weight: 600; font-size: 1.2rem; letter-spacing: 1px; }
 
-        .btn {
+        .nav-buttons { display: flex; gap: 10px; }
+
+        button {
             border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 12px;
-            transition: 0.2s;
+            transition: transform 0.2s;
         }
 
-        .btn-fav { background: var(--fav); color: #000; }
-        .btn-mode { background: var(--card-bg); color: var(--text); border: 1px solid rgba(128,128,128,0.2); }
+        button:active { transform: scale(0.95); }
 
-        /* --- Grid --- */
-        .container { padding: 15px; max-width: 900px; margin: 0 auto; }
+        .btn-fav { background: var(--fav-color); color: white; }
+        .btn-mode { background: var(--accent-color); color: #000; }
 
-        .grid {
+        /* Search Bar */
+        .search-container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        #searchInput {
+            width: 90%;
+            max-width: 400px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: none;
+            background: var(--card-bg);
+            color: var(--text-color);
+            outline: 2px solid var(--accent-color);
+        }
+
+        /* Grid Layout */
+        .container {
+            padding: 10px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 15px;
+            max-width: 800px;
+            margin: auto;
         }
 
-        .card {
+        /* Station Card */
+        .station-card {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 6px;
+            border-radius: 15px;
+            overflow: hidden;
             position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            text-align: center;
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .card:active { transform: scale(0.95); }
+        .station-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
 
-        .card img {
-            width: 100%;
-            aspect-ratio: 1/1;
-            object-fit: cover;
-            border-radius: 10px;
+        .station-link {
+            text-decoration: none;
+            color: inherit;
             display: block;
-            background: #1e293b;
         }
 
-        .fav-star {
+        .station-card img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+        }
+
+        .station-info {
+            padding: 10px 5px;
+            text-align: center;
+        }
+
+        .station-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Favorite Star */
+        .favorite-btn {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 20px;
+            top: 8px;
+            right: 8px;
+            font-size: 1.5rem;
             cursor: pointer;
             z-index: 10;
             text-shadow: 0 0 5px rgba(0,0,0,0.8);
         }
 
-        .name {
-            margin: 8px 0 4px 0;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 2px;
-        }
-
         footer {
             text-align: center;
-            padding: 40px;
-            font-size: 10px;
-            opacity: 0.4;
-            letter-spacing: 1px;
+            padding: 30px;
+            font-size: 0.8rem;
+            opacity: 0.7;
         }
 
-        a { text-decoration: none; color: inherit; }
+        /* Mobile Adjustments */
+        @media (max-width: 400px) {
+            .container { gap: 8px; }
+            .station-name { font-size: 0.7rem; }
+        }
     </style>
 </head>
 <body>
 
-<div id="loader">
-    <div class="spinner"></div>
-    <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Loading Stations...</p>
-</div>
-
 <header>
     <div class="logo">TAMIL VM FM</div>
-    <div class="nav-group">
-        <button class="btn btn-fav" onclick="window.location.href='go:fave'">⭐ FAVS</button>
-        <button class="btn btn-mode" onclick="toggleMode()">🌓</button>
+    <div class="nav-buttons">
+        <button class="btn-fav" onclick="window.location.href='go:fave'">⭐</button>
+        <button class="btn-mode" onclick="toggleMode()">🌓</button>
     </div>
 </header>
 
-<div class="container">
-    <div class="grid" id="station-grid">
-        </div>
-    <footer>DESIGNED BY TAMILVM</footer>
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search station..." onkeyup="filterStations()">
 </div>
 
+<div class="container" id="stationGrid">
+    <div class="station-card" data-name="KARAIKAL FM">
+        <span class="favorite-btn" data-name="KARAIKAL FM" data-img="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg" data-link="go:kaarai">☆</span>
+        <a href="go:kaarai" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg" alt="KARAIKAL FM">
+            <div class="station-info"><div class="station-name">KARAIKAL FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="TRICHY FM">
+        <span class="favorite-btn" data-name="TRICHY FM" data-img="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" data-link="go:trichy">☆</span>
+        <a href="go:trichy" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg">
+            <div class="station-info"><div class="station-name">TRICHY FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="DHARMA FM">
+        <span class="favorite-btn" data-name="DHARMA FM" data-img="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg" data-link="go:dharm">☆</span>
+        <a href="go:dharm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg">
+            <div class="station-info"><div class="station-name">DHARMA FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="KUMARI FM">
+        <span class="favorite-btn" data-name="KUMARI FM" data-img="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg" data-link="go:nagerfm">☆</span>
+        <a href="go:nagerfm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg">
+            <div class="station-info"><div class="station-name">KUMARI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="CHENNAI FM">
+        <span class="favorite-btn" data-name="CHENNAI FM" data-img="https://vmfm.github.io/tamil/Images/airchennaifm.jpg" data-link="go:chennaifm">☆</span>
+        <a href="go:chennaifm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airchennaifm.jpg">
+            <div class="station-info"><div class="station-name">CHENNAI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="NELLAI FM">
+        <span class="favorite-btn" data-name="NELLAI FM" data-img="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg" data-link="go:nellaifm">☆</span>
+        <a href="go:nellaifm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg">
+            <div class="station-info"><div class="station-name">NELLAI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="COVAI FM">
+        <span class="favorite-btn" data-name="COVAI FM" data-img="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg" data-link="go:covaifm">☆</span>
+        <a href="go:covaifm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg">
+            <div class="station-info"><div class="station-name">COVAI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="OOTY FM">
+        <span class="favorite-btn" data-name="OOTY FM" data-img="https://vmfm.github.io/tamil/Images/airootyfm.jpg" data-link="go:ootyfm">☆</span>
+        <a href="go:ootyfm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airootyfm.jpg">
+            <div class="station-info"><div class="station-name">OOTY FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="MADURAI FM">
+        <span class="favorite-btn" data-name="MADURAI FM" data-img="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg" data-link="go:Fmmadu">☆</span>
+        <a href="go:Fmmadu" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg">
+            <div class="station-info"><div class="station-name">MADURAI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="AIRGOLD FM">
+        <span class="favorite-btn" data-name="AIRGOLD FM" data-img="https://vmfm.github.io/tamil/Images/airgoldfm.jpg" data-link="go:airgold">☆</span>
+        <a href="go:airgold" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airgoldfm.jpg">
+            <div class="station-info"><div class="station-name">AIRGOLD FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="KODAI FM">
+        <span class="favorite-btn" data-name="KODAI FM" data-img="https://vmfm.github.io/tamil/Images/airKodaikanalfm.jpg" data-link="go:kodai">☆</span>
+        <a href="go:kodai" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/airKodaikanalfm.jpg">
+            <div class="station-info"><div class="station-name">KODAI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="TNVIBE FM">
+        <span class="favorite-btn" data-name="TNVIBE FM" data-img="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg" data-link="go:tnvibefm">☆</span>
+        <a href="go:tnvibefm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg">
+            <div class="station-info"><div class="station-name">TNVIBE FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="RADIOPETTI">
+        <span class="favorite-btn" data-name="RADIOPETTI" data-img="https://vmfm.github.io/tamil/Images/radiopetti1.jpg" data-link="go:RadioPett">☆</span>
+        <a href="go:RadioPett" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/radiopetti1.jpg">
+            <div class="station-info"><div class="station-name">RADIOPETTI</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="THENI FM">
+        <span class="favorite-btn" data-name="THENI FM" data-img="https://vmfm.github.io/tamil/Images/thenifm.jpg" data-link="go:thenifm">☆</span>
+        <a href="go:thenifm" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/thenifm.jpg">
+            <div class="station-info"><div class="station-name">THENI FM</div></div>
+        </a>
+    </div>
+
+    <div class="station-card" data-name="JAI FM">
+        <span class="favorite-btn" data-name="JAI FM" data-img="https://vmfm.github.io/tamil/Images/erodejaifm.jpg" data-link="go:erodejai">☆</span>
+        <a href="go:erodejai" class="station-link">
+            <img src="https://vmfm.github.io/tamil/Images/erodejaifm.jpg">
+            <div class="station-info"><div class="station-name">JAI FM</div></div>
+        </a>
+    </div>
+
+</div>
+
+<footer>
+    Designed by <b>TAMILVM</b> © 2026
+</footer>
+
 <script>
-    const IMG_BASE = "https://vmfm.github.io/tamil/Images/";
-
-    const stations = [
-        { n: "KARAIKAL FM", i: "airkaaraikalfm1.jpg", l: "go:kaarai" },
-        { n: "TRICHY FM", i: "airtrichyfm.jpg", l: "go:trichy" },
-        { n: "DHARMA FM", i: "airdharmaburifm.jpg", l: "go:dharm" },
-        { n: "KUMARI FM", i: "airnagercovilfm.jpg", l: "go:nagerfm" },
-        { n: "CHENNAI FM", i: "airchennaifm.jpg", l: "go:chennaifm" },
-        { n: "NELLAI FM", i: "airtrinelvelyfm.jpg", l: "go:nellaifm" },
-        { n: "COVAI FM", i: "aircoimbaturefm.jpg", l: "go:covaifm" },
-        { n: "OOTY FM", i: "airootyfm.jpg", l: "go:ootyfm" },
-        { n: "MADURAI FM", i: "airmaduraifm.jpg", l: "go:Fmmadu" },
-        { n: "TAMILNA FM", i: "airtamilnadufm.jpg", l: "go:airtamilna" },
-        { n: "AIR TAMIL", i: "airtamillivefm.jpg", l: "go:airtamil" },
-        { n: "AIRGOLD FM", i: "airgoldfm.jpg", l: "go:airgold" },
-        { n: "VIVIDH FM", i: "airtrichyfm.jpg", l: "go:vividhbhar" },
-        { n: "KODAI FM", i: "airKodaikanalfm.jpg", l: "go:kodai" },
-        { n: "TNVIBE FM", i: "tnvibefm-1.jpg", l: "go:tnvibefm" },
-        { n: "PUDUGAI CITY", i: "pudhugai.jpg", l: "go:pudugaicit" },
-        { n: "RADIOPETTI", i: "radiopetti1.jpg", l: "go:RadioPett" },
-        { n: "THENI FM", i: "thenifm.jpg", l: "go:thenifm" },
-        { n: "SIVAGA FM", i: "ssradiosivagangai.png", l: "go:sivaganga" },
-        { n: "PERAMB FM", i: "perambalurfm.png", l: "go:peram" },
-        { n: "THIRUDAN FM", i: "thirudanfm.png", l: "go:thirudan" },
-        { n: "VIRUDHA FM", i: "virudhairadio.jpg", l: "go:virudhai" },
-        { n: "PSTAMIL FM", i: "pstamilradio.png", l: "go:PSTamilR" },
-        { n: "JAI FM", i: "erodejaifm.jpg", l: "go:erodejai" },
-        { n: "ISAIPA FM", i: "isaiparavai-1.jpg", l: "go:isaiparava" },
-        { n: "TAMILAI FM", i: "tamilaifm-1.jpg", l: "go:tamilaifm" },
-        { n: "TAMIZ FM", i: "tamizenradio.png", l: "go:Tamizen" },
-        { n: "TAMILNA FM", i: "tamilnadufm.png", l: "go:Tamilnadu" },
-        { n: "SSNATHAM FM", i: "mathamradio.jpeg", l: "go:NTMRadio" },
-        { n: "HARI FM", i: "haritamilfm-1.jpg", l: "go:harifm" },
-        { n: "REMIX FM", i: "tamilremixhitsfm.jpeg", l: "go:TamilRemi" },
-        { n: "MEGAZON FM", i: "megazonesouthnew-1.jpg", l: "go:megazon" },
-        { n: "DINDUGAL FM", i: "dindugalfm.jpeg", l: "go:Dindigul" },
-        { n: "KOTTAR FM", i: "FM%20Kottarakkara.png", l: "go:FMKottara" },
-        { n: "GINGEE FM", i: "gingeefm.jpg", l: "go:GingeeFm" },
-        { n: "SUBAG FM", i: "subageetham.jpeg", l: "go:subagee" },
-        { n: "NAMMA FM", i: "nammaradio.png", l: "go:nammaradio" },
-        { n: "VAANAVIL2 FM", i: "vaanavilvaanoli-1.png", l: "go:vaanavil2" },
-        { n: "MANNAI FM", i: "mannaifm.jpg", l: "go:mannaifm" },
-        { n: "BRITISH FM", i: "British%20Indian%20Tamil%20Radio%202-1.png", l: "go:British" },
-        { n: "TTHANGA FM", i: "tamilthangamgm.jpeg", l: "go:tthanga" },
-        { n: "AMU PLUSH", i: "amuthamhdplush.jpg", l: "go:amuplush" },
-        { n: "CHILLAX FM", i: "chillaxfm1.png", l: "go:chillax" },
-        { n: "KINGTAMIL FM", i: "King%20fm%20tamil%201.png", l: "go:Kingtamil" },
-        { n: "MINNAL FM", i: "vallioorminnalfm.png", l: "go:Vallioor" },
-        { n: "AMARAVA FM", i: "amaravathiradio.png", l: "go:Amaravathi" },
-        { n: "CHEEMAI FM", i: "cheemaifm.png", l: "go:cheemai" },
-        { n: "MAGIZH FM", i: "magizhfm.jpeg", l: "go:Magizh" },
-        { n: "CUDDALOU FM", i: "nammacuddalorefm.jpg", l: "go:ammaCuddN" },
-        { n: "THIRUTHANI FM", i: "thiruthanicityfm.jpg", l: "go:Thiruthani" },
-        { n: "RAGAM FM", i: "tamilragam.jpg", l: "go:TamilRaga" },
-        { n: "NATHI FM", i: "Nathi%20FM.jpg", l: "go:Nathifm" },
-        { n: "RJ TAMIL", i: "rjtamil-pudugai.jpg", l: "go:rjtamil" },
-        { n: "SAARAL FM", i: "saaral-fm.jpg", l: "go:saaralfm" },
-        { n: "SKYWAY FM", i: "Skyway%20Tamil%20FM%20(1).jpg", l: "go:Skyway" }
-    ];
-
+    // Favorites Logic
     let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
 
-    // Core Init Function
-    function render() {
-        const grid = document.getElementById("station-grid");
-        let html = "";
-        
-        stations.forEach(s => {
-            const isFav = favorites.some(f => f.name === s.n);
-            html += `
-                <div class="card">
-                    <div class="fav-star" onclick="toggleFav(this, '${s.n}', '${s.i}', '${s.l}')">
-                        ${isFav ? '⭐' : '☆'}
-                    </div>
-                    <a href="${s.l}">
-                        <img src="${IMG_BASE + s.i}" loading="lazy" onerror="this.src='https://placehold.co/200/1e293b/ffffff?text=Radio'">
-                        <div class="name">${s.n}</div>
-                    </a>
-                </div>
-            `;
+    function updateFavButtons() {
+        document.querySelectorAll(".favorite-btn").forEach(btn => {
+            const name = btn.dataset.name;
+            btn.textContent = favorites.find(f => f.name === name) ? "⭐" : "☆";
+            btn.style.color = favorites.find(f => f.name === name) ? "#ffcc00" : "white";
         });
-        grid.innerHTML = html;
-
-        // Force hide loader after a short delay
-        setTimeout(() => {
-            const loader = document.getElementById("loader");
-            loader.style.opacity = "0";
-            setTimeout(() => loader.style.display = "none", 500);
-        }, 1200);
     }
 
-    function toggleFav(el, name, img, link) {
-        const idx = favorites.findIndex(f => f.name === name);
-        if (idx > -1) {
-            favorites.splice(idx, 1);
-            el.textContent = "☆";
-        } else {
-            favorites.push({ name, img, link });
-            el.textContent = "⭐";
+    document.addEventListener("click", function(e) {
+        if (e.target.classList.contains("favorite-btn")) {
+            const btn = e.target;
+            const station = {
+                name: btn.dataset.name,
+                img: btn.dataset.img,
+                link: btn.dataset.link
+            };
+
+            const index = favorites.findIndex(f => f.name === station.name);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(station);
+            }
+
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            updateFavButtons();
         }
-        localStorage.setItem("favorites", JSON.stringify(favorites));
-    }
+    });
 
+    // Theme Toggle
     function toggleMode() {
         document.body.classList.toggle("light-mode");
     }
 
-    // Start everything
-    render();
+    // Search Filter
+    function filterStations() {
+        let input = document.getElementById('searchInput').value.toUpperCase();
+        let cards = document.getElementsByClassName('station-card');
+        
+        for (let i = 0; i < cards.length; i++) {
+            let name = cards[i].getAttribute('data-name');
+            if (name.toUpperCase().indexOf(input) > -1) {
+                cards[i].style.display = "";
+            } else {
+                cards[i].style.display = "none";
+            }
+        }
+    }
+
+    // Initial Load
+    window.onload = updateFavButtons;
 </script>
 
 </body>
