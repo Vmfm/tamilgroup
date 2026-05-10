@@ -4,161 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tamil VM FM - Premium Live Radio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0b1120;
+            --bg: #0b1120;
             --card-bg: rgba(255, 255, 255, 0.05);
-            --text-color: #f8fafc;
-            --accent-color: #38bdf8;
-            --fav-color: #fbbf24;
-            --transition: all 0.3s ease;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+            --fav: #fbbf24;
+            --glass: rgba(15, 23, 42, 0.8);
         }
 
         .light-mode {
-            --bg-color: #f1f5f9;
+            --bg: #f1f5f9;
             --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --accent-color: #0284c7;
+            --text: #1e293b;
+            --accent: #0284c7;
+            --glass: rgba(255, 255, 255, 0.8);
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--bg);
+            color: var(--text);
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
-            transition: var(--transition);
+            transition: background 0.3s ease;
         }
 
         /* --- Loader --- */
         #loader {
             position: fixed;
             inset: 0;
-            background: var(--bg-color);
+            background: var(--bg);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 99999;
+            z-index: 9999;
         }
+        #loader img { width: 60px; filter: drop-shadow(0 0 10px var(--accent)); }
 
-        #loader img { width: 80px; filter: drop-shadow(0 0 10px var(--accent-color)); }
-
-        /* --- Header & Navigation --- */
+        /* --- Header --- */
         header {
             position: sticky;
             top: 0;
             z-index: 1000;
-            background: rgba(11, 17, 32, 0.8);
+            background: var(--glass);
             backdrop-filter: blur(12px);
-            padding: 15px 20px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .logo { font-weight: 600; font-size: 1.2rem; color: var(--accent-color); }
-
-        .nav-buttons { display: flex; gap: 10px; }
+        .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); letter-spacing: -0.5px; }
+        
+        .nav-group { display: flex; gap: 8px; }
 
         button {
             border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
+            padding: 8px 14px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 14px;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            font-size: 13px;
+            transition: 0.2s;
         }
 
-        .btn-fav { background: var(--fav-color); color: #000; }
-        .btn-mode { background: var(--card-bg); color: var(--text-color); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-fav { background: var(--fav); color: #000; }
+        .btn-mode { background: var(--card-bg); color: var(--text); border: 1px solid rgba(128,128,128,0.2); }
         button:active { transform: scale(0.95); }
 
         /* --- Grid System --- */
-        .container {
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .container { padding: 15px; max-width: 800px; margin: 0 auto; }
 
-        .station-grid {
+        .grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Force 3 columns */
-            gap: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
         }
 
-        .station-card {
+        .card {
             background: var(--card-bg);
-            border-radius: 16px;
-            padding: 10px;
+            border-radius: 12px;
+            padding: 8px;
             position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: var(--transition);
-            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: 0.3s;
+            text-align: center;
         }
 
-        .station-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-color);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
+        .card:hover { transform: translateY(-3px); border-color: var(--accent); }
 
-        .station-card img {
+        .card img {
             width: 100%;
             aspect-ratio: 1/1;
             object-fit: cover;
-            border-radius: 12px;
-            margin-bottom: 8px;
+            border-radius: 8px;
             display: block;
         }
 
-        .station-info {
-            text-align: center;
-            font-size: 11px;
+        .fav-icon {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .name {
+            margin-top: 8px;
+            font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            letter-spacing: 0.3px;
+            opacity: 0.9;
         }
 
-        .favorite-heart {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 20px;
-            cursor: pointer;
-            z-index: 10;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            transition: var(--transition);
-        }
-
-        .favorite-heart:hover { transform: scale(1.2); }
-
-        /* --- Footer --- */
         footer {
             text-align: center;
-            padding: 30px;
-            font-size: 12px;
-            opacity: 0.6;
+            padding: 40px 20px;
+            font-size: 11px;
+            opacity: 0.5;
+            letter-spacing: 1px;
         }
 
-        /* Responsive tweak for very small screens */
-        @media (max-width: 360px) {
-            .station-grid { gap: 8px; }
-            .station-info { font-size: 9px; }
-        }
+        a { text-decoration: none; color: inherit; }
     </style>
 </head>
 <body>
@@ -169,109 +143,116 @@
 
 <header>
     <div class="logo">TAMIL VM FM</div>
-    <div class="nav-buttons">
-        <button class="btn-fav" onclick="window.location.href='go:fave'">⭐ Favs</button>
+    <div class="nav-group">
+        <button class="btn-fav" onclick="window.location.href='go:fave'">⭐ FAVS</button>
         <button class="btn-mode" onclick="toggleMode()">🌓</button>
     </div>
 </header>
 
 <div class="container" id="content" style="display:none;">
-    <div class="station-grid" id="main-grid">
+    <div class="grid" id="station-grid">
         </div>
 
-    <footer>
-        &copy; 2026 Designed by TAMILVM
-    </footer>
+    <footer>DESIGNED BY TAMILVM</footer>
 </div>
 
 <script>
-    // Station Data Array (Easier to manage than repeating HTML)
+    // Config: Base URL for all images
+    const IMG_BASE = "https://vmfm.github.io/tamil/Images/";
+
+    // Station Database
     const stations = [
-        { name: "KARAIKAL FM", img: "airkaaraikalfm1.jpg", link: "go:kaarai" },
-        { name: "TRICHY FM", img: "airtrichyfm.jpg", link: "go:trichy" },
-        { name: "DHARMA FM", img: "airdharmaburifm.jpg", link: "go:dharm" },
-        { name: "KUMARI FM", img: "airnagercovilfm.jpg", link: "go:nagerfm" },
-        { name: "CHENNAI FM", img: "airchennaifm.jpg", link: "go:chennaifm" },
-        { name: "NELLAI FM", img: "airtrinelvelyfm.jpg", link: "go:nellaifm" },
-        { name: "COVAI FM", img: "aircoimbaturefm.jpg", link: "go:covaifm" },
-        { name: "OOTY FM", img: "airootyfm.jpg", link: "go:ootyfm" },
-        { name: "MADURAI FM", img: "airmaduraifm.jpg", link: "go:Fmmadu" },
-        { name: "TAMILNA FM", img: "airtamilnadufm.jpg", link: "go:airtamilna" },
-        { name: "AIR TAMIL", img: "airtamillivefm.jpg", link: "go:airtamil" },
-        { name: "AIRGOLD FM", img: "airgoldfm.jpg", link: "go:airgold" },
-        { name: "VIVIDH FM", img: "airtrichyfm.jpg", link: "go:vividhbhar" },
-        { name: "KODAI FM", img: "airKodaikanalfm.jpg", link: "go:kodai" },
-        { name: "TNVIBE FM", img: "tnvibefm-1.jpg", link: "go:tnvibefm" },
-        { name: "PUDUGAI CITY", img: "pudhugai.jpg", link: "go:pudugaicit" },
-        { name: "RADIOPETTI", img: "radiopetti1.jpg", link: "go:RadioPett" },
-        { name: "THENI FM", img: "thenifm.jpg", link: "go:thenifm" },
-        { name: "SIVAGA FM", img: "ssradiosivagangai.png", link: "go:sivaganga" },
-        { name: "PERAMB FM", img: "perambalurfm.png", link: "go:peram" },
-        { name: "THIRUDAN FM", img: "thirudanfm.png", link: "go:thirudan" },
-        { name: "VIRUDHA FM", img: "virudhairadio.jpg", link: "go:virudhai" },
-        { name: "PSTAMIL FM", img: "pstamilradio.png", link: "go:PSTamilR" },
-        { name: "JAI FM", img: "erodejaifm.jpg", link: "go:erodejai" },
-        { name: "ISAIPA FM", img: "isaiparavai-1.jpg", link: "go:isaiparava" },
-        { name: "TAMILAI FM", img: "tamilaifm-1.jpg", link: "go:tamilaifm" },
-        { name: "TAMIZ FM", img: "tamizenradio.png", link: "go:Tamizen" },
-        { name: "SSNATHAM FM", img: "mathamradio.jpeg", link: "go:NTMRadio" },
-        { name: "HARI FM", img: "haritamilfm-1.jpg", link: "go:harifm" },
-        { name: "REMIX FM", img: "tamilremixhitsfm.jpeg", link: "go:TamilRemi" },
-        { name: "MEGAZON FM", img: "megazonesouthnew-1.jpg", link: "go:megazon" },
-        { name: "DINDUGAL FM", img: "dindugalfm.jpeg", link: "go:Dindigul" },
-        { name: "KOTTAR FM", img: "FM%20Kottarakkara.png", link: "go:FMKottara" },
-        { name: "GINGEE FM", img: "gingeefm.jpg", link: "go:GingeeFm" },
-        { name: "SUBAG FM", img: "subageetham.jpeg", link: "go:subagee" },
-        { name: "NAMMA FM", img: "nammaradio.png", link: "go:nammaradio" },
-        { name: "VAANAVIL2 FM", img: "vaanavilvaanoli-1.png", link: "go:vaanavil2" },
-        { name: "MANNAI FM", img: "mannaifm.jpg", link: "go:mannaifm" },
-        { name: "BRITISH FM", img: "British%20Indian%20Tamil%20Radio%202-1.png", link: "go:British" },
-        { name: "CHILLAX FM", img: "chillaxfm1.png", link: "go:chillax" },
-        { name: "MINNAL FM", img: "vallioorminnalfm.png", link: "go:Vallioor" },
-        { name: "MAGIZH FM", img: "magizhfm.jpeg", link: "go:Magizh" },
-        { name: "SKYWAY FM", img: "Skyway%20Tamil%20FM%20(1).jpg", link: "go:Skyway" }
+        { n: "KARAIKAL FM", i: "airkaaraikalfm1.jpg", l: "go:kaarai" },
+        { n: "TRICHY FM", i: "airtrichyfm.jpg", l: "go:trichy" },
+        { n: "DHARMA FM", i: "airdharmaburifm.jpg", l: "go:dharm" },
+        { n: "KUMARI FM", i: "airnagercovilfm.jpg", l: "go:nagerfm" },
+        { n: "CHENNAI FM", i: "airchennaifm.jpg", l: "go:chennaifm" },
+        { n: "NELLAI FM", i: "airtrinelvelyfm.jpg", l: "go:nellaifm" },
+        { n: "COVAI FM", i: "aircoimbaturefm.jpg", l: "go:covaifm" },
+        { n: "OOTY FM", i: "airootyfm.jpg", l: "go:ootyfm" },
+        { n: "MADURAI FM", i: "airmaduraifm.jpg", l: "go:Fmmadu" },
+        { n: "TAMILNA FM", i: "airtamilnadufm.jpg", l: "go:airtamilna" },
+        { n: "AIR TAMIL", i: "airtamillivefm.jpg", l: "go:airtamil" },
+        { n: "AIRGOLD FM", i: "airgoldfm.jpg", l: "go:airgold" },
+        { n: "VIVIDH FM", i: "airtrichyfm.jpg", l: "go:vividhbhar" },
+        { n: "KODAI FM", i: "airKodaikanalfm.jpg", l: "go:kodai" },
+        { n: "TNVIBE FM", i: "tnvibefm-1.jpg", l: "go:tnvibefm" },
+        { n: "PUDUGAI CITY", i: "pudhugai.jpg", l: "go:pudugaicit" },
+        { n: "RADIOPETTI", i: "radiopetti1.jpg", l: "go:RadioPett" },
+        { n: "THENI FM", i: "thenifm.jpg", l: "go:thenifm" },
+        { n: "SIVAGA FM", i: "ssradiosivagangai.png", l: "go:sivaganga" },
+        { n: "PERAMB FM", i: "perambalurfm.png", l: "go:peram" },
+        { n: "THIRUDAN FM", i: "thirudanfm.png", l: "go:thirudan" },
+        { n: "VIRUDHA FM", i: "virudhairadio.jpg", l: "go:virudhai" },
+        { n: "PSTAMIL FM", i: "pstamilradio.png", l: "go:PSTamilR" },
+        { n: "JAI FM", i: "erodejaifm.jpg", l: "go:erodejai" },
+        { n: "ISAIPA FM", i: "isaiparavai-1.jpg", l: "go:isaiparava" },
+        { n: "TAMILAI FM", i: "tamilaifm-1.jpg", l: "go:tamilaifm" },
+        { n: "TAMIZ FM", i: "tamizenradio.png", l: "go:Tamizen" },
+        { n: "TAMILNA FM", i: "tamilnadufm.png", l: "go:Tamilnadu" },
+        { n: "SSNATHAM FM", i: "mathamradio.jpeg", l: "go:NTMRadio" },
+        { n: "HARI FM", i: "haritamilfm-1.jpg", l: "go:harifm" },
+        { n: "REMIX FM", i: "tamilremixhitsfm.jpeg", l: "go:TamilRemi" },
+        { n: "MEGAZON FM", i: "megazonesouthnew-1.jpg", l: "go:megazon" },
+        { n: "DINDUGAL FM", i: "dindugalfm.jpeg", l: "go:Dindigul" },
+        { n: "KOTTAR FM", i: "FM%20Kottarakkara.png", l: "go:FMKottara" },
+        { n: "GINGEE FM", i: "gingeefm.jpg", l: "go:GingeeFm" },
+        { n: "SUBAG FM", i: "subageetham.jpeg", l: "go:subagee" },
+        { n: "NAMMA FM", i: "nammaradio.png", l: "go:nammaradio" },
+        { n: "VAANAVIL2 FM", i: "vaanavilvaanoli-1.png", l: "go:vaanavil2" },
+        { n: "MANNAI FM", i: "mannaifm.jpg", l: "go:mannaifm" },
+        { n: "BRITISH FM", i: "British%20Indian%20Tamil%20Radio%202-1.png", l: "go:British" },
+        { n: "TTHANGA FM", i: "tamilthangamgm.jpeg", l: "go:tthanga" },
+        { n: "AMU PLUSH", i: "amuthamhdplush.jpg", l: "go:amuplush" },
+        { n: "CHILLAX FM", i: "chillaxfm1.png", l: "go:chillax" },
+        { n: "KINGTAMIL FM", i: "King%20fm%20tamil%201.png", l: "go:Kingtamil" },
+        { n: "MINNAL FM", i: "vallioorminnalfm.png", l: "go:Vallioor" },
+        { n: "AMARAVA FM", i: "amaravathiradio.png", l: "go:Amaravathi" },
+        { n: "CHEEMAI FM", i: "cheemaifm.png", l: "go:cheemai" },
+        { n: "MAGIZH FM", i: "magizhfm.jpeg", l: "go:Magizh" },
+        { n: "CUDDALOU FM", i: "nammacuddalorefm.jpg", l: "go:ammaCuddN" },
+        { n: "THIRUTHANI FM", i: "thiruthanicityfm.jpg", l: "go:Thiruthani" },
+        { n: "RAGAM FM", i: "tamilragam.jpg", l: "go:TamilRaga" },
+        { n: "NATHI FM", i: "Nathi%20FM.jpg", l: "go:Nathifm" },
+        { n: "RJ TAMIL", i: "rjtamil-pudugai.jpg", l: "go:rjtamil" },
+        { n: "SAARAL FM", i: "saaral-fm.jpg", l: "go:saaralfm" },
+        { n: "SKYWAY FM", i: "Skyway%20Tamil%20FM%20(1).jpg", l: "go:Skyway" }
     ];
 
-    const baseUrl = "https://vmfm.github.io/tamil/Images/";
     let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
 
-    // Initialize Page
-    window.onload = function () {
-        renderStations();
-        setTimeout(() => {
-            document.getElementById("loader").style.display = "none";
-            document.getElementById("content").style.display = "block";
-        }, 1200);
-    };
-
-    function renderStations() {
-        const grid = document.getElementById("main-grid");
+    // Render Function
+    function init() {
+        const grid = document.getElementById("station-grid");
         grid.innerHTML = stations.map(s => {
-            const isFav = favorites.some(f => f.name === s.name);
-            const fullImgUrl = s.img.startsWith('http') ? s.img : baseUrl + s.img;
+            const isFav = favorites.some(f => f.name === s.n);
             return `
-                <div class="station-card">
-                    <span class="favorite-heart" 
-                          onclick="toggleFav(this, '${s.name}', '${fullImgUrl}', '${s.link}')">
-                          ${isFav ? '⭐' : '☆'}
-                    </span>
-                    <a href="${s.link}">
-                        <img src="${fullImgUrl}" loading="lazy" alt="${s.name}">
-                        <div class="station-info">${s.name}</div>
+                <div class="card">
+                    <div class="fav-icon" onclick="toggleFav(this, '${s.n}', '${s.i}', '${s.l}')">
+                        ${isFav ? '⭐' : '☆'}
+                    </div>
+                    <a href="${s.l}">
+                        <img src="${IMG_BASE + s.i}" loading="lazy">
+                        <div class="name">${s.n}</div>
                     </a>
                 </div>
             `;
         }).join('');
+
+        setTimeout(() => {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("content").style.display = "block";
+        }, 1500);
     }
 
-    function toggleFav(element, name, img, link) {
-        let exists = favorites.findIndex(fav => fav.name === name);
-        if (exists > -1) {
-            favorites.splice(exists, 1);
-            element.textContent = "☆";
+    function toggleFav(el, name, img, link) {
+        const idx = favorites.findIndex(f => f.name === name);
+        if (idx > -1) {
+            favorites.splice(idx, 1);
+            el.textContent = "☆";
         } else {
             favorites.push({ name, img, link });
-            element.textContent = "⭐";
+            el.textContent = "⭐";
         }
         localStorage.setItem("favorites", JSON.stringify(favorites));
     }
@@ -279,6 +260,8 @@
     function toggleMode() {
         document.body.classList.toggle("light-mode");
     }
+
+    window.onload = init;
 </script>
 
 </body>
