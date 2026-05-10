@@ -1,305 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tamil VM FM</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #072859;
-            --text-color: #ffffff;
-            --card-bg: rgba(255, 255, 255, 0.1);
-            --accent: #ffcc00;
-        }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp Full Chat & Live</title>
+<style>
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0;--live:#ff3b30}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
 
-        .light-mode {
-            --bg-color: #f4f7f6;
-            --text-color: #333333;
-            --card-bg: #ffffff;
-            --accent: #004e92;
-        }
+/* --- LOADER CSS --- */
+#loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
+.loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+.loader-text { color: #ffeb3b; font-size: 14px; font-weight: 500; letter-spacing: 1px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding-bottom: 50px;
-            transition: 0.3s ease;
-        }
+#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
+#title{font-weight:600;display:flex;align-items:center;gap:10px}
 
-        /* Header Navigation */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
+/* LIVE BUTTON CSS */
+#liveBtn { background: var(--live); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; animation: glow 1.5s infinite; }
+@keyframes glow { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
 
-        .brand { font-weight: 600; font-size: 1.1rem; color: var(--accent); }
+#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
+#panel.open{transform:translateX(0)}
+.panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
+.panelTitle{font-weight:700}
+.panelClose{margin-left:auto;background:none;border:0;color:var(--accent);cursor:pointer;font-size:18px}
+.panelList{padding:8px;overflow:auto;flex:1}
+.panelItem{padding:10px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.panelItem:hover{background:rgba(255,255,255,.02)}
+#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
+.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
+.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+.msg-row.self .bubble{background:#005c4b}
+#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
+#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer}
 
-        .nav-btn {
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
+/* STREAMING UI */
+#streamOverlay { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
+#streamVideo { width: 100%; height: 100%; object-fit: cover; }
+#streamUI { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; pointer-events: none; }
+.streamHeader { display: flex; justify-content: space-between; pointer-events: auto; }
+.viewer-badge { background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
+#closeStream { background: var(--live); border: none; color: #fff; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.stream-bottom { margin-top: auto; padding: 20px; pointer-events: auto; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
 
-        .btn-fav { background: #ff6600; color: white; margin-right: 5px; }
-        .btn-mode { background: var(--accent); color: #000; }
+#liveModal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 4000; display: none; align-items: center; justify-content: center; }
+.liveCard { background: #111b21; width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; }
+.liveList { max-height: 300px; overflow-y: auto; margin: 15px 0; }
+.liveUserItem { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #202c33; }
+.btnStartLive { width: 100%; background: var(--live); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
-        /* Grid Layout - 3 per row */
-        .station-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            padding: 15px;
-            max-width: 900px;
-            margin: auto;
-        }
-
-        .station-card {
-            position: relative;
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .station-card:active { transform: scale(0.95); }
-
-        .station-card img {
-            width: 100%;
-            aspect-ratio: 1/1;
-            object-fit: cover;
-            display: block;
-        }
-
-        .station-info {
-            padding: 8px 4px;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .fav-star {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            font-size: 1.2rem;
-            background: rgba(0,0,0,0.4);
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 0.8rem;
-            background: rgba(0,0,0,0.2);
-            margin-top: 20px;
-        }
-
-        a { text-decoration: none; color: inherit; }
-    </style>
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s}
+#toast.show{opacity:1}
+#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+#loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:300px}
+#loginCard input{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff}
+#loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:bold}
+</style>
 </head>
 <body>
 
-<header>
-    <div class="brand">TAMIL VM FM</div>
-    <div>
-        <button class="nav-btn btn-fav" onclick="window.location.href='go:fave'">⭐</button>
-        <button class="nav-btn btn-mode" onclick="toggleMode()">🌓</button>
-    </div>
-</header>
+<div id="loader-wrapper"><div class="loader-wheel"></div><div class="loader-text">Initializing...</div></div>
 
-<div class="station-grid">
-    <div class="station-card">
-        <div class="fav-star" data-name="KARAIKAL FM" data-img="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg" data-link="go:kaarai">☆</div>
-        <a href="go:kaarai">
-            <img src="https://vmfm.github.io/tamil/Images/airkaaraikalfm1.jpg">
-            <div class="station-info">KARAIKAL FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="TRICHY FM" data-img="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg" data-link="go:trichy">☆</div>
-        <a href="go:trichy">
-            <img src="https://vmfm.github.io/tamil/Images/airtrichyfm.jpg">
-            <div class="station-info">TRICHY FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="DHARMA FM" data-img="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg" data-link="go:dharm">☆</div>
-        <a href="go:dharm">
-            <img src="https://vmfm.github.io/tamil/Images/airdharmaburifm.jpg">
-            <div class="station-info">DHARMA FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="KUMARI FM" data-img="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg" data-link="go:nagerfm">☆</div>
-        <a href="go:nagerfm">
-            <img src="https://vmfm.github.io/tamil/Images/airnagercovilfm.jpg">
-            <div class="station-info">KUMARI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="CHENNAI FM" data-img="https://vmfm.github.io/tamil/Images/airchennaifm.jpg" data-link="go:chennaifm">☆</div>
-        <a href="go:chennaifm">
-            <img src="https://vmfm.github.io/tamil/Images/airchennaifm.jpg">
-            <div class="station-info">CHENNAI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="NELLAI FM" data-img="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg" data-link="go:nellaifm">☆</div>
-        <a href="go:nellaifm">
-            <img src="https://vmfm.github.io/tamil/Images/airtrinelvelyfm.jpg">
-            <div class="station-info">NELLAI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="COVAI FM" data-img="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg" data-link="go:covaifm">☆</div>
-        <a href="go:covaifm">
-            <img src="https://vmfm.github.io/tamil/Images/aircoimbaturefm.jpg">
-            <div class="station-info">COVAI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="MADURAI FM" data-img="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg" data-link="go:Fmmadu">☆</div>
-        <a href="go:Fmmadu">
-            <img src="https://vmfm.github.io/tamil/Images/airmaduraifm.jpg">
-            <div class="station-info">MADURAI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="AIRGOLD FM" data-img="https://vmfm.github.io/tamil/Images/airgoldfm.jpg" data-link="go:airgold">☆</div>
-        <a href="go:airgold">
-            <img src="https://vmfm.github.io/tamil/Images/airgoldfm.jpg">
-            <div class="station-info">AIRGOLD FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="TNVIBE FM" data-img="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg" data-link="go:tnvibefm">☆</div>
-        <a href="go:tnvibefm">
-            <img src="https://vmfm.github.io/tamil/Images/tnvibefm-1.jpg">
-            <div class="station-info">TNVIBE FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="PUDUGAI CITY" data-img="https://vmfm.github.io/tamil/Images/pudhugai.jpg" data-link="go:pudugaicit">☆</div>
-        <a href="go:pudugaicit">
-            <img src="https://vmfm.github.io/tamil/Images/pudhugai.jpg">
-            <div class="station-info">PUDUGAI CITY</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="RADIOPETTI" data-img="https://vmfm.github.io/tamil/Images/radiopetti1.jpg" data-link="go:RadioPett">☆</div>
-        <a href="go:RadioPett">
-            <img src="https://vmfm.github.io/tamil/Images/radiopetti1.jpg">
-            <div class="station-info">RADIOPETTI</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="SIVAGA FM" data-img="https://vmfm.github.io/tamil/Images/ssradiosivagangai.png" data-link="go:sivaganga">☆</div>
-        <a href="go:sivaganga">
-            <img src="https://vmfm.github.io/tamil/Images/ssradiosivagangai.png">
-            <div class="station-info">SIVAGA FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="JAI FM" data-img="https://vmfm.github.io/tamil/Images/erodejaifm.jpg" data-link="go:erodejai">☆</div>
-        <a href="go:erodejai">
-            <img src="https://vmfm.github.io/tamil/Images/erodejaifm.jpg">
-            <div class="station-info">JAI FM</div>
-        </a>
-    </div>
-
-    <div class="station-card">
-        <div class="fav-star" data-name="REMIX FM" data-img="https://vmfm.github.io/tamil/Images/tamilremixhitsfm.jpeg" data-link="go:TamilRemi">☆</div>
-        <a href="go:TamilRemi">
-            <img src="https://vmfm.github.io/tamil/Images/tamilremixhitsfm.jpeg">
-            <div class="station-info">REMIX FM</div>
-        </a>
+<div id="streamOverlay">
+    <video id="streamVideo" autoplay playsinline></video>
+    <div id="streamUI">
+        <div class="streamHeader">
+            <div class="viewer-badge">👁️ <span id="viewerCount">0</span> Watching</div>
+            <button id="closeStream">End Stream</button>
+        </div>
+        <div class="stream-bottom">
+            <h3 id="streamerName" style="margin:0">Live Stream</h3>
+            <p id="streamStatus" style="font-size:12px;color:var(--muted)">Broadcasting via WebRTC...</p>
+        </div>
     </div>
 </div>
 
-<footer>
-    Designed by <b>TAMILVM</b>
-</footer>
+<div id="liveModal">
+    <div class="liveCard">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Live Streams</h3>
+            <button onclick="document.getElementById('liveModal').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div class="liveList" id="liveList"></div>
+        <button class="btnStartLive" id="goLiveBtn">GO LIVE NOW</button>
+    </div>
+</div>
+
+<div id="app">
+    <div id="topBar">
+        <div id="title">Chat Room</div>
+        <button id="liveBtn">● LIVE</button>
+        <div style="flex:1"></div>
+        <div id="onlineCount" style="font-size:12px;color:var(--accent)">0 online</div>
+    </div>
+    <div id="messages"></div>
+    <div id="inputBar">
+        <input id="messageInput" placeholder="Type a message..."/>
+        <button id="sendBtn">➤</button>
+    </div>
+</div>
+
+<div id="loginWrap">
+    <div id="loginCard">
+        <h3 style="margin:0;text-align:center">Welcome</h3>
+        <input id="nameInput" placeholder="Your Name" />
+        <button id="joinBtn">Join Chat</button>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
-    // Favorites System
-    let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    document.addEventListener("click", function(e) {
-        if (e.target.classList.contains("fav-star")) {
-            const btn = e.target;
-            const station = {
-                name: btn.dataset.name,
-                img: btn.dataset.img,
-                link: btn.dataset.link
-            };
+let username = localStorage.getItem('guestName') || '';
+const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn');
+const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
+const liveBtn = document.getElementById('liveBtn'), liveModal = document.getElementById('liveModal'), liveList = document.getElementById('liveList'), goLiveBtn = document.getElementById('goLiveBtn');
+const streamOverlay = document.getElementById('streamOverlay'), streamVideo = document.getElementById('streamVideo'), closeStream = document.getElementById('closeStream'), viewerCountEl = document.getElementById('viewerCount');
 
-            const index = favorites.findIndex(f => f.name === station.name);
-            if (index > -1) {
-                favorites.splice(index, 1);
-                btn.textContent = "☆";
-                btn.style.color = "white";
-            } else {
-                favorites.push(station);
-                btn.textContent = "⭐";
-                btn.style.color = "#ffcc00";
-            }
-            localStorage.setItem("favorites", JSON.stringify(favorites));
-        }
+let localStream = null, peerConnections = {}, isBroadcasting = false, currentStreamer = null;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1000); });
+
+function showToast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 2000); }
+
+// --- AUTH ---
+if(!username) loginWrap.style.display = 'flex'; else startApp();
+
+joinBtn.onclick = () => {
+    const n = nameInput.value.trim();
+    if(n) { username = n; localStorage.setItem('guestName', n); loginWrap.style.display = 'none'; startApp(); }
+};
+
+function startApp(){
+    db.ref(`status/${username}`).set(true);
+    db.ref(`status/${username}`).onDisconnect().remove();
+    
+    // Group Messages
+    db.ref('messages').limitToLast(50).on('child_added', snap => {
+        const data = snap.val();
+        const row = document.createElement('div');
+        row.className = 'msg-row' + (data.name === username ? ' self' : '');
+        row.innerHTML = `<div class="avatar">${data.name[0]}</div><div class="bubble"><b>${data.name}</b><br>${data.text}</div>`;
+        messagesEl.appendChild(row);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
     });
 
-    function loadFavorites() {
-        document.querySelectorAll(".fav-star").forEach(btn => {
-            if (favorites.find(f => f.name === btn.dataset.name)) {
-                btn.textContent = "⭐";
-                btn.style.color = "#ffcc00";
+    db.ref('status').on('value', s => { document.getElementById('onlineCount').textContent = (s.numChildren() || 0) + " online"; });
+    
+    listenForStreams();
+}
+
+sendBtn.onclick = () => {
+    const text = messageInput.value.trim();
+    if(text) { db.ref('messages').push({ name: username, text: text, time: Date.now() }); messageInput.value = ''; }
+};
+
+// --- LIVE STREAMING LOGIC (WEBRTC MESH) ---
+
+liveBtn.onclick = () => { liveModal.style.display = 'flex'; refreshLiveList(); };
+
+async function refreshLiveList(){
+    liveList.innerHTML = '';
+    const snap = await db.ref('streams').once('value');
+    snap.forEach(child => {
+        const s = child.val();
+        const div = document.createElement('div');
+        div.className = 'liveUserItem';
+        div.innerHTML = `<span><b>${s.name}</b> is Live</span> <button onclick="watchStream('${child.key}')" style="background:var(--accent);border:0;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer">Watch</button>`;
+        liveList.appendChild(div);
+    });
+    if(!snap.exists()) liveList.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--muted)">No active streams</p>';
+}
+
+goLiveBtn.onclick = async () => {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamVideo.srcObject = localStream;
+        streamVideo.muted = true;
+        streamOverlay.style.display = 'flex';
+        liveModal.style.display = 'none';
+        isBroadcasting = true;
+        
+        const streamRef = db.ref(`streams/${username}`);
+        await streamRef.set({ name: username, startedAt: Date.now(), viewers: 0 });
+        streamRef.onDisconnect().remove();
+
+        // Listen for watch requests (Signaling)
+        db.ref(`stream_signaling/${username}`).on('child_added', async snap => {
+            const request = snap.val();
+            if(request.offer) {
+                const pc = new RTCPeerConnection(rtcConfig);
+                peerConnections[snap.key] = pc;
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                
+                pc.onicecandidate = e => { if(e.candidate) db.ref(`stream_signaling/${username}/${snap.key}/ice_streamer`).push(e.candidate.toJSON()); };
+                
+                await pc.setRemoteDescription(new RTCSessionDescription(request.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                
+                db.ref(`stream_signaling/${username}/${snap.key}/answer`).set({ sdp: answer.sdp, type: answer.type });
+                
+                // Track viewer count
+                db.ref(`streams/${username}/viewers`).transaction(v => (v || 0) + 1);
+                pc.onconnectionstatechange = () => {
+                    if(pc.connectionState === 'disconnected') {
+                        db.ref(`streams/${username}/viewers`).transaction(v => Math.max(0, (v || 1) - 1));
+                    }
+                };
             }
         });
-    }
 
-    function toggleMode() {
-        document.body.classList.toggle("light-mode");
-    }
+        // Update Viewer Count UI for streamer
+        db.ref(`streams/${username}/viewers`).on('value', s => { viewerCountEl.textContent = s.val() || 0; });
 
-    window.onload = loadFavorites;
+    } catch (e) { showToast("Camera Access Denied"); }
+};
+
+async function watchStream(streamerId) {
+    currentStreamer = streamerId;
+    liveModal.style.display = 'none';
+    streamOverlay.style.display = 'flex';
+    closeStream.textContent = "Leave Stream";
+    document.getElementById('streamerName').textContent = streamerId + "'s Live";
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    peerConnections[streamerId] = pc;
+
+    pc.ontrack = e => { streamVideo.srcObject = e.streams[0]; };
+    pc.onicecandidate = e => { if(e.candidate) db.ref(`stream_signaling/${streamerId}/${username}/ice_viewer`).push(e.candidate.toJSON()); };
+
+    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
+    await pc.setLocalDescription(offer);
+
+    const sigRef = db.ref(`stream_signaling/${streamerId}/${username}`);
+    sigRef.set({ offer: { sdp: offer.sdp, type: offer.type } });
+
+    sigRef.child('answer').on('value', async s => {
+        if(s.exists()) await pc.setRemoteDescription(new RTCSessionDescription(s.val()));
+    });
+
+    db.ref(`stream_signaling/${streamerId}/${username}/ice_streamer`).on('child_added', s => {
+        pc.addIceCandidate(new RTCIceCandidate(s.val()));
+    });
+
+    db.ref(`streams/${streamerId}/viewers`).on('value', s => { viewerCountEl.textContent = s.val() || 0; });
+}
+
+function listenForStreams() {
+    db.ref('streams').on('child_removed', snap => {
+        if(currentStreamer === snap.key) {
+            showToast("Stream ended by host");
+            stopEverything();
+        }
+    });
+}
+
+closeStream.onclick = stopEverything;
+
+function stopEverything() {
+    if(isBroadcasting) {
+        db.ref(`streams/${username}`).remove();
+        db.ref(`stream_signaling/${username}`).remove();
+    } else if(currentStreamer) {
+        db.ref(`stream_signaling/${currentStreamer}/${username}`).remove();
+    }
+    
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    Object.values(peerConnections).forEach(pc => pc.close());
+    peerConnections = {};
+    streamOverlay.style.display = 'none';
+    streamVideo.srcObject = null;
+    isBroadcasting = false;
+    currentStreamer = null;
+}
 </script>
-
 </body>
 </html>
