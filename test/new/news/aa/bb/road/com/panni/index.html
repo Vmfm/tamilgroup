@@ -259,7 +259,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="loader-text">Loading Group Chat...</div>
 </div>
 
-<!-- NEW ONLINE LIST MODAL -->
 <div id="onlineListOverlay">
     <div class="onlineListCard">
         <div class="onlineListHeader">
@@ -306,7 +305,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </div>
 <div id="toast"></div>
 
-<!-- UPDATED LOGIN UI -->
 <div id="loginWrap">
     <div id="loginCard">
         <div style="font-weight:700;color:#fff;font-size:18px;text-align:center;margin-bottom:5px">Welcome</div>
@@ -324,7 +322,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <input type="file" id="loginPhotoInput" accept="image/*" style="font-size:11px;" />
         
         <button id="joinBtn">Join Chat</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
+        <div id="loginNote" style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
     </div>
 </div>
 
@@ -446,9 +444,18 @@ const emojiPicker = document.getElementById('emojiPicker');
 let longPressTimer;
 let currentReactionRef = null;
 
+// ONE USERNAME ONE DEVICE LOGIC
 let username = localStorage.getItem('guestName') || '';
 let profileImage = localStorage.getItem('profileImage') || '';
 let userAge = localStorage.getItem('userAge') || '18+';
+
+// Logic to lock the username to the device
+if(username) {
+    nameInput.value = username;
+    nameInput.readOnly = true;
+    document.getElementById('loginNote').innerHTML = "This device is registered to <b>" + username + "</b>. You cannot change your username.";
+    document.getElementById('loginNote').style.color = "var(--accent)";
+}
 
 let blockedUsers = new Set();
 let iHaveBeenBlockedBy = new Set();
@@ -647,14 +654,13 @@ document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } localStorage.removeItem('guestName'); localStorage.removeItem('userAge'); location.reload(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`profiles/${username}/lastSeen`).set(Date.now()); } loginWrap.style.display = 'flex'; };
 
-// UPDATED STARTAS TO PREVENT SAME NAME LOGIN
+// STARTAS LOGIC
 async function startAs(name){
   const statusSnap = await db.ref(`status/${name}`).once('value');
   if(statusSnap.exists()) { 
-    showToast("Username already taken/active on another device."); 
-    localStorage.removeItem('guestName'); // Clean up if it was a saved session
+    showToast("Username already active on another device."); 
     loginWrap.style.display = 'flex';
     return; 
   }
@@ -668,10 +674,18 @@ async function startAs(name){
 
 if(!username) loginWrap.style.display = 'flex'; else startAs(username);
 
-// JOIN LOGIC WITH AGE & PHOTO
+// JOIN LOGIC WITH AGE & PHOTO & USERNAME LOCK
 joinBtn.onclick = () => { 
   const n = nameInput.value.trim(); 
   if(!n) return showToast('Enter a name');
+
+  // Prevent user from manually typing a different name if one is already locked
+  let storedName = localStorage.getItem('guestName');
+  if(storedName && n !== storedName) {
+      showToast("This device is locked to: " + storedName);
+      nameInput.value = storedName;
+      return;
+  }
   
   const age = ageSelect.value;
   userAge = age;
