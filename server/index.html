@@ -63,6 +63,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
 #loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:320px;box-shadow: 0 10px 40px rgba(0,0,0,0.8);border: 1px solid rgba(255,255,255,0.05)}
 #loginCard input, #loginCard select{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff;outline:none}
+#loginCard input:disabled{opacity:0.6;cursor:not-allowed}
 #loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
 .login-label {font-size: 13px; color: var(--muted); margin-bottom: -8px; margin-left: 4px;}
 
@@ -388,12 +389,70 @@ toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySett
 toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('guestName'); location.reload(); };
 
-async function startAs(name){ const statusSnap = await db.ref(`status/${name}`).once('value'); if(statusSnap.exists()) { showToast("Username active."); loginWrap.style.display = 'flex'; return; } username = name; localStorage.setItem('guestName', name); if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); loginWrap.style.display = 'none'; setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks(); manageMessageCount('messages', 15); }
-if(!username) loginWrap.style.display = 'flex'; else startAs(username);
+logoutBtn.onclick = () => { 
+    if(username) { 
+        db.ref(`status/${username}`).remove(); 
+        db.ref(`profiles/${username}/online`).remove(); 
+    } 
+    sessionStorage.removeItem('isLoggedIn'); // Clear active session
+    location.reload(); 
+};
 
-joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
+// --- AUTO LOGIN & LOCK LOGIC ---
+const savedName = localStorage.getItem('guestName');
+if (savedName) {
+    nameInput.value = savedName;
+    nameInput.disabled = true; // LOCK: Cannot edit
+}
+
+// Check if user was already logged in before refresh
+if (savedName && sessionStorage.getItem('isLoggedIn') === 'true') {
+    loginWrap.style.display = 'none';
+    startAs(savedName);
+} else {
+    loginWrap.style.display = 'flex';
+}
+
+async function startAs(name){ 
+    const statusSnap = await db.ref(`status/${name}`).once('value'); 
+    if(statusSnap.exists() && sessionStorage.getItem('isLoggedIn') !== 'true') { 
+        showToast("Username active."); 
+        loginWrap.style.display = 'flex'; 
+        return; 
+    } 
+    username = name; 
+    localStorage.setItem('guestName', name); 
+    sessionStorage.setItem('isLoggedIn', 'true'); // Track active session
+    if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
+    loginWrap.style.display = 'none'; 
+    setPresence(); 
+    startGroupListeners(); 
+    listenTypingGroup(); 
+    listenPresence(); 
+    watchPrivateChatsInitial(); 
+    listenBlocks(); 
+    manageMessageCount('messages', 15); 
+}
+
+joinBtn.onclick = () => { 
+    const n = nameInput.value.trim(); 
+    if(!n) return showToast('Enter name'); 
+    userAge = ageSelect.value; 
+    localStorage.setItem('userAge', userAge); 
+    if(loginPhotoInput.files && loginPhotoInput.files[0]) { 
+        if(userAge !== '18+') { alert("18+ only for photo."); return; } 
+        const reader = new FileReader(); 
+        reader.onload = (e) => { 
+            profileImage = e.target.result; 
+            localStorage.setItem('profileImage', profileImage); 
+            startAs(n); 
+        }; 
+        reader.readAsDataURL(loginPhotoInput.files[0]); 
+    } else { 
+        startAs(n); 
+    } 
+};
 
 function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
@@ -569,7 +628,6 @@ function listenBlocks(){
       blockedUsers = new Set(Object.keys(s.val()||{})); 
       if(privateChatWith) {
           updateBlockUI(blockedUsers.has(privateChatWith));
-          // Re-render chat to hide newly blocked messages
           openPrivatePopup(privateChatWith); 
       }
       refreshPanelList(); 
