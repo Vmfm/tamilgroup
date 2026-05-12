@@ -395,34 +395,24 @@ logoutBtn.onclick = () => {
         db.ref(`status/${username}`).remove(); 
         db.ref(`profiles/${username}/online`).remove(); 
     } 
-    // Clear the session so the login card appears on refresh
+    // Clear session so the login card appears on refresh
+    localStorage.removeItem('guestName');
     sessionStorage.removeItem('isLoggedIn'); 
     location.reload(); 
 };
 
-// --- LOGIC: AUTOMATIC LOGIN & HIDE LOGIN CARD ---
+// --- LOGIC: FIX AUTOMATIC LOGIN ---
 const savedName = localStorage.getItem('guestName');
-// If we have a saved name and the user hasn't logged out (session is active), log in automatically
-if (savedName && sessionStorage.getItem('isLoggedIn') === 'true') {
+if (savedName) {
+    // Hide login wrap immediately if we have a saved name
     loginWrap.style.display = 'none';
     startAs(savedName);
 } else {
     // Show login card if first time or after logout
     loginWrap.style.display = 'flex';
-    if(savedName) {
-        nameInput.value = savedName;
-        nameInput.disabled = true; // User can't change name once set, only via clearing storage
-    }
 }
 
 async function startAs(name){ 
-    const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    // Check if another session is already using this name
-    if(statusSnap.exists() && sessionStorage.getItem('isLoggedIn') !== 'true') { 
-        showToast("Username active."); 
-        loginWrap.style.display = 'flex'; 
-        return; 
-    } 
     username = name; 
     localStorage.setItem('guestName', name); 
     sessionStorage.setItem('isLoggedIn', 'true'); // Mark session as active
