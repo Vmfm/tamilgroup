@@ -389,29 +389,70 @@ toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySett
 toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } 
-// Keep guestName in localStorage but reload to show login screen
-location.reload(); };
 
-// --- LOCK USERNAME LOGIC ---
-const lockedUsername = localStorage.getItem('guestName');
-if (lockedUsername) {
-    nameInput.value = lockedUsername;
-    nameInput.disabled = true; // One username per device, cannot edit
+logoutBtn.onclick = () => { 
+    if(username) { 
+        db.ref(`status/${username}`).remove(); 
+        db.ref(`profiles/${username}/online`).remove(); 
+    } 
+    sessionStorage.removeItem('isLoggedIn'); // Clear active session
+    location.reload(); 
+};
+
+// --- AUTO LOGIN & LOCK LOGIC ---
+const savedName = localStorage.getItem('guestName');
+if (savedName) {
+    nameInput.value = savedName;
+    nameInput.disabled = true; // LOCK: Cannot edit
 }
 
-async function startAs(name){ const statusSnap = await db.ref(`status/${name}`).once('value'); if(statusSnap.exists()) { showToast("Username active."); loginWrap.style.display = 'flex'; return; } username = name; localStorage.setItem('guestName', name); if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); loginWrap.style.display = 'none'; setPresence(); startGroupListeners(); listenTypingGroup(); listenPresence(); watchPrivateChatsInitial(); listenBlocks(); manageMessageCount('messages', 15); }
-// Use an internal session variable to determine if we are "in" the app
-let sessionActive = false;
-if(!username) {
-    loginWrap.style.display = 'flex';
+// Check if user was already logged in before refresh
+if (savedName && sessionStorage.getItem('isLoggedIn') === 'true') {
+    loginWrap.style.display = 'none';
+    startAs(savedName);
 } else {
-    // If we have a username, we still start at login screen unless we auto-login (handled by your logic)
-    // To ensure they stay logged out until "Join" is clicked, we keep loginWrap visible.
     loginWrap.style.display = 'flex';
 }
 
-joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
+async function startAs(name){ 
+    const statusSnap = await db.ref(`status/${name}`).once('value'); 
+    if(statusSnap.exists() && sessionStorage.getItem('isLoggedIn') !== 'true') { 
+        showToast("Username active."); 
+        loginWrap.style.display = 'flex'; 
+        return; 
+    } 
+    username = name; 
+    localStorage.setItem('guestName', name); 
+    sessionStorage.setItem('isLoggedIn', 'true'); // Track active session
+    if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
+    loginWrap.style.display = 'none'; 
+    setPresence(); 
+    startGroupListeners(); 
+    listenTypingGroup(); 
+    listenPresence(); 
+    watchPrivateChatsInitial(); 
+    listenBlocks(); 
+    manageMessageCount('messages', 15); 
+}
+
+joinBtn.onclick = () => { 
+    const n = nameInput.value.trim(); 
+    if(!n) return showToast('Enter name'); 
+    userAge = ageSelect.value; 
+    localStorage.setItem('userAge', userAge); 
+    if(loginPhotoInput.files && loginPhotoInput.files[0]) { 
+        if(userAge !== '18+') { alert("18+ only for photo."); return; } 
+        const reader = new FileReader(); 
+        reader.onload = (e) => { 
+            profileImage = e.target.result; 
+            localStorage.setItem('profileImage', profileImage); 
+            startAs(n); 
+        }; 
+        reader.readAsDataURL(loginPhotoInput.files[0]); 
+    } else { 
+        startAs(n); 
+    } 
+};
 
 function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
@@ -587,7 +628,6 @@ function listenBlocks(){
       blockedUsers = new Set(Object.keys(s.val()||{})); 
       if(privateChatWith) {
           updateBlockUI(blockedUsers.has(privateChatWith));
-          // Re-render chat to hide newly blocked messages
           openPrivatePopup(privateChatWith); 
       }
       refreshPanelList(); 
