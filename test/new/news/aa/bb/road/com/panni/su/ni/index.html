@@ -60,7 +60,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
 #toast.show{opacity:1;bottom:40px}
 
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
+#loginWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
 #loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:320px;box-shadow: 0 10px 40px rgba(0,0,0,0.8);border: 1px solid rgba(255,255,255,0.05)}
 #loginCard input, #loginCard select{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff;outline:none}
 #loginCard input:disabled{opacity:0.6;cursor:not-allowed}
@@ -396,24 +396,33 @@ logoutBtn.onclick = () => {
         db.ref(`profiles/${username}/online`).remove(); 
     } 
     localStorage.removeItem('guestName');
-    localStorage.removeItem('profileImage');
-    localStorage.removeItem('userAge');
+    sessionStorage.removeItem('isLoggedIn'); 
     location.reload(); 
 };
 
-// --- LOGIC: AUTOMATIC LOGIN ---
-if (username) {
+// --- PERSISTENT LOGIN LOGIC ---
+const savedName = localStorage.getItem('guestName');
+if (savedName) {
+    // Attempt automatic login if name is saved
     loginWrap.style.display = 'none';
-    startAs(username);
+    startAs(savedName);
 } else {
+    // Show login card
     loginWrap.style.display = 'flex';
 }
 
 async function startAs(name){ 
     const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    // Small logic update: Don't block if it's the same person refreshing
+    // Prevent another user from using this name if it's currently online
+    if(statusSnap.exists() && sessionStorage.getItem('isLoggedIn') !== 'true') { 
+        showToast("Username active on another device."); 
+        loginWrap.style.display = 'flex'; 
+        localStorage.removeItem('guestName'); // Force clear so they can try another name
+        return; 
+    } 
     username = name; 
     localStorage.setItem('guestName', name); 
+    sessionStorage.setItem('isLoggedIn', 'true');
     
     if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
     loginWrap.style.display = 'none'; 
