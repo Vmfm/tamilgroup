@@ -230,19 +230,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="loginWrap">
     <div id="loginCard">
         <div style="font-weight:700;color:#fff;font-size:18px;text-align:center;margin-bottom:5px">Welcome</div>
-        
         <div class="login-label">Name</div>
         <input id="nameInput" placeholder="Enter your name" />
-        
         <div class="login-label">Age</div>
         <select id="ageSelect">
             <option value="18+" selected>18+</option>
             <option value="Under 18">Under 18</option>
         </select>
-
         <div class="login-label">Profile Photo (Optional)</div>
         <input type="file" id="loginPhotoInput" accept="image/*" style="font-size:11px;" />
-        
         <button id="joinBtn">Join Chat</button>
         <div style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
     </div>
@@ -277,7 +273,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="callOverlay">
     <video id="remoteVideo" autoplay playsinline></video>
     <video id="localVideo" autoplay playsinline muted></video>
-    
     <div class="callCard" id="mainCallCard">
         <div style="text-align:center">
             <div id="callTypeText" style="font-size:12px;color:var(--muted);margin-bottom:20px">Incoming call</div>
@@ -285,7 +280,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             <div class="callName" id="callFrom" style="margin-top:15px">User</div>
             <div id="callTimer" class="callStatusText">Ringing...</div>
         </div>
-
         <div id="activeCallControls" class="callControls hidden" style="display:none; flex-direction: column; align-items: center; gap: 20px; width: 100%;">
             <div style="display:flex; gap:20px">
                 <button class="ctrlBtn" id="muteBtn" title="Mute">🎤</button>
@@ -295,12 +289,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             </div>
             <button class="circleBtn btnDecline" id="endCallBtnBig">📞</button>
         </div>
-
         <div class="callBtns" id="inboundCallBtns">
             <button class="circleBtn btnDecline" id="declineCallBtn">✕</button>
             <button class="circleBtn btnAccept" id="acceptCallBtn">✓</button>
         </div>
-        
         <div class="callBtns" id="outboundCallBtns" style="display:none">
             <button class="circleBtn btnDecline" id="cancelCallBtn">✕</button>
         </div>
@@ -390,40 +382,17 @@ toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySet
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 
-logoutBtn.onclick = () => { 
-    if(username) { 
-        db.ref(`status/${username}`).remove(); 
-        db.ref(`profiles/${username}/online`).remove(); 
-    } 
-    localStorage.removeItem('isLoggedIn'); // This is the key change: clear persistent login
-    location.reload(); 
-};
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
-// --- LOGIC: AUTOMATIC LOGIN & HIDE LOGIN CARD ---
-// Use localStorage instead of sessionStorage to keep user logged in after refresh
 const savedName = localStorage.getItem('guestName');
-if (savedName && localStorage.getItem('isLoggedIn') === 'true') {
-    loginWrap.style.display = 'none';
-    startAs(savedName);
-} else {
-    loginWrap.style.display = 'flex';
-    if(savedName) {
-        nameInput.value = savedName;
-        nameInput.disabled = true; 
-    }
-}
+if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
 
 async function startAs(name){ 
     const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { 
-        showToast("Username active."); 
-        loginWrap.style.display = 'flex'; 
-        return; 
-    } 
+    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
     username = name; 
     localStorage.setItem('guestName', name); 
-    localStorage.setItem('isLoggedIn', 'true'); // Persist the login state
-    
+    localStorage.setItem('isLoggedIn', 'true');
     if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
     loginWrap.style.display = 'none'; 
     setPresence(); 
@@ -435,24 +404,7 @@ async function startAs(name){
     manageMessageCount('messages', 15); 
 }
 
-joinBtn.onclick = () => { 
-    const n = nameInput.value.trim(); 
-    if(!n) return showToast('Enter name'); 
-    userAge = ageSelect.value; 
-    localStorage.setItem('userAge', userAge); 
-    if(loginPhotoInput.files && loginPhotoInput.files[0]) { 
-        if(userAge !== '18+') { alert("18+ only for photo."); return; } 
-        const reader = new FileReader(); 
-        reader.onload = (e) => { 
-            profileImage = e.target.result; 
-            localStorage.setItem('profileImage', profileImage); 
-            startAs(n); 
-        }; 
-        reader.readAsDataURL(loginPhotoInput.files[0]); 
-    } else { 
-        startAs(n); 
-    } 
-};
+joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
 
 function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
@@ -471,7 +423,7 @@ onlineCountEl.onclick = () => { document.getElementById('onlineListOverlay').sty
 async function updatePrivateHeaderStatus(targetUser, isOnline) { if(isOnline) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } else { headerDot.style.background = 'var(--offline)'; const profileSnap = await db.ref(`profiles/${targetUser}`).once('value'); const profile = profileSnap.val(); headerStatusText.textContent = (profile && profile.lastSeen) ? 'Last seen ' + formatTime(profile.lastSeen) : 'offline'; } }
 
 function watchPrivateChatsInitial(){ db.ref('privateChats').on('child_added', snap => { if(snap.key.includes(username)) attachPrivateListener(snap.key); }); listenUnreadForMe(); watchCallsForMe(); }
-function attachPrivateListener(chatKey){ if(privateListeners.has(chatKey)) return; const chatRef = db.ref(`privateChats/${chatKey}`); manageMessageCount(`privateChats/${chatKey}`, 10); const handler = chatRef.limitToLast(1).on('child_added', snap => { const msg = snap.val(); if(!msg || msg.name === username) return; const other = chatKey.split('_').find(x=>x!==username); if(blockedUsers.has(other)) return; if(privateChatWith === other && privatePopup.style.display === 'flex') { if(!msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true}); } else { playTing(); } refreshPanelList(); }); chatRef.on('child_changed', snap => { const msg = snap.val(); const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); if(msgEl && msg.read) msgEl.classList.add('read'); const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`); if(bubble) renderReactions(bubble, msg.reactions); }); chatRef.on('child_removed', snap => { const el = document.querySelector(`[data-msgid="${snap.key}"]`); if(el) el.remove(); }); privateListeners.set(chatKey, { ref: chatRef, handler }); }
+function attachPrivateListener(chatKey){ if(privateListeners.has(chatKey)) return; const chatRef = db.ref(`privateChats/${chatKey}`); manageMessageCount(`privateChats/${chatKey}`, 10); const handler = chatRef.on('child_added', snap => { const msg = snap.val(); if(!msg) return; const other = chatKey.split('_').find(x=>x!==username); if(blockedUsers.has(other)) return; if(privateChatWith === other && privatePopup.style.display === 'flex') { renderPrivateMessageWithId(chatKey, snap.key, msg); if(msg.name !== username && !msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true}); } else if(msg.name !== username) { playTing(); } refreshPanelList(); }); chatRef.on('child_changed', snap => { const msg = snap.val(); const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); if(msgEl && msg.read) msgEl.classList.add('read'); const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`); if(bubble) renderReactions(bubble, msg.reactions); }); chatRef.on('child_removed', snap => { const el = document.querySelector(`[data-msgid="${snap.key}"]`); if(el) el.remove(); }); privateListeners.set(chatKey, { ref: chatRef, handler }); }
 
 function listenUnreadForMe(){ db.ref(`unread/${username}`).on('value', snap => { const val = snap.val() || {}; const total = Object.values(val).reduce((a,b)=>a+b, 0); bellBadge.style.display = total > 0 ? 'flex' : 'none'; bellBadge.textContent = total; refreshPanelList(); }); }
 async function refreshPanelList(){ panelListEl.innerHTML = ''; const all = await db.ref('privateChats').once('value').then(s=>s.val()||{}); const unread = await db.ref(`unread/${username}`).once('value').then(s=>s.val()||{}); const list = Object.keys(all).filter(k=>k.includes(username)).map(k=>{ const other = k.split('_').find(x=>x!==username); return { other, ucount: unread[other]||0 }; }); list.forEach(item => { if(blockedUsers.has(item.other)) return; const el = document.createElement('div'); el.className='panelItem'; el.innerHTML = `<div class="who">${item.other}</div><div class="count" style="display:${item.ucount?'block':'none'}">${item.ucount}</div>`; el.onclick = () => openPrivatePopup(item.other); panelListEl.appendChild(el); }); }
@@ -479,13 +431,43 @@ async function refreshPanelList(){ panelListEl.innerHTML = ''; const all = await
 clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); const allChatsSnap = await db.ref('privateChats').once('value'); const allChats = allChatsSnap.val() || {}; Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) db.ref(`privateChats/${chatKey}`).remove(); }); showToast("Cleared"); refreshPanelList(); };
 async function checkTargetPrivateChatStatus() { if(!privateChatWith) return false; const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value'); const targetProf = targetProfSnap.val(); if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) { showToast("User disabled private chat"); return false; } return true; }
 
-async function openPrivatePopup(other){ if(!settings.privateChat) return showToast('Private chat disabled'); privateChatWith = other; privatePopup.style.display = 'flex'; privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`; const statusSnap = await db.ref(`status/${other}`).once('value'); updatePrivateHeaderStatus(other, statusSnap.exists()); 
+async function openPrivatePopup(other){ 
+    if(!settings.privateChat) return showToast('Private chat disabled'); 
+    privateChatWith = other; 
+    privatePopup.style.display = 'flex'; 
+    privateMessages.innerHTML = ''; 
+    privateTitle.textContent = `Chat with ${other}`; 
+    const statusSnap = await db.ref(`status/${other}`).once('value'); 
+    updatePrivateHeaderStatus(other, statusSnap.exists()); 
     updateBlockUI(blockedUsers.has(other));
-    const key = chatId(username, other); const snapshot = await db.ref(`privateChats/${key}`).once('value'); snapshot.forEach(child => { if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); }); db.ref(`unread/${username}/${other}`).set(0); if(currentPrivateRef) currentPrivateRef.off(); renderedPrivateMsgIds.set(key, new Set()); currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(50); currentPrivateRef.on('child_added', snap => { renderPrivateMessageWithId(key, snap.key, snap.val()); if(snap.val().name === other && !snap.val().read) db.ref(`privateChats/${key}/${snap.key}`).update({read: true}); }); panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; }
+    const key = chatId(username, other); 
+    renderedPrivateMsgIds.set(key, new Set());
+    const snapshot = await db.ref(`privateChats/${key}`).once('value'); 
+    snapshot.forEach(child => { 
+        renderPrivateMessageWithId(key, child.key, child.val());
+        if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); 
+    }); 
+    db.ref(`unread/${username}/${other}`).set(0); 
+    panelEl.classList.remove('open'); 
+    document.getElementById('app').style.transform = ''; 
+}
 
 function renderPrivateMessageWithId(chatKey, id, msg){ 
     if(msg.name !== username && blockedUsers.has(msg.name)) return; 
-    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } if(set.has(id)) return; set.add(id); const isSelf = msg.name === username; const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; const bubble = row.querySelector('.private-bubble'); if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); attachLongPress(bubble, `privateChats/${chatKey}/${id}`); renderReactions(bubble, data.reactions); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
+    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } 
+    if(set.has(id)) return; set.add(id); 
+    const isSelf = msg.name === username; 
+    const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; 
+    let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; 
+    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; 
+    if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; 
+    const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; 
+    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
+    const bubble = row.querySelector('.private-bubble'); 
+    if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
+    attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
+    if(msg.reactions) renderReactions(bubble, msg.reactions);
+    privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
 }
 
 privateSend.onclick = async () => { 
@@ -495,11 +477,10 @@ privateSend.onclick = async () => {
     const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
 };
 
-closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; if(currentPrivateRef) currentPrivateRef.off(); };
+closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; };
 bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 
-/* --- UPDATED CALL LOGIC --- */
 privateCallBtn.onclick = () => initiateCall('audio');
 privateVideoBtn.onclick = () => initiateCall('video');
 
@@ -529,11 +510,8 @@ async function setupWebRTC(callId, isCaller, isVideo) {
   } catch(e) { showToast("Media denied"); cleanupCall(callId); return; }
 
   peerConnection.ontrack = (event) => { 
-      if(activeCall && activeCall.type === 'video') { 
-          remoteVideo.srcObject = event.streams[0]; 
-          remoteVideo.style.display = 'block'; 
-          mainCallCard.classList.add('connected-video'); 
-      } else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
+      if(activeCall && activeCall.type === 'video') { remoteVideo.srcObject = event.streams[0]; remoteVideo.style.display = 'block'; mainCallCard.classList.add('connected-video'); } 
+      else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
   };
   peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
@@ -577,24 +555,12 @@ endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
-  if(c.type === 'video') { 
-      mainCallCard.classList.add('connected-video'); 
-      showTemporaryControls(); 
-  } else {
-      activeCallControls.classList.remove('hidden');
-  }
+  if(c.type === 'video') { mainCallCard.classList.add('connected-video'); showTemporaryControls(); } else { activeCallControls.classList.remove('hidden'); }
   clearInterval(callTimerInterval);
   callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
 }
 
-function showTemporaryControls() {
-    activeCallControls.classList.remove('hidden');
-    clearTimeout(controlHideTimer);
-    controlHideTimer = setTimeout(() => {
-        if(activeCall && activeCall.type === 'video') activeCallControls.classList.add('hidden');
-    }, 4000);
-}
-
+function showTemporaryControls() { activeCallControls.classList.remove('hidden'); clearTimeout(controlHideTimer); controlHideTimer = setTimeout(() => { if(activeCall && activeCall.type === 'video') activeCallControls.classList.add('hidden'); }, 4000); }
 callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') showTemporaryControls(); };
 
 function cleanupCall(callId){ 
@@ -606,8 +572,7 @@ function cleanupCall(callId){
 }
 
 flipCamBtn.onclick = async (e) => {
-    e.stopPropagation();
-    isFrontCam = !isFrontCam;
+    e.stopPropagation(); isFrontCam = !isFrontCam;
     if(localStream) {
         localStream.getTracks().forEach(t => t.stop());
         const constraints = { audio: true, video: { facingMode: isFrontCam ? "user" : "environment" } };
@@ -626,28 +591,14 @@ fullScreenBtn.onclick = (e) => { e.stopPropagation(); mainCallCard.classList.tog
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => { 
       blockedUsers = new Set(Object.keys(s.val()||{})); 
-      if(privateChatWith) {
-          updateBlockUI(blockedUsers.has(privateChatWith));
-          openPrivatePopup(privateChatWith); 
-      }
+      if(privateChatWith) { updateBlockUI(blockedUsers.has(privateChatWith)); openPrivatePopup(privateChatWith); }
       refreshPanelList(); 
   }); 
   db.ref('blocks').on('value', snap => { const all = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(all).forEach(u => { if(all[u][username]) iHaveBeenBlockedBy.add(u); }); });
 }
 
-function updateBlockUI(isBlocked) {
-    blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
-    blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked');
-}
-
-blockBtn.onclick = () => { 
-    if(!privateChatWith) return;
-    const ref = db.ref(`blocks/${username}/${privateChatWith}`); 
-    ref.once('value', s => { 
-        if(s.exists()) { ref.remove(); showToast("User Unblocked"); } else { ref.set(true); showToast("User Blocked"); }
-    }); 
-};
-
+function updateBlockUI(isBlocked) { blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked'); }
+blockBtn.onclick = () => { if(!privateChatWith) return; const ref = db.ref(`blocks/${username}/${privateChatWith}`); ref.once('value', s => { if(s.exists()) { ref.remove(); showToast("User Unblocked"); } else { ref.set(true); showToast("User Blocked"); } }); };
 reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); };
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
