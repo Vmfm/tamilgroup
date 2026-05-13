@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,7 +63,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
 #loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:320px;box-shadow: 0 10px 40px rgba(0,0,0,0.8);border: 1px solid rgba(255,255,255,0.05)}
 #loginCard input, #loginCard select{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff;outline:none}
-#loginCard input:disabled{background:#070d10;color:#8696a0;cursor:not-allowed}
+#loginCard input:disabled{opacity:0.6;cursor:not-allowed}
 #loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
 .login-label {font-size: 13px; color: var(--muted); margin-bottom: -8px; margin-left: 4px;}
 
@@ -153,7 +152,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .emoji-btn:hover { transform: scale(1.3); }
 
 /* --- STICKER PICKER CSS --- */
-#stickerPicker { position: absolute; bottom: 60px; left: 10px; background: #202c33; padding: 10px; border-radius: 12px; display: none; grid-template-columns: repeat(4, 1fr); gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 10; max-height: 250px; overflow-y: auto; width: 240px; border: 1px solid rgba(255,255,255,0.1); }
+#stickerPicker { position: absolute; bottom: 60px; left: 10px; background: #202c33; padding: 10px; border-radius: 12px; display: none; grid-template-columns: repeat(4, 1fr); gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 100; max-height: 250px; overflow-y: auto; width: 240px; border: 1px solid rgba(255,255,255,0.1); }
 .sticker-item { width: 100%; aspect-ratio: 1; cursor: pointer; object-fit: contain; border-radius: 4px; transition: transform 0.2s; }
 .sticker-item:hover { transform: scale(1.1); background: rgba(255,255,255,0.05); }
 
@@ -396,27 +395,34 @@ logoutBtn.onclick = () => {
         db.ref(`status/${username}`).remove(); 
         db.ref(`profiles/${username}/online`).remove(); 
     } 
-    localStorage.removeItem('guestName');
-    localStorage.removeItem('profileImage');
-    sessionStorage.removeItem('isLoggedIn'); 
+    localStorage.removeItem('isLoggedIn'); // This is the key change: clear persistent login
     location.reload(); 
 };
 
-// --- UPDATED AUTO-LOGIN LOGIC ---
+// --- LOGIC: AUTOMATIC LOGIN & HIDE LOGIN CARD ---
+// Use localStorage instead of sessionStorage to keep user logged in after refresh
 const savedName = localStorage.getItem('guestName');
-if (savedName) {
-    // If we have a name, hide login immediately and start
+if (savedName && localStorage.getItem('isLoggedIn') === 'true') {
     loginWrap.style.display = 'none';
     startAs(savedName);
 } else {
-    // No name found, show login card
     loginWrap.style.display = 'flex';
+    if(savedName) {
+        nameInput.value = savedName;
+        nameInput.disabled = true; 
+    }
 }
 
 async function startAs(name){ 
+    const statusSnap = await db.ref(`status/${name}`).once('value'); 
+    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { 
+        showToast("Username active."); 
+        loginWrap.style.display = 'flex'; 
+        return; 
+    } 
     username = name; 
     localStorage.setItem('guestName', name); 
-    sessionStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('isLoggedIn', 'true'); // Persist the login state
     
     if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
     loginWrap.style.display = 'none'; 
@@ -479,7 +485,7 @@ async function openPrivatePopup(other){ if(!settings.privateChat) return showToa
 
 function renderPrivateMessageWithId(chatKey, id, msg){ 
     if(msg.name !== username && blockedUsers.has(msg.name)) return; 
-    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } if(set.has(id)) return; set.add(id); const isSelf = msg.name === username; const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; const bubble = row.querySelector('.private-bubble'); if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); attachLongPress(bubble, `privateChats/${chatKey}/${id}`); renderReactions(bubble, msg.reactions); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
+    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } if(set.has(id)) return; set.add(id); const isSelf = msg.name === username; const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; const bubble = row.querySelector('.private-bubble'); if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); attachLongPress(bubble, `privateChats/${chatKey}/${id}`); renderReactions(bubble, data.reactions); privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
 }
 
 privateSend.onclick = async () => { 
@@ -555,8 +561,7 @@ function watchCallsForMe(){
 }
 
 async function showCallOverlay(otherName, type, callType) {
-  callOverlay.style.display = 'flex';
-  callFrom.textContent = otherName;
+  callFrom.textContent = otherName; callOverlay.style.display = 'flex';
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
   if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
   if(type === 'incoming') { callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
