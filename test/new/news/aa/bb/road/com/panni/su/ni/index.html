@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -395,32 +396,24 @@ logoutBtn.onclick = () => {
         db.ref(`status/${username}`).remove(); 
         db.ref(`profiles/${username}/online`).remove(); 
     } 
-    // Clear session status so login card appears on refresh after manual logout
+    localStorage.removeItem('guestName');
+    localStorage.removeItem('profileImage');
     sessionStorage.removeItem('isLoggedIn'); 
     location.reload(); 
 };
 
-// --- AUTOMATIC LOGIN & LOCKED USERNAME LOGIC ---
+// --- UPDATED AUTO-LOGIN LOGIC ---
 const savedName = localStorage.getItem('guestName');
-if (savedName && sessionStorage.getItem('isLoggedIn') === 'true') {
+if (savedName) {
+    // If we have a name, hide login immediately and start
     loginWrap.style.display = 'none';
     startAs(savedName);
 } else {
+    // No name found, show login card
     loginWrap.style.display = 'flex';
-    if(savedName) {
-        nameInput.value = savedName;
-        nameInput.disabled = true; // DO NOT ALLOW TO CHANGE
-    }
 }
 
 async function startAs(name){ 
-    const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    // Check if user is already online on another session/device
-    if(statusSnap.exists() && sessionStorage.getItem('isLoggedIn') !== 'true') { 
-        showToast("Username active elsewhere."); 
-        loginWrap.style.display = 'flex'; 
-        return; 
-    } 
     username = name; 
     localStorage.setItem('guestName', name); 
     sessionStorage.setItem('isLoggedIn', 'true');
@@ -562,7 +555,8 @@ function watchCallsForMe(){
 }
 
 async function showCallOverlay(otherName, type, callType) {
-  callFrom.textContent = otherName; callOverlay.style.display = 'flex';
+  callOverlay.style.display = 'flex';
+  callFrom.textContent = otherName;
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
   if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
   if(type === 'incoming') { callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
