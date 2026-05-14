@@ -9,6 +9,16 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
 
+/* --- TRANSLATOR CSS --- */
+#trans-bar { background: #1d2a33; padding: 5px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); z-index: 10; }
+.trans-label { font-size: 11px; color: var(--accent); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+.switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #394b59; transition: .3s; border-radius: 20px; }
+.slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(16px); }
+
 /* --- LOADER CSS --- */
 #loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
 .loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -180,6 +190,14 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="loader-text">Loading Group Chat...</div>
 </div>
 
+<div id="trans-bar">
+    <div class="trans-label">Tamil Transliteration (Tanglish)</div>
+    <label class="switch">
+        <input type="checkbox" id="transToggle">
+        <span class="slider"></span>
+    </label>
+</div>
+
 <div id="onlineListOverlay">
     <div class="onlineListCard">
         <div class="onlineListHeader">
@@ -309,6 +327,43 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
+/* --- TAMIL TRANSLITERATION ENGINE --- */
+const tamilMap = {
+    'a':'அ','aa':'ஆ','A':'ஆ','i':'இ','ii':'ஈ','I':'ஈ','u':'உ','uu':'ஊ','U':'ஊ','e':'எ','ee':'ஏ','E':'ஏ','ai':'ஐ','o':'ஒ','oo':'ஓ','O':'ஓ','au':'ஔ',
+    'ka':'க','ga':'க','kha':'க','gha':'க','nga':'ங','ca':'ச','cha':'ச','ja':'ஜ','nya':'ஞ','ta':'ட','tha':'த','da':'ட','dha':'த','na':'ந','pa':'ப','ba':'ப','pha':'ப','bha':'ப','ma':'ம',
+    'ya':'ய','ra':'ர','la':'ல','va':'வ','zha':'ழ','laa':'ள','ra2':'ற','na2':'ன','sa':'ஸ','ha':'ஹ'
+};
+function transliterate(text) {
+    let result = text;
+    // Simple logic for space-triggered conversion or continuous mapping
+    // This is a basic version. For complex ones, we usually use Google Transliterate API, 
+    // but here is a lightweight local mapper for standard Tanglish.
+    const rules = [
+        ['amma','அம்மா'],['appa','அப்பா'],['vanakkam','வணக்கம்'],['nalam','நலம்'],
+        ['eppadi','எப்படி'],['saptiya','சாப்டியா'],['nanri','நன்றி'],['ponga','போங்க']
+    ];
+    rules.forEach(r => { result = result.replace(new RegExp(r[0], 'gi'), r[1]); });
+    return result;
+}
+
+const transToggle = document.getElementById('transToggle');
+function handleTransliteration(e) {
+    if(!transToggle.checked) return;
+    let val = e.target.value;
+    // We only transliterate when a word is completed (space pressed)
+    if(val.endsWith(' ')) {
+        let words = val.split(' ');
+        let lastWord = words[words.length - 2];
+        let converted = transliterate(lastWord);
+        if(converted !== lastWord) {
+            words[words.length - 2] = converted;
+            e.target.value = words.join(' ');
+        }
+    }
+}
+document.getElementById('messageInput').addEventListener('input', handleTransliteration);
+document.getElementById('privateInput').addEventListener('input', handleTransliteration);
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -415,7 +470,7 @@ function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name))
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
 function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
-function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
+function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = (e) => { handleTransliteration(e); db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
 
 function listenPresence(){ db.ref('status').on('value', async snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]); const container = document.getElementById('onlineUsersContainer'); container.innerHTML = ''; for(let user in val) { if(user === username) continue; const profSnap = await db.ref(`profiles/${user}`).once('value'); const prof = profSnap.val() || {}; const userDiv = document.createElement('div'); userDiv.className = 'onlineUserItem'; let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase(); userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`; userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); }; container.appendChild(userDiv); } }); }
 onlineCountEl.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'flex'; };
