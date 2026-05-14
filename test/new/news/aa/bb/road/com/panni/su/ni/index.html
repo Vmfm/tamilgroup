@@ -1,290 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WhatsApp Full Chat + Live</title>
-<style>
-:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--online:#25d366;--offline:#8696a0;--live:#ff3b30}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream - No Login</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --bg: #0b141a;
+            --panel: #202c33;
+            --accent: #ff3b30;
+            --text: #e9edef;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
 
-/* --- LOADER CSS --- */
-#loader-wrapper { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
-.loader-wheel { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #ffeb3b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Header */
+        header { background: var(--panel); padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .logo { font-size: 20px; font-weight: bold; color: var(--accent); }
+        
+        #startLiveBtn { 
+            background: var(--accent); color: white; border: none; 
+            padding: 8px 20px; border-radius: 20px; font-weight: bold; 
+            cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
 
-/* --- LIVE STREAM CSS --- */
-#streamSection { background: #0b141a; border-bottom: 1px solid rgba(255,255,255,0.05); display: none; padding: 10px; flex-direction: column; gap: 10px; z-index: 10; }
-#liveUsersList { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-.live-thumb { position: relative; width: 62px; height: 62px; border: 2px solid var(--live); border-radius: 50%; cursor: pointer; flex-shrink: 0; padding: 2px; }
-.live-thumb img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.live-badge { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); background: var(--live); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        /* Live User List */
+        .live-container { padding: 15px; }
+        .section-title { margin-bottom: 15px; font-size: 16px; color: #8696a0; }
+        #liveGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; }
+        
+        .live-card { text-align: center; cursor: pointer; position: relative; }
+        .img-wrapper { 
+            width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; 
+            border: 2px solid var(--accent); padding: 2px; position: relative;
+        }
+        .img-wrapper img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .live-tag { 
+            position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+            background: var(--accent); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold;
+        }
+        .username-text { margin-top: 10px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-#streamPlayerOverlay { position: fixed; inset: 0; background: #000; z-index: 10005; display: none; flex-direction: column; }
-#remoteStreamVideo { width: 100%; height: 100%; object-fit: contain; }
-.stream-header { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 10006; }
-.live-info { background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.close-stream { background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+        /* Full Screen Player */
+        #playerOverlay { 
+            position: fixed; inset: 0; background: #000; z-index: 200; 
+            display: none; flex-direction: column;
+        }
+        #remoteVideo { width: 100%; height: 100%; object-fit: contain; background: #000; }
+        .player-controls { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; z-index: 201; }
+        .view-badge { background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 15px; font-size: 14px; }
+        .close-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 20px; }
 
-#startLiveBtn { background: var(--live); color: #fff; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
-
-/* Existing App Styles */
-#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
-#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
-#title{font-weight:600;display:flex;align-items:center;gap:10px}
-#onlineCount { background: rgba(37, 211, 102, 0.1); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(37, 211, 102, 0.3); font-weight: 600; }
-#messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
-.msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
-.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;overflow:hidden}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
-.msg-row.self .bubble{background:#005c4b}
-#inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
-#messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.9);z-index:9999}
-#loginCard{background:#0b141a;padding:25px;border-radius:16px;display:flex;flex-direction:column;gap:15px;width:320px;border:1px solid rgba(255,255,255,0.1)}
-#loginCard input, #loginCard select{padding:12px;border-radius:10px;border:0;background:#162027;color:#fff;outline:none}
-#loginCard button{padding:12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:bold}
-</style>
+        /* Toast Notification */
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; padding: 10px 20px; border-radius: 5px; display: none; z-index: 1000; }
+    </style>
 </head>
 <body>
 
-<div id="loader-wrapper">
-    <div class="loader-wheel"></div>
-    <div style="color:#ffeb3b">Connecting...</div>
-</div>
+<header>
+    <div class="logo">LIVE PRO</div>
+    <button id="startLiveBtn">Go Live</button>
+</header>
 
-<div id="app">
-    <div id="topBar">
-        <div id="title">
-            <button id="startLiveBtn">● GO LIVE</button>
-            <div id="titleText">Group Chat</div>
+<div class="live-container">
+    <h2 class="section-title">Active Streams</h2>
+    <div id="liveGrid">
         </div>
-        <div style="flex:1"></div>
-        <div id="onlineCount">0 online</div>
-    </div>
-
-    <div id="streamSection">
-        <div style="font-size: 11px; color: var(--muted); margin-bottom: 5px; font-weight: bold;">LIVE NOW</div>
-        <div id="liveUsersList"></div>
-    </div>
-
-    <div id="messages"></div>
-
-    <div id="inputBar">
-        <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
-        <button id="sendBtn">➤</button>
-    </div>
 </div>
 
-<div id="streamPlayerOverlay">
-    <div class="stream-header">
-        <div class="live-info">
-            <span style="color:var(--live); font-weight:bold">● LIVE</span>
-            <span id="liveViewerCount">0 watching</span>
-        </div>
-        <button class="close-stream" id="closeStreamBtn">✕</button>
+<div id="playerOverlay">
+    <div class="player-controls">
+        <div class="view-badge">● LIVE | <span id="viewCounter">0</span> watching</div>
+        <button class="close-btn" onclick="closeStream()">✕</button>
     </div>
-    <video id="remoteStreamVideo" autoplay playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
 </div>
 
-<div id="loginWrap">
-    <div id="loginCard">
-        <h3 style="text-align:center">Welcome</h3>
-        <input id="nameInput" placeholder="Enter name" />
-        <select id="ageSelect">
-            <option value="18+">18+</option>
-            <option value="Under 18">Under 18</option>
-        </select>
-        <button id="joinBtn">Join Chat</button>
-    </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
+<div id="toast"></div>
 
 <script>
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    // --- CONFIGURATION ---
+    const firebaseConfig = {
+        // PASTE YOUR FIREBASE CONFIG HERE
+        databaseURL: "YOUR_DATABASE_URL"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-let username = localStorage.getItem('guestName') || '';
-let profileImage = localStorage.getItem('profileImage') || '';
-let localStream = null;
-let broadcastPeer = null;
-let viewerPeer = null;
-const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    // Check local storage for existing identity (if any)
+    let myId = localStorage.getItem('chatUsername') || "Guest_" + Math.floor(Math.random()*9999);
+    let myStream = null;
+    let peerConn = null;
+    const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-window.addEventListener('load', () => { 
-    setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1000); 
-    if(username) {
-        document.getElementById('loginWrap').style.display = 'none';
-        startChat();
-    }
-});
-
-// --- LOGIN LOGIC ---
-document.getElementById('joinBtn').onclick = () => {
-    const name = document.getElementById('nameInput').value.trim();
-    if(!name) return alert("Enter name");
-    username = name;
-    localStorage.setItem('guestName', name);
-    document.getElementById('loginWrap').style.display = 'none';
-    startChat();
-};
-
-function startChat() {
-    setPresence();
-    listenMessages();
-    listenStreams();
-}
-
-function setPresence() {
-    db.ref(`status/${username}`).set(true);
-    db.ref(`status/${username}`).onDisconnect().remove();
-    db.ref(`profiles/${username}`).update({ online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
-}
-
-// --- MESSAGES LOGIC ---
-function listenMessages() {
-    db.ref('messages').limitToLast(20).on('child_added', snap => {
-        const data = snap.val();
-        const row = document.createElement('div');
-        row.className = 'msg-row' + (data.name === username ? ' self' : '');
-        row.innerHTML = `
-            <div class="avatar">${data.name.charAt(0)}</div>
-            <div class="bubble">${data.text}</div>
-        `;
-        document.getElementById('messages').appendChild(row);
-        const m = document.getElementById('messages');
-        m.scrollTop = m.scrollHeight;
-    });
-}
-
-document.getElementById('sendBtn').onclick = () => {
-    const text = document.getElementById('messageInput').value.trim();
-    if(!text) return;
-    db.ref('messages').push({ name: username, text: text, time: Date.now() });
-    document.getElementById('messageInput').value = '';
-};
-
-// --- LIVE STREAMING LOGIC (THE FIX) ---
-
-// 1. Listen for Who is Live
-function listenStreams() {
-    db.ref('streams').on('value', async snap => {
-        const streams = snap.val() || {};
-        const list = document.getElementById('liveUsersList');
-        const section = document.getElementById('streamSection');
-        list.innerHTML = '';
+    // 1. WATCH FOR LIVE USERS
+    db.ref('streams').on('value', async (snapshot) => {
+        const grid = document.getElementById('liveGrid');
+        grid.innerHTML = '';
+        const data = snapshot.val();
         
-        const activeKeys = Object.keys(streams);
-        section.style.display = activeKeys.length > 0 ? 'flex' : 'none';
+        if(!data) {
+            grid.innerHTML = '<p style="color:#666; grid-column: 1/-1; text-align:center;">No one is live right now</p>';
+            return;
+        }
 
-        for (let key in streams) {
-            const s = streams[key];
-            const profSnap = await db.ref(`profiles/${s.host}`).once('value');
+        for(let key in data) {
+            const stream = data[key];
+            // Get user profile photo from your profiles node
+            const profSnap = await db.ref(`profiles/${stream.host}`).once('value');
             const prof = profSnap.val() || {};
-            
-            const thumb = document.createElement('div');
-            thumb.className = 'live-thumb';
-            thumb.innerHTML = `
-                <img src="${prof.profileImage || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}">
-                <div class="live-badge">LIVE</div>
+            const photo = prof.profileImage || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+            const card = document.createElement('div');
+            card.className = 'live-card';
+            card.onclick = () => joinStream(key, stream.host);
+            card.innerHTML = `
+                <div class="img-wrapper">
+                    <img src="${photo}">
+                    <div class="live-tag">LIVE</div>
+                </div>
+                <div class="username-text">${stream.host}</div>
             `;
-            thumb.onclick = () => watchStream(key, s.host);
-            list.appendChild(thumb);
+            grid.appendChild(card);
         }
     });
-}
 
-// 2. GO LIVE BUTTON ACTION
-document.getElementById('startLiveBtn').onclick = async () => {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        const streamId = "live_" + username;
+    // 2. START BROADCASTING
+    document.getElementById('startLiveBtn').onclick = async () => {
+        try {
+            myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const streamId = "stream_" + myId;
+            
+            // Create record in DB
+            await db.ref(`streams/${streamId}`).set({
+                host: myId,
+                viewers: 0,
+                active: true
+            });
+
+            // Cleanup when user leaves
+            db.ref(`streams/${streamId}`).onDisconnect().remove();
+            showToast("You are live! Keep this page open.");
+
+            // Listen for viewer offers (Signaling)
+            db.ref(`streams/${streamId}/signals`).on('child_added', async (snap) => {
+                const signal = snap.val();
+                if(signal.type === 'offer') {
+                    handleOffer(streamId, snap.key, signal);
+                }
+            });
+
+        } catch (e) {
+            alert("Camera/Mic access is required to stream.");
+        }
+    };
+
+    // 3. JOIN AS VIEWER
+    async function joinStream(streamId, hostName) {
+        if(hostName === myId) return; // Can't watch yourself
+
+        document.getElementById('playerOverlay').style.display = 'flex';
+        peerConn = new RTCPeerConnection(rtcConfig);
         
-        await db.ref(`streams/${streamId}`).set({
-            host: username,
-            viewers: 0,
-            startedAt: Date.now()
+        // Handle incoming video
+        peerConn.ontrack = (event) => {
+            document.getElementById('remoteVideo').srcObject = event.streams[0];
+        };
+
+        // Create Offer
+        const offer = await peerConn.createOffer();
+        await peerConn.setLocalDescription(offer);
+
+        const mySignalRef = db.ref(`streams/${streamId}/signals`).push();
+        mySignalRef.set({
+            type: 'offer',
+            sdp: offer.sdp,
+            from: myId
         });
 
-        // Auto-remove if host leaves
-        db.ref(`streams/${streamId}`).onDisconnect().remove();
-        alert("You are now LIVE! Other users can see you.");
-
-        // Listen for viewer connections (WebRTC Signaling)
-        db.ref(`streams/${streamId}/signals`).on('child_added', async (snap) => {
-            const signal = snap.val();
-            if(signal.type === 'offer') {
-                const pc = new RTCPeerConnection(rtcConfig);
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                await pc.setRemoteDescription(new RTCSessionDescription(signal));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                db.ref(`streams/${streamId}/signals/${snap.key}`).update({
-                    type: 'answer',
-                    sdp: answer.sdp
-                });
+        // Listen for Answer
+        mySignalRef.on('value', async (snap) => {
+            const data = snap.val();
+            if(data.type === 'answer') {
+                await peerConn.setRemoteDescription(new RTCSessionDescription(data));
             }
         });
 
-    } catch (err) {
-        alert("Could not access camera: " + err.message);
+        // Update Viewer Counter
+        db.ref(`streams/${streamId}/viewers`).transaction(v => (v || 0) + 1);
+        db.ref(`streams/${streamId}/viewers`).on('value', s => {
+            document.getElementById('viewCounter').innerText = s.val() || 0;
+        });
+
+        // Store reference to clean up counter later
+        window.currentViewId = streamId;
     }
-};
 
-// 3. WATCH A STREAM
-async function watchStream(streamId, host) {
-    if(host === username) return;
+    // 4. HOST HANDLES VIEWERS (Signaling)
+    async function handleOffer(streamId, signalKey, signal) {
+        const pc = new RTCPeerConnection(rtcConfig);
+        myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
+        
+        await pc.setRemoteDescription(new RTCSessionDescription(signal));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
-    const overlay = document.getElementById('streamPlayerOverlay');
-    const video = document.getElementById('remoteStreamVideo');
-    overlay.style.display = 'flex';
+        db.ref(`streams/${streamId}/signals/${signalKey}`).update({
+            type: 'answer',
+            sdp: answer.sdp
+        });
+    }
 
-    viewerPeer = new RTCPeerConnection(rtcConfig);
-    viewerPeer.ontrack = (e) => { video.srcObject = e.streams[0]; };
-
-    const offer = await viewerPeer.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
-    await viewerPeer.setLocalDescription(offer);
-
-    const signalRef = db.ref(`streams/${streamId}/signals`).push();
-    signalRef.set({ type: 'offer', sdp: offer.sdp, from: username });
-
-    signalRef.on('value', async snap => {
-        const val = snap.val();
-        if(val && val.type === 'answer') {
-            await viewerPeer.setRemoteDescription(new RTCSessionDescription(val));
+    function closeStream() {
+        document.getElementById('playerOverlay').style.display = 'none';
+        if(peerConn) {
+            peerConn.close();
+            peerConn = null;
         }
-    });
-
-    // Viewer Counter
-    db.ref(`streams/${streamId}/viewers`).transaction(v => (v || 0) + 1);
-    db.ref(`streams/${streamId}/viewers`).on('value', s => {
-        document.getElementById('liveViewerCount').textContent = `${s.val() || 0} watching`;
-    });
-    
-    window.activeStreamId = streamId;
-}
-
-document.getElementById('closeStreamBtn').onclick = () => {
-    document.getElementById('streamPlayerOverlay').style.display = 'none';
-    if(viewerPeer) {
-        viewerPeer.close();
-        viewerPeer = null;
+        if(window.currentViewId) {
+            db.ref(`streams/${window.currentViewId}/viewers`).transaction(v => (v > 0 ? v - 1 : 0));
+        }
     }
-    if(window.activeStreamId) {
-        db.ref(`streams/${window.activeStreamId}/viewers`).transaction(v => (v > 0 ? v - 1 : 0));
-    }
-};
 
-// --- ONLINE COUNT ---
-db.ref('status').on('value', s => {
-    document.getElementById('onlineCount').textContent = `${Object.keys(s.val() || {}).length} online`;
-});
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
 </script>
+
 </body>
 </html>
