@@ -19,8 +19,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
 #title{font-weight:600;display:flex;align-items:center;gap:10px}
 #notifWrap{display:flex;align-items:center;gap:8px}
-.bell, .trans-top-btn{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
+.bell, .translate-toggle{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
+.translate-toggle { font-size: 10px; font-weight: bold; color: var(--accent); }
 .badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
+
+/* Hide Google Branding */
+.goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon { display: none !important; }
+body { top: 0px !important; }
+.goog-te-gadget-simple { background-color: transparent !important; border: none !important; padding: 0 !important; }
+.goog-te-menu-value span { color: var(--accent) !important; font-size: 10px; }
 
 #onlineCount { background: rgba(37, 211, 102, 0.1); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(37, 211, 102, 0.3); font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
 #onlineCount:hover { background: rgba(37, 211, 102, 0.2); }
@@ -52,10 +59,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
 .read-status{font-size:14px;line-height:1}
 .read-status.read{color:#53bdeb}
-
-/* --- TRANSLATE BUTTON STYLE --- */
-.translate-btn { font-size: 10px; color: var(--accent); cursor: pointer; margin-left: 8px; border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; background: transparent; }
-.translate-btn:hover { background: var(--accent); color: #fff; }
 
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px;position:relative}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
@@ -170,10 +173,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
-/* Hide Google Translate Bar */
-iframe.skiptranslate { display: none !important; }
-body { top: 0px !important; }
-
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -188,8 +187,6 @@ body { top: 0px !important; }
     <div class="loader-wheel"></div>
     <div class="loader-text">Loading Group Chat...</div>
 </div>
-
-<div id="google_translate_element" style="display:none"></div>
 
 <div id="onlineListOverlay">
     <div class="onlineListCard">
@@ -224,7 +221,9 @@ body { top: 0px !important; }
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
 <div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap">
-    <div class="trans-top-btn" id="fullTransBtn" title="Translate All to Tamil">TAM</div>
+    <div id="google_translate_element" style="display:none"></div>
+    <div class="translate-toggle" id="translateBtn" title="Translate All to Tamil">TAM</div>
+    
     <div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
     <div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
     <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
@@ -324,7 +323,12 @@ body { top: 0px !important; }
 
 <script type="text/javascript">
 function googleTranslateElementInit() {
-  new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'ta', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+  new google.translate.TranslateElement({
+    pageLanguage: 'en', 
+    includedLanguages: 'ta', 
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+    autoDisplay: false
+  }, 'google_translate_element');
 }
 </script>
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
@@ -334,6 +338,21 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1500); });
+
+// Translation Logic
+let isTranslated = false;
+document.getElementById('translateBtn').onclick = () => {
+    isTranslated = !isTranslated;
+    const googleCombo = document.querySelector('.goog-te-combo');
+    if (googleCombo) {
+        googleCombo.value = isTranslated ? 'ta' : 'en';
+        googleCombo.dispatchEvent(new Event('change'));
+        showToast(isTranslated ? "Translating to Tamil..." : "Original Language");
+        document.getElementById('translateBtn').style.color = isTranslated ? '#ffeb3b' : 'var(--accent)';
+    } else {
+        showToast("Translator loading...");
+    }
+};
 
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -362,20 +381,6 @@ if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
-// Function to translate specific message
-function translateMsg(btn, text) {
-  const parent = btn.parentElement;
-  const originalText = text;
-  // This triggers Google's engine to focus on Tamil
-  const url = `https://translate.google.com/#view=home&op=translate&sl=auto&tl=ta&text=${encodeURIComponent(originalText)}`;
-  window.open(url, '_blank');
-}
-
-document.getElementById('fullTransBtn').onclick = () => {
-    showToast("Opening Tamil Translator...");
-    window.open('https://translate.google.com/', '_blank');
-};
 
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
@@ -445,7 +450,7 @@ function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/$
 
 function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
 
-function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.innerHTML = `${formatTime(data.time)} ${data.text ? `<button class="translate-btn" onclick="translateMsg(this, '${data.text.replace(/'/g, "\\'")}')">TA</button>` : ''}`; content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
+function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
@@ -497,8 +502,7 @@ function renderPrivateMessageWithId(chatKey, id, msg){
     if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; 
     if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; 
     const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; 
-    const transBtn = (!isSelf && msg.text) ? `<button class="translate-btn" onclick="translateMsg(this, '${msg.text.replace(/'/g, "\\'")}')">TA</button>` : '';
-    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${transBtn} ${statusHtml}</div>`; 
+    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
     const bubble = row.querySelector('.private-bubble'); 
     if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
     attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
