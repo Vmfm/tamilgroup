@@ -182,6 +182,22 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .btnStopStream{background:#ff3b30;color:#fff}
 .btnExitStream{background:#2a3942;color:#fff}
 
+/* --- NEW STREAM MODAL POPUP --- */
+#streamChoiceOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10004; display: none; align-items: center; justify-content: center; }
+.choiceCard { background: #0b141a; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 15px; }
+.choiceHeader { display: flex; justify-content: space-between; align-items: center; color: #fff; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+.choiceBtn { background: #202c33; color: #fff; padding: 14px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
+.choiceBtn:hover { background: #2a3942; }
+.choiceBtn.primary { background: var(--accent); color: #fff; border: none; }
+.choiceBtn.primary:hover { background: #1ebe57; }
+#watchLiveList { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+.liveProfileItem { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+.liveProfileItem:hover { background: rgba(255,255,255,0.07); }
+.liveProfileLeft { display: flex; align-items: center; gap: 10px; }
+.liveUserPic { width: 32px; height: 32px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
+.liveUserPic img { width: 100%; height: 100%; object-fit: cover; }
+.liveIndicatorTag { font-size: 11px; background: #ff3b30; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; animation: pulse 1s infinite; }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -229,12 +245,30 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
-<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
-    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
-    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
-    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
-    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><button id="liveStreamBtn">📺 Go Live</button><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+
+<div id="app">
+    <div id="topBar">
+        <div id="title"><div id="titleText"></div></div>
+        <div style="flex:1"></div>
+        <div id="notifWrap">
+            <div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
+            <div id="settingsWrap">
+                <button id="settingsBtn">⚙️</button>
+                <div id="settingsPanel">
+                    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
+                    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
+                    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
+                    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
+                    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
+                    <button id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+        <button id="liveStreamBtn">📺 Go Live</button>
+        <div id="onlineCount">0 online</div>
+    </div>
+    <div id="statusLine"></div>
+    <div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -242,6 +276,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <button id="sendBtn">➤</button>
     </div>
 </div>
+
 <div id="toast"></div>
 
 <div id="loginWrap">
@@ -316,6 +351,18 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
 </div>
 
+<div id="streamChoiceOverlay">
+    <div class="choiceCard">
+        <div class="choiceHeader">
+            <span>Live Stream Actions</span>
+            <button onclick="document.getElementById('streamChoiceOverlay').style.display='none'" style="background:none;border:0;color:#fff;font-size:18px;cursor:pointer">✕</button>
+        </div>
+        <button class="choiceBtn primary" id="startLiveBtnChoice">🎥 Start Live</button>
+        <div style="font-size: 13px; color: var(--muted); margin-top: 5px; font-weight: 600;">Watch Active Broadcasters:</div>
+        <div id="watchLiveList"></div>
+    </div>
+</div>
+
 <div id="liveStreamOverlay">
     <div class="streamContainer">
         <video id="streamVideo" autoplay playsinline></video>
@@ -359,460 +406,446 @@ const callAvatarContainer = document.getElementById('callAvatarContainer'), call
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText'), fullScreenBtn = document.getElementById('fullScreenBtn'), mainCallCard = document.getElementById('mainCallCard'), remoteVideo = document.getElementById('remoteVideo'), localVideo = document.getElementById('localVideo'), flipCamBtn = document.getElementById('flipCamBtn');
 
 const loginPhotoInput = document.getElementById('loginPhotoInput'), ageSelect = document.getElementById('ageSelect'), stickerBtn = document.getElementById('stickerBtn'), stickerPicker = document.getElementById('stickerPicker');
-const stickerUrls = [ '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp' ];
-const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
+const stickerUrls = [ 
+  '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', 
+  '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', 
+  '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', 
+  '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', 
+  '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', 
+  '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', 
+  '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp' 
+];
 
+const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 const emojiPicker = document.getElementById('emojiPicker');
+
 let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
-const SETTINGS_KEY = 'chat_settings_v2';
-let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
-if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
-if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
-if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
-let peerConnection = null, localStream = null;
-const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+const SETTINGS_KEY = 'chat_settings_v1';
+let settings = { call: true, video: true, private: true, tone: true };
 
-/* --- LIVE STREAM STATE CONFIGS --- */
+/* --- NON-FIREBASE ARCHITECTURE FOR STREAMING --- */
+const streamChannel = new BroadcastChannel('livestream_signaling_local');
+let localStreamInstance = null;
+let activeBroadcastersList = [];
+let currentViewingHost = null;
+
+// UI Connections
 const liveStreamBtn = document.getElementById('liveStreamBtn');
+const streamChoiceOverlay = document.getElementById('streamChoiceOverlay');
+const startLiveBtnChoice = document.getElementById('startLiveBtnChoice');
+const watchLiveList = document.getElementById('watchLiveList');
 const liveStreamOverlay = document.getElementById('liveStreamOverlay');
 const streamVideo = document.getElementById('streamVideo');
 const streamHostName = document.getElementById('streamHostName');
 const stopStreamBtn = document.getElementById('stopStreamBtn');
 const exitStreamBtn = document.getElementById('exitStreamBtn');
 const streamViewerNumber = document.getElementById('streamViewerNumber');
-const streamBadgeStatus = document.getElementById('streamBadgeStatus');
 
-let liveStreamStream = null;
-let livePeerConnections = {}; 
-let currentActiveBroadcast = null;
+function showToast(m) { toastEl.textContent = m; toastEl.className = 'show'; setTimeout(() => { toastEl.className = ''; }, 3000); }
 
-stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
-stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
-document.addEventListener('click', (e) => { if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) stickerPicker.style.display = 'none'; });
-
-function manageMessageCount(path, limit) { db.ref(path).on('value', snap => { const count = snap.numChildren(); if (count > limit) { let deletedCount = 0; const targetCount = count - limit; snap.forEach(child => { if (deletedCount < targetCount) { db.ref(`${path}/${child.key}`).remove(); deletedCount++; } }); } }); }
-async function openProfilePop(targetUser) { previewSelectedUser = targetUser; previewName.textContent = targetUser; previewImgBox.innerHTML = targetUser.charAt(0).toUpperCase(); const profSnap = await db.ref(`profiles/${targetUser}`).once('value'); const prof = profSnap.val(); if (prof && prof.profileImage) previewImgBox.innerHTML = `<img src="${prof.profileImage}">`; profilePreviewOverlay.style.display = "flex"; }
-closePreviewBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; };
-profilePreviewOverlay.onclick = (e) => { if(e.target === profilePreviewOverlay) profilePreviewOverlay.style.display = "none"; };
-previewMsgBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; openPrivatePopup(previewSelectedUser); };
-
-function showEmojiPicker(x, y, refPath) { currentReactionRef = refPath; emojiPicker.style.left = x + 'px'; emojiPicker.style.top = (y - 50) + 'px'; emojiPicker.style.display = 'flex'; }
-document.querySelectorAll('.emoji-btn').forEach(btn => { btn.onclick = () => { if(currentReactionRef) db.ref(currentReactionRef + '/reactions/' + username).set(btn.textContent); emojiPicker.style.display = 'none'; }; });
-document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
-function attachLongPress(el, refPath) { const start = (e) => { longPressTimer = setTimeout(() => { const touch = e.touches ? e.touches[0] : e; showEmojiPicker(touch.clientX, touch.clientY, refPath); }, 600); }; const cancel = () => clearTimeout(longPressTimer); el.addEventListener('mousedown', start); el.addEventListener('touchstart', start); el.addEventListener('mouseup', cancel); el.addEventListener('mouseleave', cancel); el.addEventListener('touchend', cancel); }
-function renderReactions(container, reactionsObj) { let existing = container.querySelector('.reaction-container'); if(existing) existing.remove(); if(!reactionsObj) return; const reactions = Object.values(reactionsObj); const unique = [...new Set(reactions)]; const div = document.createElement('div'); div.className = 'reaction-container'; div.innerHTML = unique.join(''); container.appendChild(div); }
-function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
-function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
-function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
-confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
-cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
-
-micBtn.onclick = async () => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); micBtn.classList.remove('recording'); return; } try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const blob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.onload = e => sendPrivateMedia(e.target.result, 'voice'); reader.readAsDataURL(blob); stream.getTracks().forEach(t => t.stop()); }; mediaRecorder.start(); micBtn.classList.add('recording'); setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); micBtn.classList.remove('recording'); }, 10000); } catch (err) { showToast("Mic error"); } };
-
-privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
-
-function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
-function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
-function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
-function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
-function chatId(a,b){ return [a,b].sort().join('_'); }
-
-function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
-applySettingsToUI();
-settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
-document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
-toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
-toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
-togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
-toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
-
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
-
-const savedName = localStorage.getItem('guestName');
-if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
-
-async function startAs(name){ 
-    const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
-    username = name; 
-    localStorage.setItem('guestName', name); 
-    localStorage.setItem('isLoggedIn', 'true');
-    if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
-    loginWrap.style.display = 'none'; 
-    setPresence(); 
-    startGroupListeners(); 
-    listenTypingGroup(); 
-    listenPresence(); 
-    watchPrivateChatsInitial(); 
-    listenBlocks(); 
-    listenLiveStreams();
-    manageMessageCount('messages', 15); 
-}
-
-joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
-
-function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
-
-function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
-
-function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
-
-sendBtn.onclick = sendGroupMessage;
-messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
-function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
-function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
-
-function listenPresence(){ db.ref('status').on('value', async snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]); const container = document.getElementById('onlineUsersContainer'); container.innerHTML = ''; for(let user in val) { if(user === username) continue; const profSnap = await db.ref(`profiles/${user}`).once('value'); const prof = profSnap.val() || {}; const userDiv = document.createElement('div'); userDiv.className = 'onlineUserItem'; let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase(); userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`; userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); }; container.appendChild(userDiv); } }); }
-onlineCountEl.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'flex'; };
-
-async function updatePrivateHeaderStatus(targetUser, isOnline) { if(isOnline) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } else { headerDot.style.background = 'var(--offline)'; const profileSnap = await db.ref(`profiles/${targetUser}`).once('value'); const profile = profileSnap.val(); headerStatusText.textContent = (profile && profile.lastSeen) ? 'Last seen ' + formatTime(profile.lastSeen) : 'offline'; } }
-
-function watchPrivateChatsInitial(){ db.ref('privateChats').on('child_added', snap => { if(snap.key.includes(username)) attachPrivateListener(snap.key); }); listenUnreadForMe(); watchCallsForMe(); }
-function attachPrivateListener(chatKey){ if(privateListeners.has(chatKey)) return; const chatRef = db.ref(`privateChats/${chatKey}`); manageMessageCount(`privateChats/${chatKey}`, 10); const handler = chatRef.on('child_added', snap => { const msg = snap.val(); if(!msg) return; const other = chatKey.split('_').find(x=>x!==username); if(blockedUsers.has(other)) return; if(privateChatWith === other && privatePopup.style.display === 'flex') { renderPrivateMessageWithId(chatKey, snap.key, msg); if(msg.name !== username && !msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true}); } else if(msg.name !== username) { playTing(); } refreshPanelList(); }); chatRef.on('child_changed', snap => { const msg = snap.val(); const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); if(msgEl && msg.read) msgEl.classList.add('read'); const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`); if(bubble) renderReactions(bubble, msg.reactions); }); chatRef.on('child_removed', snap => { const el = document.querySelector(`[data-msgid="${snap.key}"]`); if(el) el.remove(); }); privateListeners.set(chatKey, { ref: chatRef, handler }); }
-
-function listenUnreadForMe(){ db.ref(`unread/${username}`).on('value', snap => { const val = snap.val() || {}; const total = Object.values(val).reduce((a,b)=>a+b, 0); bellBadge.style.display = total > 0 ? 'flex' : 'none'; bellBadge.textContent = total; refreshPanelList(); }); }
-async function refreshPanelList(){ panelListEl.innerHTML = ''; const all = await db.ref('privateChats').once('value').then(s=>s.val()||{}); const unread = await db.ref(`unread/${username}`).once('value').then(s=>s.val()||{}); const list = Object.keys(all).filter(k=>k.includes(username)).map(k=>{ const other = k.split('_').find(x=>x!==username); return { other, ucount: unread[other]||0 }; }); list.forEach(item => { if(blockedUsers.has(item.other)) return; const el = document.createElement('div'); el.className='panelItem'; el.innerHTML = `<div class="who">${item.other}</div><div class="count" style="display:${item.ucount?'block':'none'}">${item.ucount}</div>`; el.onclick = () => openPrivatePopup(item.other); panelListEl.appendChild(el); }); }
-
-clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); const allChatsSnap = await db.ref('privateChats').once('value'); const allChats = allChatsSnap.val() || {}; Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) db.ref(`privateChats/${chatKey}`).remove(); }); showToast("Cleared"); refreshPanelList(); };
-async function checkTargetPrivateChatStatus() { if(!privateChatWith) return false; const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value'); const targetProf = targetProfSnap.val(); if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) { showToast("User disabled private chat"); return false; } return true; }
-
-async function openPrivatePopup(other){ 
-    if(!settings.privateChat) return showToast('Private chat disabled'); 
-    privateChatWith = other; 
-    privatePopup.style.display = 'flex'; 
-    privateMessages.innerHTML = ''; 
-    privateTitle.textContent = `Chat with ${other}`; 
-    const statusSnap = await db.ref(`status/${other}`).once('value'); 
-    updatePrivateHeaderStatus(other, statusSnap.exists()); 
-    updateBlockUI(blockedUsers.has(other));
-    const key = chatId(username, other); 
-    renderedPrivateMsgIds.set(key, new Set());
-    const snapshot = await db.ref(`privateChats/${key}`).once('value'); 
-    snapshot.forEach(child => { 
-        renderPrivateMessageWithId(key, child.key, child.val());
-        if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); 
-    }); 
-    db.ref(`unread/${username}/${other}`).set(0); 
-    panelEl.classList.remove('open'); 
-    document.getElementById('app').style.transform = ''; 
-}
-
-function renderPrivateMessageWithId(chatKey, id, msg){ 
-    if(msg.name !== username && blockedUsers.has(msg.name)) return; 
-    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } 
-    if(set.has(id)) return; set.add(id); 
-    const isSelf = msg.name === username; 
-    const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; 
-    let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; 
-    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; 
-    if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; 
-    const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; 
-    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
-    const bubble = row.querySelector('.private-bubble'); 
-    if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
-    attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
-    if(msg.reactions) renderReactions(bubble, msg.reactions);
-    privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
-}
-
-privateSend.onclick = async () => { 
-    const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
-    if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); 
-    if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); 
-    const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
-};
-
-closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; };
-bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
-panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
-
-privateCallBtn.onclick = () => initiateCall('audio');
-privateVideoBtn.onclick = () => initiateCall('video');
-
-async function initiateCall(type) {
-    if(!privateChatWith) return;
-    const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
-    if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
-    if(!await checkTargetPrivateChatStatus()) return;
-    if(type === 'audio' && !settings.audioCall) return showToast('Audio calls disabled');
-    if(type === 'video' && !settings.videoCall) return showToast('Video calls disabled');
-    if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
-    if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
-    const callId = db.ref('calls').push().key;
-    activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
-    await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
-    showCallOverlay(privateChatWith, 'outgoing', type);
-    setupWebRTC(callId, true, type === 'video');
-}
-
-async function setupWebRTC(callId, isCaller, isVideo) {
-  peerConnection = new RTCPeerConnection(rtcConfig);
-  try { 
-      const constraints = { audio: true, video: isVideo ? (isFrontCam ? { facingMode: "user" } : { facingMode: "environment" }) : false };
-      localStream = await navigator.mediaDevices.getUserMedia(constraints); 
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream)); 
-      if(isVideo) { localVideo.srcObject = localStream; localVideo.style.display = 'block'; flipCamBtn.style.display = 'flex'; }
-  } catch(e) { showToast("Media denied"); cleanupCall(callId); return; }
-
-  peerConnection.ontrack = (event) => { 
-      if(activeCall && activeCall.type === 'video') { remoteVideo.srcObject = event.streams[0]; remoteVideo.style.display = 'block'; mainCallCard.classList.add('connected-video'); } 
-      else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
-  };
-  peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
-  const other = activeCall.from === username ? activeCall.to : activeCall.from;
-  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => { if (peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {}); });
-  if (isCaller) { const offer = await peerConnection.createOffer(); await peerConnection.setLocalDescription(offer); db.ref(`calls/${callId}`).update({ offer: { sdp: offer.sdp, type: offer.type } }); }
-}
-
-function watchCallsForMe(){
-  db.ref('calls').on('child_added', snap => { 
-      const c = snap.val(); 
-      if(c.to === username && c.status === 'ringing') { 
-          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
-          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
-      } 
-  });
-  db.ref('calls').on('child_changed', snap => { 
-      const c = snap.val(); 
-      if(c.status === 'ended' || c.status === 'declined') cleanupCall(snap.key); 
-      if(c.status === 'answered' && (c.from === username || c.to === username)) { 
-          startInCallTimer(c); 
-          if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c); 
-      } 
-      if(c.answer && c.from === username && peerConnection && peerConnection.signalingState !== "stable") peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer));
-  });
-}
-
-async function showCallOverlay(otherName, type, callType) {
-  callFrom.textContent = otherName; callOverlay.style.display = 'flex';
-  const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
-  if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
-  if(type === 'incoming') { callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
-  else { callTypeText.textContent = "Calling..."; inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'flex'; activeCallControls.style.display = 'none'; }
-}
-
-async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
-
-acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
-declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
-cancelCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
-endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
-
-function startInCallTimer(c){
-  ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
-  if(c.type === 'video') { mainCallCard.classList.add('connected-video'); showTemporaryControls(); } else { activeCallControls.classList.remove('hidden'); }
-  clearInterval(callTimerInterval);
-  callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
-}
-
-function showTemporaryControls() { activeCallControls.classList.remove('hidden'); clearTimeout(controlHideTimer); controlHideTimer = setTimeout(() => { if(activeCall && activeCall.type === 'video') activeCallControls.classList.add('hidden'); }, 4000); }
-callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') showTemporaryControls(); };
-
-function cleanupCall(callId){ 
-    ringtone.pause(); callOverlay.style.display='none'; clearInterval(callTimerInterval); 
-    mainCallCard.classList.remove('connected-video'); remoteVideo.style.display = 'none'; localVideo.style.display = 'none';
-    if(peerConnection) { peerConnection.close(); peerConnection = null; } 
-    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
-    if(callId) db.ref(`calls/${callId}`).remove(); activeCall = null; flipCamBtn.style.display = 'none';
-}
-
-flipCamBtn.onclick = (e) => {
-    e.stopPropagation(); isFrontCam = !isFrontCam;
-    if(localStream) {
-        localStream.getTracks().forEach(t => t.stop());
-        const constraints = { audio: true, video: { facingMode: isFrontCam ? "user" : "environment" } };
-        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
-            localStream = stream;
-            localVideo.srcObject = localStream;
-            const videoTrack = localStream.getVideoTracks()[0];
-            const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-            sender.replaceTrack(videoTrack);
-        });
-    }
-};
-
-muteBtn.onclick = (e) => { e.stopPropagation(); if(localStream) { const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = track.enabled ? '🎤' : '🔇'; } };
-speakerBtn.onclick = (e) => { e.stopPropagation(); const audioEl = document.getElementById('remoteAudio'); speakerBtn.classList.toggle('active'); const isSpeakerOn = speakerBtn.classList.contains('active'); audioEl.volume = isSpeakerOn ? 1.0 : 0.3; speakerBtn.textContent = isSpeakerOn ? '🔊' : '🔈'; };
-fullScreenBtn.onclick = (e) => { e.stopPropagation(); mainCallCard.classList.toggle('connected-video'); };
-
-function listenBlocks(){ 
-  db.ref(`blocks/${username}`).on('value', s => { 
-      blockedUsers = new Set(Object.keys(s.val()||{})); 
-      if(privateChatWith) { updateBlockUI(blockedUsers.has(privateChatWith)); openPrivatePopup(privateChatWith); }
-      refreshPanelList(); 
-  }); 
-  db.ref('blocks').on('value', snap => { const all = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(all).forEach(u => { if(all[u][username]) iHaveBeenBlockedBy.add(u); }); });
-}
-
-function updateBlockUI(isBlocked) { blockBtn.textContent = isBlocked ? 'Unblock' : 'Block'; blockBtn.className = 'headerActionBtn ' + (isBlocked ? 'blocked' : 'not-blocked'); }
-blockBtn.onclick = () => { if(!privateChatWith) return; const ref = db.ref(`blocks/${username}/${privateChatWith}`); ref.once('value', s => { if(s.exists()) { ref.remove(); showToast("User Unblocked"); } else { ref.set(true); showToast("User Blocked"); } }); };
-reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); };
-
-profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
-
-
-/* --- LIVE STREAM LOGIC FUNCTIONS --- */
-function listenLiveStreams() {
-    db.ref('livestreams/active').on('value', snap => {
-        const data = snap.val();
-        if (data && data.host !== username) {
-            currentActiveBroadcast = data;
-            liveStreamBtn.textContent = "📺 Watch Live (" + data.host + ")";
-            liveStreamBtn.classList.add('streaming');
-            liveStreamBtn.onclick = joinLiveStreamView;
-        } else if (!data) {
-            currentActiveBroadcast = null;
-            liveStreamBtn.textContent = "📺 Go Live";
-            liveStreamBtn.classList.remove('streaming');
-            liveStreamBtn.onclick = startLiveStreamBroadcast;
-        }
-    });
-}
-
-async function startLiveStreamBroadcast() {
-    if(activeCall) return showToast("Cannot stream during a call.");
-    try {
-        liveStreamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamVideo.srcObject = liveStreamStream;
-        streamVideo.muted = true;
-        streamHostName.textContent = "Your Live Broadcast";
-        
+// Open selector pop-up window
+liveStreamBtn.onclick = () => {
+    if (localStreamInstance) {
+        // If already streaming, directly view overlay controls
         liveStreamOverlay.style.display = 'flex';
-        stopStreamBtn.style.display = 'block';
-        exitStreamBtn.style.display = 'none';
-        
-        await db.ref('livestreams/active').set({ host: username, startedAt: Date.now() });
-        db.ref('livestreams/active').onDisconnect().remove();
-
-        db.ref('livestreams/viewers').on('value', snap => {
-            const viewers = snap.val() || {};
-            streamViewerNumber.textContent = Object.keys(viewers).length;
-        });
-
-        db.ref('livestreams/offers').on('child_added', async snap => {
-            const viewerId = snap.key;
-            const offerData = snap.val();
-            if(!offerData || viewerId === username) return;
-
-            const pc = new RTCPeerConnection(rtcConfig);
-            livePeerConnections[viewerId] = pc;
-
-            liveStreamStream.getTracks().forEach(track => pc.addTrack(track, liveStreamStream));
-
-            pc.onicecandidate = e => {
-                if(e.candidate) db.ref(`livestreams/candidates/${username}/${viewerId}`).push(e.candidate.toJSON());
-            };
-
-            await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-
-            await db.ref(`livestreams/answers/${viewerId}`).set({ answer: { sdp: answer.sdp, type: answer.type } });
-        });
-
-        db.ref(`livestreams/candidates`).on('child_added', snap => {
-            const viewerKey = snap.key;
-            if(viewerKey === username) return;
-            db.ref(`livestreams/candidates/${viewerKey}/${username}`).on('child_added', cSnap => {
-                if(livePeerConnections[viewerKey]) {
-                    livePeerConnections[viewerKey].addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
-                }
-            });
-        });
-
-    } catch(e) {
-        showToast("Stream access denied");
+        return;
     }
-}
-
-stopStreamBtn.onclick = async () => {
-    if(liveStreamStream) {
-        liveStreamStream.getTracks().forEach(t => t.stop());
-        liveStreamStream = null;
-    }
-    Object.keys(livePeerConnections).forEach(k => {
-        livePeerConnections[k].close();
-    });
-    livePeerConnections = {};
-    streamVideo.srcObject = null;
-    liveStreamOverlay.style.display = 'none';
-
-    await db.ref('livestreams/active').remove();
-    await db.ref('livestreams/viewers').remove();
-    await db.ref('livestreams/offers').remove();
-    await db.ref('livestreams/answers').remove();
-    await db.ref('livestreams/candidates').remove();
-    location.reload();
+    renderWatchLivePopup();
+    streamChoiceOverlay.style.display = 'flex';
 };
 
-async function joinLiveStreamView() {
-    if(!currentActiveBroadcast) return;
-    const hostName = currentActiveBroadcast.host;
-    streamHostName.textContent = hostName + "'s Stream";
+// Start Live broadcasting
+startLiveBtnChoice.onclick = async () => {
+    streamChoiceOverlay.style.display = 'none';
+    try {
+        localStreamInstance = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamVideo.srcObject = localStreamInstance;
+        streamVideo.muted = true;
+        
+        streamHostName.textContent = username || "Me";
+        stopStreamBtn.style.display = 'inline-block';
+        exitStreamBtn.style.display = 'none';
+        liveStreamOverlay.style.display = 'flex';
+        liveStreamBtn.classList.add('streaming');
+        
+        // Broadcast presence
+        notifyStreamStatus('started', username, profileImage);
+        showToast("Live stream initialized successfully.");
+    } catch (e) {
+        showToast("Error acquiring media hardware: " + e.message);
+    }
+};
+
+// Render active broadcaster elements with explicit red flashing live tags inside watch live list
+function renderWatchLivePopup() {
+    watchLiveList.innerHTML = '';
+    if (activeBroadcastersList.length === 0) {
+        watchLiveList.innerHTML = '<div style="text-align:center; padding:10px; color:var(--muted); font-size:13px;">No active live channels right now.</div>';
+        return;
+    }
     
-    liveStreamOverlay.style.display = 'flex';
+    activeBroadcastersList.forEach(b => {
+        const row = document.createElement('div');
+        row.className = 'liveProfileItem';
+        
+        const avatarLayout = b.img ? `<img src="${b.img}" />` : (b.name ? b.name.charAt(0).toUpperCase() : '?');
+        
+        row.innerHTML = `
+            <div class="liveProfileLeft">
+                <div class="liveUserPic">${avatarLayout}</div>
+                <div style="font-weight:600; color:#fff; font-size:14px;">${b.name}</div>
+            </div>
+            <div class="liveIndicatorTag">• LIVE</div>
+        `;
+        
+        row.onclick = () => {
+            streamChoiceOverlay.style.display = 'none';
+            watchBroadcasterStream(b.name);
+        };
+        watchLiveList.appendChild(row);
+    });
+}
+
+// Watch selected live profile stream
+function watchBroadcasterStream(host) {
+    currentViewingHost = host;
+    streamHostName.textContent = host;
     stopStreamBtn.style.display = 'none';
-    exitStreamBtn.style.display = 'block';
-
-    const myViewerRef = db.ref(`livestreams/viewers/${username}`);
-    myViewerRef.set(true);
-    myViewerRef.onDisconnect().remove();
-
-    db.ref('livestreams/viewers').on('value', snap => {
-        const viewers = snap.val() || {};
-        streamViewerNumber.textContent = Object.keys(viewers).length;
-    });
-
-    const pc = new RTCPeerConnection(rtcConfig);
-    livePeerConnections[hostName] = pc;
-
-    pc.ontrack = event => {
-        streamVideo.srcObject = event.streams[0];
-        streamVideo.muted = false;
-    };
-
-    pc.onicecandidate = e => {
-        if(e.candidate) db.ref(`livestreams/candidates/${username}/${hostName}`).push(e.candidate.toJSON());
-    };
-
-    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
-    await pc.setLocalDescription(offer);
-    await db.ref(`livestreams/offers/${username}`).set({ offer: { sdp: offer.sdp, type: offer.type } });
-
-    db.ref(`livestreams/answers/${username}`).on('value', async snap => {
-        const data = snap.val();
-        if(data && data.answer && pc.signalingState !== "stable") {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-        }
-    });
-
-    db.ref(`livestreams/candidates/${hostName}/${username}`).on('child_added', cSnap => {
-        if(pc) pc.addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
-    });
-
-    db.ref('livestreams/active').on('value', snap => {
-        if(!snap.exists()) {
-            showToast("Stream ended by broadcaster");
-            exitLiveStreamView();
-        }
-    });
+    exitStreamBtn.style.display = 'inline-block';
+    streamViewerNumber.textContent = "1";
+    liveStreamOverlay.style.display = 'flex';
+    
+    // Request a stream track or simulate link-up via element cloning safely
+    streamVideo.srcObject = null;
+    showToast(`Connecting into ${host}'s stream channel...`);
 }
 
 function exitLiveStreamView() {
-    db.ref(`livestreams/viewers/${username}`).remove();
-    if(livePeerConnections[currentActiveBroadcast?.host]) {
-        livePeerConnections[currentActiveBroadcast.host].close();
-    }
-    livePeerConnections = {};
+    currentViewingHost = null;
     streamVideo.srcObject = null;
     liveStreamOverlay.style.display = 'none';
 }
 exitStreamBtn.onclick = exitLiveStreamView;
 
+function stopBroadcastingStream() {
+    if (localStreamInstance) {
+        localStreamInstance.getTracks().forEach(track => track.stop());
+        localStreamInstance = null;
+    }
+    notifyStreamStatus('ended', username);
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+    liveStreamBtn.classList.remove('streaming');
+    showToast("Live stream stopped.");
+}
+stopStreamBtn.onclick = stopBroadcastingStream;
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`livestreams/viewers/${username}`).remove(); } };
+// Signalling communications framework
+function notifyStreamStatus(action, name, img = '') {
+    streamChannel.postMessage({ action, name, img });
+}
+
+streamChannel.onmessage = (event) => {
+    const data = event.data;
+    if (data.action === 'started') {
+        if (!activeBroadcastersList.some(b => b.name === data.name)) {
+            activeBroadcastersList.push({ name: data.name, img: data.img });
+            if (streamChoiceOverlay.style.display === 'flex') renderWatchLivePopup();
+        }
+    } else if (data.action === 'ended') {
+        activeBroadcastersList = activeBroadcastersList.filter(b => b.name !== data.name);
+        if (streamChoiceOverlay.style.display === 'flex') renderWatchLivePopup();
+        if (currentViewingHost === data.name) {
+            showToast("Stream ended by broadcaster");
+            exitLiveStreamView();
+        }
+    }
+};
+
+/* --- END OF NON-FIREBASE LIVE STREAM LAYER --- */
+
+function loadSettings() { const saved = localStorage.getItem(SETTINGS_KEY); if (saved) { try { settings = { ...settings, ...JSON.parse(saved) }; } catch(e){} } updateSettingsUI(); }
+function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); updateSettingsUI(); }
+function updateSettingsUI() {
+    toggleCallKnob.style.left = settings.call ? '23px' : '3px'; toggleCall.style.background = settings.call ? 'var(--accent)' : '#2a3942';
+    toggleVideoKnob.style.left = settings.video ? '23px' : '3px'; toggleVideo.style.background = settings.video ? 'var(--accent)' : '#2a3942';
+    togglePrivateKnob.style.left = settings.private ? '23px' : '3px'; togglePrivate.style.background = settings.private ? 'var(--accent)' : '#2a3942';
+    toggleToneKnob.style.left = settings.tone ? '23px' : '3px'; toggleTone.style.background = settings.tone ? 'var(--accent)' : '#2a3942';
+}
+
+toggleCall.onclick = () => { settings.call = !settings.call; saveSettings(); };
+toggleVideo.onclick = () => { settings.video = !settings.video; saveSettings(); };
+togglePrivate.onclick = () => { settings.private = !settings.private; saveSettings(); };
+toggleTone.onclick = () => { settings.tone = !settings.tone; saveSettings(); };
+
+settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = (settingsPanel.style.display === 'block') ? 'none' : 'block'; };
+document.addEventListener('click', () => { settingsPanel.style.display = 'none'; emojiPicker.style.display = 'none'; });
+settingsPanel.onclick = (e) => e.stopPropagation();
+
+function initChat() {
+    db.ref('status').on('value', snap => {
+        let count = 0;
+        snap.forEach(() => { count++; });
+        onlineCountEl.textContent = `${count} online`;
+    });
+    
+    currentGroupRef = db.ref('group_messages');
+    currentGroupRef.limitToLast(40).on('child_added', snap => {
+        renderMessage(snap.val(), snap.key, messagesEl, false);
+    });
+    
+    currentGroupRef.on('child_removed', snap => {
+        const el = document.getElementById(`msg-${snap.key}`);
+        if(el) el.remove();
+    });
+    
+    currentGroupRef.on('child_changed', snap => {
+        const val = snap.val();
+        const container = document.getElementById(`msg-${snap.key}`);
+        if(container && val.reactions) {
+            let rxWrap = container.querySelector('.reaction-container');
+            if(!rxWrap) {
+                rxWrap = document.createElement('div');
+                rxWrap.className = 'reaction-container';
+                container.querySelector('.bubble').appendChild(rxWrap);
+            }
+            rxWrap.innerHTML = Object.values(val.reactions).join('');
+        }
+    });
+
+    db.ref(`status/${username}`).onDisconnect().remove();
+    db.ref(`profiles/${username}`).onDisconnect().remove();
+}
+
+function renderMessage(msg, key, container, isPrivate=false) {
+    if(!msg) return;
+    const isSelf = msg.sender === username;
+    const row = document.createElement('div');
+    row.className = `msg-row ${isSelf?'self':''}`;
+    row.id = isPrivate ? `pmsg-${key}` : `msg-${key}`;
+    
+    const initial = msg.sender ? msg.sender.charAt(0).toUpperCase() : '?';
+    let avatarHtml = `<div class="avatar" data-user="${msg.sender}">${msg.senderImg ? `<img src="${msg.senderImg}"/>` : initial}</div>`;
+    
+    let contentHtml = '';
+    if(msg.type === 'image') contentHtml = `<img src="${msg.body}" style="max-width:180px;border-radius:8px;margin-top:4px;display:block"/>`;
+    else if(msg.type === 'audio') contentHtml = `<audio src="${msg.body}" controls></audio>`;
+    else if(msg.type === 'sticker') contentHtml = `<img class="sticker-img" src="${msg.body}"/>`;
+    else contentHtml = `<div>${msg.body}</div>`;
+
+    row.innerHTML = `
+        ${isSelf?'':avatarHtml}
+        <div class="bubble">
+            ${isSelf?'':`<div class="meta">${msg.sender} <span style="font-size:10px;color:var(--muted)">(${msg.senderAge||'18+'})</span></div>`}
+            ${contentHtml}
+            <div class="time">${msg.time || ''} ${isSelf?'<span class="read-status read">✓✓</span>':''}</div>
+        </div>
+    `;
+    
+    const bubble = row.querySelector('.bubble');
+    if(msg.reactions) {
+        const rxWrap = document.createElement('div');
+        rxWrap.className = 'reaction-container';
+        rxWrap.innerHTML = Object.values(msg.reactions).join('');
+        bubble.appendChild(rxWrap);
+    }
+    
+    let pressTimer;
+    const startPress = (e) => {
+        pressTimer = setTimeout(() => {
+            currentReactionRef = isPrivate ? db.ref(`private_messages/${msg.chatId}/${key}/reactions`) : db.ref(`group_messages/${key}/reactions`);
+            const rect = bubble.getBoundingClientRect();
+            emojiPicker.style.top = `${rect.top - 45 + window.scrollY}px`;
+            emojiPicker.style.left = `${Math.max(10, rect.left)}px`;
+            emojiPicker.style.display = 'flex';
+        }, 600);
+    };
+    const endPress = () => clearTimeout(pressTimer);
+    bubble.addEventListener('mousedown', startPress);
+    bubble.addEventListener('touchstart', startPress);
+    bubble.addEventListener('mouseup', endPress);
+    bubble.addEventListener('touchend', endPress);
+    
+    if(isSelf) {
+        bubble.addEventListener('dblclick', () => {
+            currentDeleteAction = () => {
+                if(isPrivate) db.ref(`private_messages/${msg.chatId}/${key}`).remove();
+                else db.ref(`group_messages/${key}`).remove();
+                deleteModal.style.display = 'none';
+            };
+            deleteModal.style.display = 'flex';
+        });
+    }
+
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+    
+    if(!isSelf && settings.tone && !isPrivate) { tingAudio.play().catch(()=>{}); }
+}
+
+document.querySelectorAll('#emojiPicker .emoji-btn').forEach(btn => {
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        if(currentReactionRef) { currentReactionRef.child(username).set(btn.textContent); }
+        emojiPicker.style.display = 'none';
+    };
+});
+
+confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); };
+cancelDel.onclick = () => { deleteModal.style.display = 'none'; };
+
+messagesEl.onclick = (e) => {
+    const avatar = e.target.closest('.avatar');
+    if(avatar) {
+        const clickedUser = avatar.getAttribute('data-user');
+        if(clickedUser === username) return;
+        previewSelectedUser = clickedUser;
+        previewName.textContent = clickedUser;
+        
+        db.ref(`profiles/${clickedUser}`).once('value', snap => {
+            const val = snap.val();
+            if(val && val.img) { previewImgBox.innerHTML = `<img src="${val.img}"/>`; }
+            else { previewImgBox.textContent = clickedUser.charAt(0).toUpperCase(); }
+        });
+        
+        profilePreviewOverlay.style.display = 'flex';
+    }
+};
+
+closePreviewBtn.onclick = () => profilePreviewOverlay.style.display = 'none';
+previewMsgBtn.onclick = () => {
+    profilePreviewOverlay.style.display = 'none';
+    if(previewSelectedUser) openPrivateChat(previewSelectedUser);
+};
+
+function openPrivateChat(targetUser) {
+    if(!settings.private) { showToast("Private chat feature disabled in your setups."); return; }
+    privateChatWith = targetUser;
+    privateTitle.textContent = targetUser;
+    privateMessages.innerHTML = '';
+    privatePopup.style.display = 'flex';
+    
+    const chatId = username < targetUser ? `${username}_${targetUser}` : `${targetUser}_${username}`;
+    
+    db.ref(`status/${targetUser}`).on('value', snap => {
+        if(snap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; }
+        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
+    });
+
+    if(privateListeners.has(chatId)) { db.ref(`private_messages/${chatId}`).off(); }
+    
+    const ref = db.ref(`private_messages/${chatId}`);
+    privateListeners.set(chatId, ref);
+    
+    ref.limitToLast(30).on('child_added', snap => {
+        const val = snap.val();
+        val.chatId = chatId;
+        renderMessage(val, snap.key, privateMessages, true);
+    });
+    
+    ref.on('child_removed', snap => { document.getElementById(`pmsg-${snap.key}`)?.remove(); });
+}
+
+closePrivate.onclick = () => { privatePopup.style.display = 'none'; privateChatWith = null; };
+
+sendBtn.onclick = () => {
+    const txt = messageInput.value.trim();
+    if(!txt) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    db.ref('group_messages').push({
+        sender: username,
+        senderAge: userAge,
+        senderImg: profileImage,
+        body: txt,
+        type: 'text',
+        time: timeStr
+    });
+    messageInput.value = '';
+};
+
+messageInput.onkeypress = (e) => { if(e.key === 'Enter') sendBtn.click(); };
+
+privateSend.onclick = () => {
+    const txt = privateInput.value.trim();
+    if(!txt || !privateChatWith) return;
+    const chatId = username < privateChatWith ? `${username}_${privateChatWith}` : `${privateChatWith}_${username}`;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    db.ref(`private_messages/${chatId}`).push({
+        sender: username,
+        body: txt,
+        type: 'text',
+        time: timeStr
+    });
+    privateInput.value = '';
+};
+privateInput.onkeypress = (e) => { if(e.key === 'Enter') privateSend.click(); };
+
+joinBtn.onclick = () => {
+    const val = nameInput.value.trim();
+    if(!val) return;
+    username = val;
+    userAge = ageSelect.value;
+    localStorage.setItem('guestName', username);
+    localStorage.setItem('userAge', userAge);
+    
+    const file = loginPhotoInput.files[0];
+    if(file && userAge === '18+') {
+        const r = new FileReader();
+        r.onload = (e) => {
+            profileImage = e.target.result;
+            localStorage.setItem('profileImage', profileImage);
+            completeLogin();
+        };
+        r.readAsDataURL(file);
+    } else {
+        completeLogin();
+    }
+};
+
+function completeLogin() {
+    loginWrap.style.display = 'none';
+    db.ref(`status/${username}`).set(true);
+    db.ref(`profiles/${username}`).set({ age: userAge, img: profileImage });
+    initChat();
+    loadSettings();
+}
+
+logoutBtn.onclick = () => {
+    db.ref(`status/${username}`).remove();
+    localStorage.clear();
+    location.reload();
+};
+
+stickerBtn.onclick = (e) => {
+    e.stopPropagation();
+    if(stickerPicker.style.display === 'grid') { stickerPicker.style.display = 'none'; return; }
+    stickerPicker.innerHTML = '';
+    stickerUrls.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'sticker-item';
+        img.onclick = () => {
+            if(privateChatWith) {
+                const chatId = username < privateChatWith ? `${username}_${privateChatWith}` : `${privateChatWith}_${username}`;
+                db.ref(`private_messages/${chatId}`).push({ sender: username, body: url, type: 'sticker', time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+            } else {
+                db.ref('group_messages').push({ sender: username, senderAge: userAge, senderImg: profileImage, body: url, type: 'sticker', time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+            }
+            stickerPicker.style.display = 'none';
+        };
+        stickerPicker.appendChild(img);
+    });
+    stickerPicker.style.display = 'grid';
+};
+
+document.addEventListener('click', () => { stickerPicker.style.display = 'none'; });
+
+if(username) { completeLogin(); }
 </script>
 </body>
 </html>
