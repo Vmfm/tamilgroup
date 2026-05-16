@@ -2,10 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Just Nothing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nothing to see here!</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .container {
+            position: relative;
+        }
+
+        /* The Ghost */
+        .ghost {
+            font-size: 80px;
+            animation: float 3s ease-in-out infinite, lookAround 6s steps(1) infinite;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Making the ghost look confused */
+        @keyframes lookAround {
+            0%, 100% { content: "👻"; }
+            25% { transform: scaleX(-1); } /* Flips horizontally to look left */
+            50% { transform: scaleX(1); }
+            75% { transform: translateY(-10px) rotate(10deg); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #e94560;
+        }
+
+        p {
+            color: #0f3460;
+            background-color: #e1e8eb;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: textPulse 1.5s infinite alternate;
+        }
+
+        @keyframes textPulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .btn {
+            margin-top: 25px;
+            padding: 12px 25px;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.3s ease;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn:hover {
+            background-color: #0f3460;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(15, 52, 96, 0.6);
+        }
+    </style>
 </head>
 <body>
-    <h1>Empty Space</h1>
-    <p>Everything is working. Now, what goes here?</p>
+
+    <div class="container">
+        <!-- The Ghost Emoji that gets animated -->
+        <div class="ghost">👻</div>
+        <h1>404: Echo... Echo...</h1>
+        <div>
+            <p id="speech-bubble">Wow, so empty. Much void.</p>
+        </div>
+        <br>
+        <a href="#" class="btn" onclick="goBack()">Take Me Home</a>
+    </div>
+
+    <script>
+        // Array of funny messages to rotate through
+        const messages = [
+            "Wow, so empty. Much void.",
+            "Are you looking for dust bunnies?",
+            "Even the data left this place.",
+            "Tumbleweed setting: Max.",
+            "I swear I saw a pixel here a minute ago.",
+            "Please go back, I'm trying to sleep."
+        ];
+
+        // Change the message randomly every 3 seconds
+        const bubble = document.getElementById('speech-bubble');
+        setInterval(() => {
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            bubble.textContent = randomMessage;
+        }, 3000);
+
+        // Simple back button function
+        function goBack() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                alert("There's literally nowhere to go back to. Try entering a real URL!");
+            }
+        }
+    </script>
+
 </body>
 </html>
