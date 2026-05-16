@@ -182,22 +182,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .btnStopStream{background:#ff3b30;color:#fff}
 .btnExitStream{background:#2a3942;color:#fff}
 
-/* --- NEW STREAM MODAL POPUP --- */
-#streamChoiceOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10004; display: none; align-items: center; justify-content: center; }
-.choiceCard { background: #0b141a; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 15px; }
-.choiceHeader { display: flex; justify-content: space-between; align-items: center; color: #fff; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-.choiceBtn { background: #202c33; color: #fff; padding: 14px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
-.choiceBtn:hover { background: #2a3942; }
-.choiceBtn.primary { background: var(--accent); color: #fff; border: none; }
-.choiceBtn.primary:hover { background: #1ebe57; }
-#watchLiveList { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
-.liveProfileItem { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
-.liveProfileItem:hover { background: rgba(255,255,255,0.07); }
-.liveProfileLeft { display: flex; align-items: center; gap: 10px; }
-.liveUserPic { width: 32px; height: 32px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
-.liveUserPic img { width: 100%; height: 100%; object-fit: cover; }
-.liveIndicatorTag { font-size: 11px; background: #ff3b30; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; animation: pulse 1s infinite; }
-
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -245,30 +229,12 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
-
-<div id="app">
-    <div id="topBar">
-        <div id="title"><div id="titleText"></div></div>
-        <div style="flex:1"></div>
-        <div id="notifWrap">
-            <div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
-            <div id="settingsWrap">
-                <button id="settingsBtn">⚙️</button>
-                <div id="settingsPanel">
-                    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
-                    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
-                    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
-                    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-                    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
-                    <button id="logoutBtn">Logout</button>
-                </div>
-            </div>
-        </div>
-        <button id="liveStreamBtn">📺 Go Live</button>
-        <div id="onlineCount">0 online</div>
-    </div>
-    <div id="statusLine"></div>
-    <div id="messages" aria-live="polite"></div>
+<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
+    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
+    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
+    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
+    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><button id="liveStreamBtn">📺 Go Live</button><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -276,7 +242,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <button id="sendBtn">➤</button>
     </div>
 </div>
-
 <div id="toast"></div>
 
 <div id="loginWrap">
@@ -291,8 +256,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         </select>
         <div class="login-label">Profile Photo (Optional)</div>
         <input type="file" id="loginPhotoInput" accept="image/*" style="font-size:11px;" />
-        <button id="joinBtn">Join Chat</button>
-        <div style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
+        <button id="joinBtn">Join Chat</button> <div style="font-size:11px;color:var(--muted);text-align:center;">18+ only are allowed to set a profile photo.</div>
     </div>
 </div>
 
@@ -351,18 +315,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
 </div>
 
-<div id="streamChoiceOverlay">
-    <div class="choiceCard">
-        <div class="choiceHeader">
-            <span>Live Stream Actions</span>
-            <button onclick="document.getElementById('streamChoiceOverlay').style.display='none'" style="background:none;border:0;color:#fff;font-size:18px;cursor:pointer">✕</button>
-        </div>
-        <button class="choiceBtn primary" id="startLiveBtnChoice">🎥 Start Live</button>
-        <div style="font-size: 13px; color: var(--muted); margin-top: 5px; font-weight: 600;">Watch Active Broadcasters:</div>
-        <div id="watchLiveList"></div>
-    </div>
-</div>
-
 <div id="liveStreamOverlay">
     <div class="streamContainer">
         <video id="streamVideo" autoplay playsinline></video>
@@ -406,167 +358,40 @@ const callAvatarContainer = document.getElementById('callAvatarContainer'), call
 const headerDot = document.getElementById('headerDot'), headerStatusText = document.getElementById('headerStatusText'), fullScreenBtn = document.getElementById('fullScreenBtn'), mainCallCard = document.getElementById('mainCallCard'), remoteVideo = document.getElementById('remoteVideo'), localVideo = document.getElementById('localVideo'), flipCamBtn = document.getElementById('flipCamBtn');
 
 const loginPhotoInput = document.getElementById('loginPhotoInput'), ageSelect = document.getElementById('ageSelect'), stickerBtn = document.getElementById('stickerBtn'), stickerPicker = document.getElementById('stickerPicker');
-const stickerUrls = [ 
-  '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', 
-  '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', 
-  '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', 
-  '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', 
-  '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', 
-  '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', 
-  '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp' 
+const stickerUrls = [
+    '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', 
+    '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', 
+    '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', 
+    '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', 
+    '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', 
+    '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', 
+    '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp'
 ];
-
 const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 const emojiPicker = document.getElementById('emojiPicker');
 
 let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
-const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
-const SETTINGS_KEY = 'chat_settings_v1';
 let settings = { call: true, video: true, private: true, tone: true };
+let localStream = null, peerConnection = null, livePeerConnections = {}, mediaRecorder = null, audioChunks = [], isRecording = false, liveStreamStream = null, currentActiveBroadcast = null;
 
-/* --- NON-FIREBASE ARCHITECTURE FOR STREAMING --- */
-const streamChannel = new BroadcastChannel('livestream_signaling_local');
-let localStreamInstance = null;
-let activeBroadcastersList = [];
-let currentViewingHost = null;
+const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
-// UI Connections
-const liveStreamBtn = document.getElementById('liveStreamBtn');
-const streamChoiceOverlay = document.getElementById('streamChoiceOverlay');
-const startLiveBtnChoice = document.getElementById('startLiveBtnChoice');
-const watchLiveList = document.getElementById('watchLiveList');
-const liveStreamOverlay = document.getElementById('liveStreamOverlay');
-const streamVideo = document.getElementById('streamVideo');
-const streamHostName = document.getElementById('streamHostName');
-const stopStreamBtn = document.getElementById('stopStreamBtn');
-const exitStreamBtn = document.getElementById('exitStreamBtn');
-const streamViewerNumber = document.getElementById('streamViewerNumber');
+function showToast(msg) { toastEl.innerText = msg; toastEl.classList.add('show'); setTimeout(() => toastEl.classList.remove('show'), 3000); }
 
-function showToast(m) { toastEl.textContent = m; toastEl.className = 'show'; setTimeout(() => { toastEl.className = ''; }, 3000); }
-
-// Open selector pop-up window
-liveStreamBtn.onclick = () => {
-    if (localStreamInstance) {
-        // If already streaming, directly view overlay controls
-        liveStreamOverlay.style.display = 'flex';
-        return;
+function loadSettings() {
+    const saved = localStorage.getItem(`settings_${username}`);
+    if (saved) {
+        try { settings = Object.assign(settings, JSON.parse(saved)); } catch(e) {}
     }
-    renderWatchLivePopup();
-    streamChoiceOverlay.style.display = 'flex';
-};
-
-// Start Live broadcasting
-startLiveBtnChoice.onclick = async () => {
-    streamChoiceOverlay.style.display = 'none';
-    try {
-        localStreamInstance = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamVideo.srcObject = localStreamInstance;
-        streamVideo.muted = true;
-        
-        streamHostName.textContent = username || "Me";
-        stopStreamBtn.style.display = 'inline-block';
-        exitStreamBtn.style.display = 'none';
-        liveStreamOverlay.style.display = 'flex';
-        liveStreamBtn.classList.add('streaming');
-        
-        // Broadcast presence
-        notifyStreamStatus('started', username, profileImage);
-        showToast("Live stream initialized successfully.");
-    } catch (e) {
-        showToast("Error acquiring media hardware: " + e.message);
-    }
-};
-
-// Render active broadcaster elements with explicit red flashing live tags inside watch live list
-function renderWatchLivePopup() {
-    watchLiveList.innerHTML = '';
-    if (activeBroadcastersList.length === 0) {
-        watchLiveList.innerHTML = '<div style="text-align:center; padding:10px; color:var(--muted); font-size:13px;">No active live channels right now.</div>';
-        return;
-    }
-    
-    activeBroadcastersList.forEach(b => {
-        const row = document.createElement('div');
-        row.className = 'liveProfileItem';
-        
-        const avatarLayout = b.img ? `<img src="${b.img}" />` : (b.name ? b.name.charAt(0).toUpperCase() : '?');
-        
-        row.innerHTML = `
-            <div class="liveProfileLeft">
-                <div class="liveUserPic">${avatarLayout}</div>
-                <div style="font-weight:600; color:#fff; font-size:14px;">${b.name}</div>
-            </div>
-            <div class="liveIndicatorTag">• LIVE</div>
-        `;
-        
-        row.onclick = () => {
-            streamChoiceOverlay.style.display = 'none';
-            watchBroadcasterStream(b.name);
-        };
-        watchLiveList.appendChild(row);
-    });
+    updateSettingsUI();
 }
 
-// Watch selected live profile stream
-function watchBroadcasterStream(host) {
-    currentViewingHost = host;
-    streamHostName.textContent = host;
-    stopStreamBtn.style.display = 'none';
-    exitStreamBtn.style.display = 'inline-block';
-    streamViewerNumber.textContent = "1";
-    liveStreamOverlay.style.display = 'flex';
-    
-    // Request a stream track or simulate link-up via element cloning safely
-    streamVideo.srcObject = null;
-    showToast(`Connecting into ${host}'s stream channel...`);
+function saveSettings() {
+    localStorage.setItem(`settings_${username}`, JSON.stringify(settings));
+    if (username) { db.ref(`profiles/${username}/settings`).set(settings); }
+    updateSettingsUI();
 }
 
-function exitLiveStreamView() {
-    currentViewingHost = null;
-    streamVideo.srcObject = null;
-    liveStreamOverlay.style.display = 'none';
-}
-exitStreamBtn.onclick = exitLiveStreamView;
-
-function stopBroadcastingStream() {
-    if (localStreamInstance) {
-        localStreamInstance.getTracks().forEach(track => track.stop());
-        localStreamInstance = null;
-    }
-    notifyStreamStatus('ended', username);
-    streamVideo.srcObject = null;
-    liveStreamOverlay.style.display = 'none';
-    liveStreamBtn.classList.remove('streaming');
-    showToast("Live stream stopped.");
-}
-stopStreamBtn.onclick = stopBroadcastingStream;
-
-// Signalling communications framework
-function notifyStreamStatus(action, name, img = '') {
-    streamChannel.postMessage({ action, name, img });
-}
-
-streamChannel.onmessage = (event) => {
-    const data = event.data;
-    if (data.action === 'started') {
-        if (!activeBroadcastersList.some(b => b.name === data.name)) {
-            activeBroadcastersList.push({ name: data.name, img: data.img });
-            if (streamChoiceOverlay.style.display === 'flex') renderWatchLivePopup();
-        }
-    } else if (data.action === 'ended') {
-        activeBroadcastersList = activeBroadcastersList.filter(b => b.name !== data.name);
-        if (streamChoiceOverlay.style.display === 'flex') renderWatchLivePopup();
-        if (currentViewingHost === data.name) {
-            showToast("Stream ended by broadcaster");
-            exitLiveStreamView();
-        }
-    }
-};
-
-/* --- END OF NON-FIREBASE LIVE STREAM LAYER --- */
-
-function loadSettings() { const saved = localStorage.getItem(SETTINGS_KEY); if (saved) { try { settings = { ...settings, ...JSON.parse(saved) }; } catch(e){} } updateSettingsUI(); }
-function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); updateSettingsUI(); }
 function updateSettingsUI() {
     toggleCallKnob.style.left = settings.call ? '23px' : '3px'; toggleCall.style.background = settings.call ? 'var(--accent)' : '#2a3942';
     toggleVideoKnob.style.left = settings.video ? '23px' : '3px'; toggleVideo.style.background = settings.video ? 'var(--accent)' : '#2a3942';
@@ -579,273 +404,854 @@ toggleVideo.onclick = () => { settings.video = !settings.video; saveSettings(); 
 togglePrivate.onclick = () => { settings.private = !settings.private; saveSettings(); };
 toggleTone.onclick = () => { settings.tone = !settings.tone; saveSettings(); };
 
-settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = (settingsPanel.style.display === 'block') ? 'none' : 'block'; };
-document.addEventListener('click', () => { settingsPanel.style.display = 'none'; emojiPicker.style.display = 'none'; });
+settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
+document.addEventListener('click', () => { settingsPanel.style.display = 'none'; stickerPicker.style.display = 'none'; });
 settingsPanel.onclick = (e) => e.stopPropagation();
 
-function initChat() {
-    db.ref('status').on('value', snap => {
-        let count = 0;
-        snap.forEach(() => { count++; });
-        onlineCountEl.textContent = `${count} online`;
-    });
-    
-    currentGroupRef = db.ref('group_messages');
-    currentGroupRef.limitToLast(40).on('child_added', snap => {
-        renderMessage(snap.val(), snap.key, messagesEl, false);
-    });
-    
-    currentGroupRef.on('child_removed', snap => {
-        const el = document.getElementById(`msg-${snap.key}`);
-        if(el) el.remove();
-    });
-    
-    currentGroupRef.on('child_changed', snap => {
-        const val = snap.val();
-        const container = document.getElementById(`msg-${snap.key}`);
-        if(container && val.reactions) {
-            let rxWrap = container.querySelector('.reaction-container');
-            if(!rxWrap) {
-                rxWrap = document.createElement('div');
-                rxWrap.className = 'reaction-container';
-                container.querySelector('.bubble').appendChild(rxWrap);
-            }
-            rxWrap.innerHTML = Object.values(val.reactions).join('');
-        }
-    });
-
+function initApp() {
+    loginWrap.style.display = 'none';
+    loadSettings();
+    db.ref(`status/${username}`).set({ status: 'online', lastChanged: firebase.database.ServerValue.TIMESTAMP });
     db.ref(`status/${username}`).onDisconnect().remove();
-    db.ref(`profiles/${username}`).onDisconnect().remove();
+    db.ref(`profiles/${username}`).set({ name: username, age: userAge, photo: profileImage, settings: settings });
+    
+    listenOnlineCount();
+    listenGroupMessages();
+    listenPrivateNotifications();
+    listenInboundCalls();
+    listenBlockLists();
+    listenLiveStreams();
+    buildStickers();
 }
 
-function renderMessage(msg, key, container, isPrivate=false) {
-    if(!msg) return;
-    const isSelf = msg.sender === username;
-    const row = document.createElement('div');
-    row.className = `msg-row ${isSelf?'self':''}`;
-    row.id = isPrivate ? `pmsg-${key}` : `msg-${key}`;
-    
-    const initial = msg.sender ? msg.sender.charAt(0).toUpperCase() : '?';
-    let avatarHtml = `<div class="avatar" data-user="${msg.sender}">${msg.senderImg ? `<img src="${msg.senderImg}"/>` : initial}</div>`;
-    
-    let contentHtml = '';
-    if(msg.type === 'image') contentHtml = `<img src="${msg.body}" style="max-width:180px;border-radius:8px;margin-top:4px;display:block"/>`;
-    else if(msg.type === 'audio') contentHtml = `<audio src="${msg.body}" controls></audio>`;
-    else if(msg.type === 'sticker') contentHtml = `<img class="sticker-img" src="${msg.body}"/>`;
-    else contentHtml = `<div>${msg.body}</div>`;
-
-    row.innerHTML = `
-        ${isSelf?'':avatarHtml}
-        <div class="bubble">
-            ${isSelf?'':`<div class="meta">${msg.sender} <span style="font-size:10px;color:var(--muted)">(${msg.senderAge||'18+'})</span></div>`}
-            ${contentHtml}
-            <div class="time">${msg.time || ''} ${isSelf?'<span class="read-status read">✓✓</span>':''}</div>
-        </div>
-    `;
-    
-    const bubble = row.querySelector('.bubble');
-    if(msg.reactions) {
-        const rxWrap = document.createElement('div');
-        rxWrap.className = 'reaction-container';
-        rxWrap.innerHTML = Object.values(msg.reactions).join('');
-        bubble.appendChild(rxWrap);
-    }
-    
-    let pressTimer;
-    const startPress = (e) => {
-        pressTimer = setTimeout(() => {
-            currentReactionRef = isPrivate ? db.ref(`private_messages/${msg.chatId}/${key}/reactions`) : db.ref(`group_messages/${key}/reactions`);
-            const rect = bubble.getBoundingClientRect();
-            emojiPicker.style.top = `${rect.top - 45 + window.scrollY}px`;
-            emojiPicker.style.left = `${Math.max(10, rect.left)}px`;
-            emojiPicker.style.display = 'flex';
-        }, 600);
-    };
-    const endPress = () => clearTimeout(pressTimer);
-    bubble.addEventListener('mousedown', startPress);
-    bubble.addEventListener('touchstart', startPress);
-    bubble.addEventListener('mouseup', endPress);
-    bubble.addEventListener('touchend', endPress);
-    
-    if(isSelf) {
-        bubble.addEventListener('dblclick', () => {
-            currentDeleteAction = () => {
-                if(isPrivate) db.ref(`private_messages/${msg.chatId}/${key}`).remove();
-                else db.ref(`group_messages/${key}`).remove();
-                deleteModal.style.display = 'none';
-            };
-            deleteModal.style.display = 'flex';
-        });
-    }
-
-    container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
-    
-    if(!isSelf && settings.tone && !isPrivate) { tingAudio.play().catch(()=>{}); }
+function listenOnlineCount() {
+    db.ref('status').on('value', snap => {
+        const count = snap.numChildren();
+        onlineCountEl.innerText = `${count} online`;
+    });
 }
 
-document.querySelectorAll('#emojiPicker .emoji-btn').forEach(btn => {
-    btn.onclick = (e) => {
-        e.stopPropagation();
-        if(currentReactionRef) { currentReactionRef.child(username).set(btn.textContent); }
-        emojiPicker.style.display = 'none';
-    };
-});
-
-confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); };
-cancelDel.onclick = () => { deleteModal.style.display = 'none'; };
-
-messagesEl.onclick = (e) => {
-    const avatar = e.target.closest('.avatar');
-    if(avatar) {
-        const clickedUser = avatar.getAttribute('data-user');
-        if(clickedUser === username) return;
-        previewSelectedUser = clickedUser;
-        previewName.textContent = clickedUser;
-        
-        db.ref(`profiles/${clickedUser}`).once('value', snap => {
-            const val = snap.val();
-            if(val && val.img) { previewImgBox.innerHTML = `<img src="${val.img}"/>`; }
-            else { previewImgBox.textContent = clickedUser.charAt(0).toUpperCase(); }
+onlineCountEl.onclick = () => {
+    db.ref('status').once('value', async snap => {
+        const container = document.getElementById('onlineUsersContainer');
+        container.innerHTML = '';
+        const promises = [];
+        snap.forEach(child => {
+            if(child.key !== username) {
+                promises.push(db.ref(`profiles/${child.key}`).once('value'));
+            }
         });
-        
-        profilePreviewOverlay.style.display = 'flex';
-    }
+        const profiles = await Promise.all(promises);
+        if(profiles.length === 0) {
+            container.innerHTML = '<div style="padding:15px;color:var(--muted);text-align:center">No other users online</div>';
+        } else {
+            profiles.forEach(pSnap => {
+                if(pSnap.exists()) {
+                    const u = pSnap.val();
+                    const div = document.createElement('div');
+                    div.className = 'onlineUserItem';
+                    div.onclick = () => {
+                        document.getElementById('onlineListOverlay').style.display = 'none';
+                        showProfilePreview(u.name, u.photo || '');
+                    };
+                    let pImg = u.photo ? `<img src="${u.photo}" style="width:100%;height:100%;object-fit:cover"/>` : '?';
+                    div.innerHTML = `<div class="onlineUserAvatar">${pImg}</div><div style="font-weight:bold">${u.name}</div>`;
+                    container.appendChild(div);
+                }
+            });
+        }
+        document.getElementById('onlineListOverlay').style.display = 'flex';
+    });
 };
 
+function showProfilePreview(targetUser, photoUrl) {
+    previewSelectedUser = targetUser;
+    previewName.innerText = targetUser;
+    previewImgBox.innerHTML = photoUrl ? `<img src="${photoUrl}"/>` : '?';
+    profilePreviewOverlay.style.display = 'flex';
+}
 closePreviewBtn.onclick = () => profilePreviewOverlay.style.display = 'none';
 previewMsgBtn.onclick = () => {
     profilePreviewOverlay.style.display = 'none';
-    if(previewSelectedUser) openPrivateChat(previewSelectedUser);
+    openPrivateChat(previewSelectedUser);
 };
 
-function openPrivateChat(targetUser) {
-    if(!settings.private) { showToast("Private chat feature disabled in your setups."); return; }
-    privateChatWith = targetUser;
-    privateTitle.textContent = targetUser;
-    privateMessages.innerHTML = '';
-    privatePopup.style.display = 'flex';
-    
-    const chatId = username < targetUser ? `${username}_${targetUser}` : `${targetUser}_${username}`;
-    
-    db.ref(`status/${targetUser}`).on('value', snap => {
-        if(snap.exists()) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; }
-        else { headerDot.style.background = 'var(--offline)'; headerStatusText.textContent = 'offline'; }
-    });
-
-    if(privateListeners.has(chatId)) { db.ref(`private_messages/${chatId}`).off(); }
-    
-    const ref = db.ref(`private_messages/${chatId}`);
-    privateListeners.set(chatId, ref);
-    
-    ref.limitToLast(30).on('child_added', snap => {
-        const val = snap.val();
-        val.chatId = chatId;
-        renderMessage(val, snap.key, privateMessages, true);
-    });
-    
-    ref.on('child_removed', snap => { document.getElementById(`pmsg-${snap.key}`)?.remove(); });
-}
-
-closePrivate.onclick = () => { privatePopup.style.display = 'none'; privateChatWith = null; };
-
-sendBtn.onclick = () => {
-    const txt = messageInput.value.trim();
-    if(!txt) return;
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    
-    db.ref('group_messages').push({
-        sender: username,
-        senderAge: userAge,
-        senderImg: profileImage,
-        body: txt,
-        type: 'text',
-        time: timeStr
-    });
-    messageInput.value = '';
-};
-
-messageInput.onkeypress = (e) => { if(e.key === 'Enter') sendBtn.click(); };
-
-privateSend.onclick = () => {
-    const txt = privateInput.value.trim();
-    if(!txt || !privateChatWith) return;
-    const chatId = username < privateChatWith ? `${username}_${privateChatWith}` : `${privateChatWith}_${username}`;
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    
-    db.ref(`private_messages/${chatId}`).push({
-        sender: username,
-        body: txt,
-        type: 'text',
-        time: timeStr
-    });
-    privateInput.value = '';
-};
-privateInput.onkeypress = (e) => { if(e.key === 'Enter') privateSend.click(); };
-
-joinBtn.onclick = () => {
-    const val = nameInput.value.trim();
-    if(!val) return;
-    username = val;
-    userAge = ageSelect.value;
-    localStorage.setItem('guestName', username);
-    localStorage.setItem('userAge', userAge);
-    
-    const file = loginPhotoInput.files[0];
-    if(file && userAge === '18+') {
-        const r = new FileReader();
-        r.onload = (e) => {
-            profileImage = e.target.result;
-            localStorage.setItem('profileImage', profileImage);
-            completeLogin();
-        };
-        r.readAsDataURL(file);
-    } else {
-        completeLogin();
-    }
-};
-
-function completeLogin() {
-    loginWrap.style.display = 'none';
-    db.ref(`status/${username}`).set(true);
-    db.ref(`profiles/${username}`).set({ age: userAge, img: profileImage });
-    initChat();
-    loadSettings();
-}
-
-logoutBtn.onclick = () => {
-    db.ref(`status/${username}`).remove();
-    localStorage.clear();
-    location.reload();
-};
-
-stickerBtn.onclick = (e) => {
-    e.stopPropagation();
-    if(stickerPicker.style.display === 'grid') { stickerPicker.style.display = 'none'; return; }
+function buildStickers() {
     stickerPicker.innerHTML = '';
     stickerUrls.forEach(url => {
         const img = document.createElement('img');
         img.src = url;
         img.className = 'sticker-item';
         img.onclick = () => {
-            if(privateChatWith) {
-                const chatId = username < privateChatWith ? `${username}_${privateChatWith}` : `${privateChatWith}_${username}`;
-                db.ref(`private_messages/${chatId}`).push({ sender: username, body: url, type: 'sticker', time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
-            } else {
-                db.ref('group_messages').push({ sender: username, senderAge: userAge, senderImg: profileImage, body: url, type: 'sticker', time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
-            }
+            sendGroupSticker(url);
             stickerPicker.style.display = 'none';
         };
         stickerPicker.appendChild(img);
     });
-    stickerPicker.style.display = 'grid';
+}
+stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
+stickerPicker.onclick = (e) => e.stopPropagation();
+
+function formatTime(ts) {
+    if(!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function listenGroupMessages() {
+    if(currentGroupRef) currentGroupRef.off();
+    currentGroupRef = db.ref('messages/group').limitToLast(100);
+    currentGroupRef.on('value', snap => {
+        messagesEl.innerHTML = '';
+        snap.forEach(child => {
+            const m = child.val();
+            appendGroupBubble(child.key, m);
+        });
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+}
+
+function appendGroupBubble(msgId, m) {
+    if (blockedUsers.has(m.sender) || iHaveBeenBlockedBy.has(m.sender)) return;
+    const isSelf = m.sender === username;
+    const row = document.createElement('div');
+    row.className = `msg-row ${isSelf ? 'self' : ''}`;
+    row.dataset.id = msgId;
+
+    let mediaHtml = '';
+    if (m.type === 'sticker') {
+        mediaHtml = `<img src="${m.url}" class="sticker-img" />`;
+    } else if (m.type === 'audio') {
+        mediaHtml = `<audio src="${m.url}" controls></audio>`;
+    } else {
+        mediaHtml = `<div>${escapeHtml(m.text || '')}</div>`;
+    }
+
+    let reactionsHtml = '';
+    if (m.reactions) {
+        reactionsHtml = `<div class="reaction-container">`;
+        Object.keys(m.reactions).forEach(rKey => { reactionsHtml += `<span>${m.reactions[rKey]}</span>`; });
+        reactionsHtml += `</div>`;
+    }
+
+    let avatarPart = '';
+    if (!isSelf) {
+        avatarPart = `<div class="avatar" onclick="showProfilePreview('${escapeHtml(m.sender)}','${escapeHtml(m.senderPhoto || '')}')">${escapeHtml(m.sender.substring(0,1).toUpperCase())}</div>`;
+        db.ref(`status/${m.sender}`).once('value', sSnap => {
+            if(sSnap.exists() && sSnap.val().status === 'online') {
+                const av = row.querySelector('.avatar');
+                if(av) av.classList.add('online');
+            }
+        });
+    }
+
+    row.innerHTML = `
+        ${avatarPart}
+        <div class="bubble" style="padding-bottom:14px">
+            <div class="meta"><span>${escapeHtml(m.sender)}</span><span style="font-size:10px;color:var(--muted)">${m.senderAge || ''}</span></div>
+            ${mediaHtml}
+            <div class="time">${formatTime(m.timestamp)}</div>
+            ${reactionsHtml}
+        </div>
+    `;
+
+    setupReactionsAndDeletion(row, `messages/group/${msgId}`, isSelf);
+    messagesEl.appendChild(row);
+}
+
+function setupReactionsAndDeletion(row, dbPath, isSelf) {
+    const bubble = row.querySelector('.bubble');
+    let pressTimer;
+    bubble.onpointerdown = (e) => {
+        pressTimer = setTimeout(() => {
+            if (isSelf) {
+                showDeleteModal(dbPath);
+            } else {
+                showEmojiPicker(e.clientX, e.clientY, dbPath);
+            }
+        }, 600);
+    };
+    bubble.onpointerup = () => clearTimeout(pressTimer);
+    bubble.onpointerleave = () => clearTimeout(pressTimer);
+}
+
+function showDeleteModal(dbPath) {
+    currentDeleteAction = dbPath;
+    deleteModal.style.display = 'flex';
+}
+cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
+confirmDel.onclick = () => {
+    if(currentDeleteAction) {
+        db.ref(currentDeleteAction).remove();
+    }
+    deleteModal.style.display = 'none';
+    currentDeleteAction = null;
 };
 
-document.addEventListener('click', () => { stickerPicker.style.display = 'none'; });
+function showEmojiPicker(x, y, dbPath) {
+    currentReactionRef = dbPath;
+    emojiPicker.style.left = `${Math.min(x, window.innerWidth - 200)}px`;
+    emojiPicker.style.top = `${Math.min(y, window.innerHeight - 60)}px`;
+    emojiPicker.style.display = 'flex';
+}
+document.addEventListener('pointerdown', (e) => {
+    if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none';
+});
+Array.from(emojiPicker.children).forEach(btn => {
+    btn.onclick = () => {
+        if (currentReactionRef) {
+            db.ref(`${currentReactionRef}/reactions/${username}`).set(btn.innerText);
+        }
+        emojiPicker.style.display = 'none';
+    };
+});
 
-if(username) { completeLogin(); }
+function sendGroupMessage() {
+    const txt = messageInput.value.trim();
+    if(!txt) return;
+    db.ref('messages/group').push({
+        sender: username, senderAge: userAge, senderPhoto: profileImage,
+        text: txt, type: 'text', timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+    messageInput.value = '';
+}
+sendBtn.onclick = sendGroupMessage;
+messageInput.onkeydown = (e) => { if(e.key === 'Enter') sendGroupMessage(); };
+
+function sendGroupSticker(url) {
+    db.ref('messages/group').push({
+        sender: username, senderAge: userAge, senderPhoto: profileImage,
+        url: url, type: 'sticker', timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+}
+
+function listenPrivateNotifications() {
+    db.ref(`messages/private_notifications/${username}`).on('value', snap => {
+        let totalUnread = 0;
+        panelListEl.innerHTML = '';
+        snap.forEach(child => {
+            const data = child.val();
+            if(data && data.unreadCount > 0) {
+                totalUnread += data.unreadCount;
+                const pItem = document.createElement('div');
+                pItem.className = 'panelItem';
+                pItem.onclick = () => {
+                    panelEl.classList.remove('open');
+                    openPrivateChat(child.key);
+                };
+                pItem.innerHTML = `<div class="who"><b>${escapeHtml(child.key)}</b><br/><span style="font-size:12px;color:var(--muted)">${escapeHtml(data.lastSnippet || '')}</span></div><div class="count">${data.unreadCount}</div>`;
+                panelListEl.appendChild(pItem);
+            }
+        });
+        if(totalUnread > 0) {
+            bellBadge.innerText = totalUnread; bellBadge.style.display = 'flex';
+            if(settings.tone) dingAudio.play().catch(()=>{});
+        } else {
+            bellBadge.style.display = 'none';
+        }
+    });
+}
+
+bellBtn.onclick = (e) => { e.stopPropagation(); panelEl.classList.toggle('open'); };
+panelCloseBtn.onclick = () => panelEl.classList.remove('open');
+panelEl.onclick = (e) => e.stopPropagation();
+
+function openPrivateChat(targetUser) {
+    if(!settings.private) { showToast("Private messaging is disabled in your settings."); return; }
+    privateChatWith = targetUser;
+    privateTitle.innerText = targetUser;
+    privatePopup.style.display = 'flex';
+    
+    db.ref(`profiles/${targetUser}`).once('value', pSnap => {
+        if(pSnap.exists()) {
+            const tgtProfile = pSnap.val();
+            if(tgtProfile.settings && tgtProfile.settings.private === false) {
+                showToast(`${targetUser} has disabled private messages.`);
+                closePrivateChat();
+                return;
+            }
+        }
+    });
+
+    db.ref(`status/${targetUser}`).on('value', sSnap => {
+        if(sSnap.exists() && sSnap.val().status === 'online') {
+            headerDot.style.background = 'var(--online)'; headerStatusText.innerText = 'online';
+        } else {
+            headerDot.style.background = 'var(--offline)'; headerStatusText.innerText = 'offline';
+        }
+    });
+
+    updateBlockBtnUI();
+
+    const chatKey = [username, targetUser].sort().join('_');
+    if(currentPrivateRef) currentPrivateRef.off();
+    
+    db.ref(`messages/private_notifications/${username}/${targetUser}/unreadCount`).set(0);
+
+    currentPrivateRef = db.ref(`messages/conversations/${chatKey}`).limitToLast(50);
+    currentPrivateRef.on('value', snap => {
+        privateMessages.innerHTML = '';
+        snap.forEach(child => {
+            const m = child.val();
+            appendPrivateBubble(child.key, m, chatKey);
+        });
+        privateMessages.scrollTop = privateMessages.scrollHeight;
+    });
+}
+
+function appendPrivateBubble(msgId, m, chatKey) {
+    const isSelf = m.sender === username;
+    const row = document.createElement('div');
+    row.className = `private-row ${isSelf ? 'self' : ''}`;
+    
+    let mediaHtml = `<div>${escapeHtml(m.text || '')}</div>`;
+    if(m.type === 'image') mediaHtml = `<img src="${m.url}"/>`;
+    if(m.type === 'audio') mediaHtml = `<audio src="${m.url}" controls></audio>`;
+
+    row.innerHTML = `
+        <div class="private-bubble">
+            ${mediaHtml}
+            <div class="time">${formatTime(m.timestamp)}</div>
+        </div>
+    `;
+    setupReactionsAndDeletion(row, `messages/conversations/${chatKey}/${msgId}`, isSelf);
+    privateMessages.appendChild(row);
+}
+
+function closePrivateChat() {
+    privatePopup.style.display = 'none';
+    if(privateChatWith) db.ref(`status/${privateChatWith}`).off();
+    if(currentPrivateRef) currentPrivateRef.off();
+    privateChatWith = null;
+}
+closePrivate.onclick = closePrivateChat;
+
+function sendPrivateMessage() {
+    const txt = privateInput.value.trim();
+    if(!txt || !privateChatWith) return;
+    const chatKey = [username, privateChatWith].sort().join('_');
+    
+    db.ref(`messages/conversations/${chatKey}`).push({
+        sender: username, text: txt, type: 'text', timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    db.ref(`messages/private_notifications/${privateChatWith}/${username}`).runTransaction(current => {
+        const data = current || { unreadCount: 0 };
+        data.unreadCount = (data.unreadCount || 0) + 1;
+        data.lastSnippet = txt;
+        return data;
+    });
+
+    privateInput.value = '';
+}
+privateSend.onclick = sendPrivateMessage;
+privateInput.onkeydown = (e) => { if(e.key === 'Enter') sendPrivateMessage(); };
+
+privImgFile.onchange = () => {
+    const file = privImgFile.files[0];
+    if(!file || !privateChatWith) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        const chatKey = [username, privateChatWith].sort().join('_');
+        db.ref(`messages/conversations/${chatKey}`).push({
+            sender: username, url: reader.result, type: 'image', timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        db.ref(`messages/private_notifications/${privateChatWith}/${username}`).runTransaction(current => {
+            const data = current || { unreadCount: 0 };
+            data.unreadCount = (data.unreadCount || 0) + 1;
+            data.lastSnippet = "📷 Image";
+            return data;
+        });
+    };
+    reader.readAsDataURL(file);
+};
+
+clearHistoryBtn.onclick = () => {
+    if(confirm("Clear all your notification histories?")) {
+        db.ref(`messages/private_notifications/${username}`).remove();
+    }
+};
+
+function listenBlockLists() {
+    db.ref(`blocks/${username}`).on('value', snap => {
+        blockedUsers.clear();
+        snap.forEach(c => { if(c.val() === true) blockedUsers.add(c.key); });
+        updateBlockBtnUI();
+    });
+    db.ref('blocks').on('value', snap => {
+        iHaveBeenBlockedBy.clear();
+        snap.forEach(userBlockList => {
+            if(userBlockList.hasChild(username) && userBlockList.child(username).val() === true) {
+                iHaveBeenBlockedBy.add(userBlockList.key);
+            }
+        });
+        if(privateChatWith && iHaveBeenBlockedBy.has(privateChatWith)) {
+            showToast("You have been blocked by this user.");
+            closePrivateChat();
+        }
+    });
+}
+
+function updateBlockBtnUI() {
+    if(!privateChatWith) return;
+    if(blockedUsers.has(privateChatWith)) {
+        blockBtn.innerText = "Blocked"; blockBtn.className = "headerActionBtn blocked";
+    } else {
+        blockBtn.innerText = "Block"; blockBtn.className = "headerActionBtn not-blocked";
+    }
+}
+
+blockBtn.onclick = () => {
+    if(!privateChatWith) return;
+    if(blockedUsers.has(privateChatWith)) {
+        db.ref(`blocks/${username}/${privateChatWith}`).remove();
+        showToast("User unblocked");
+    } else {
+        db.ref(`blocks/${username}/${privateChatWith}`).set(true);
+        showToast("User blocked");
+    }
+};
+
+reportBtn.onclick = () => { showToast("Report submitted successfully."); };
+
+async function startCall(type) {
+    if(!settings.call && type==='audio') return;
+    if(!settings.video && type==='video') return;
+    if(!privateChatWith) return;
+
+    let targetAvailable = await db.ref(`profiles/${privateChatWith}/settings/${type}`).once('value').then(s=>s.val()!==false);
+    if(!targetAvailable) { showToast(`User has disabled incoming ${type} calls.`); return; }
+
+    activeCall = { role: 'caller', target: privateChatWith, type: type };
+    callFrom.innerText = privateChatWith;
+    callTypeText.innerText = `Outgoing ${type} call`;
+    callTimer.innerText = "Calling...";
+    
+    inboundCallBtns.style.display = 'none';
+    outboundCallBtns.style.display = 'flex';
+    activeCallControls.style.display = 'none';
+    callOverlay.style.display = 'flex';
+
+    if(settings.tone) ringtone.play().catch(()=>{});
+
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+        if(type === 'video') { localVideo.srcObject = localStream; localVideo.style.display = 'block'; }
+    } catch(e) {
+        showToast("Failed to access media peripherals.");
+        endCall();
+        return;
+    }
+
+    await db.ref(`calls/${privateChatWith}`).set({
+        from: username, type: type, timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    db.ref(`calls/${privateChatWith}/status`).on('value', snap => {
+        const status = snap.val();
+        if(status === 'accepted') {
+            ringtone.pause();
+            initiateWebRTC();
+        } else if(status === 'declined' || status === 'cancelled') {
+            showToast(`Call ${status}`);
+            endCall();
+        }
+    });
+}
+
+privateCallBtn.onclick = () => startCall('audio');
+privateVideoBtn.onclick = () => startCall('video');
+
+function listenInboundCalls() {
+    db.ref(`calls/${username}`).on('value', async snap => {
+        const call = snap.val();
+        if(call && !activeCall) {
+            if(call.status === 'cancelled') { endCall(); return; }
+            if(Date.now() - call.timestamp > 30000) { db.ref(`calls/${username}`).remove(); return; }
+            
+            activeCall = { role: 'callee', target: call.from, type: call.type };
+            callFrom.innerText = call.from;
+            callTypeText.innerText = `Incoming ${call.type} call`;
+            callTimer.innerText = "Ringing...";
+            
+            inboundCallBtns.style.display = 'flex';
+            outboundCallBtns.style.display = 'none';
+            activeCallControls.style.display = 'none';
+            callOverlay.style.display = 'flex';
+            
+            if(settings.tone) ringtone.play().catch(()=>{});
+
+            db.ref(`calls/${username}/status`).on('value', sSnap => {
+                if(sSnap.val() === 'cancelled') { showToast("Call cancelled by caller"); endCall(); }
+            });
+        }
+    });
+}
+
+cancelCallBtn.onclick = () => {
+    if(activeCall && activeCall.role === 'caller') {
+        db.ref(`calls/${activeCall.target}/status`).set('cancelled');
+        setTimeout(() => db.ref(`calls/${activeCall.target}`).remove(), 500);
+    }
+    endCall();
+};
+
+declineCallBtn.onclick = () => {
+    if(activeCall && activeCall.role === 'callee') {
+        db.ref(`calls/${username}/status`).set('declined');
+        setTimeout(() => db.ref(`calls/${username}`).remove(), 500);
+    }
+    endCall();
+};
+
+acceptCallBtn.onclick = async () => {
+    if(!activeCall || activeCall.role !== 'callee') return;
+    ringtone.pause();
+    inboundCallBtns.style.display = 'none';
+
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: activeCall.type === 'video' });
+        if(activeCall.type === 'video') { localVideo.srcObject = localStream; localVideo.style.display = 'block'; }
+    } catch(e) {
+        showToast("Peripherals missing or block access.");
+        db.ref(`calls/${username}/status`).set('declined');
+        endCall();
+        return;
+    }
+
+    await db.ref(`calls/${username}/status`).set('accepted');
+    initiateWebRTC();
+};
+
+async function initiateWebRTC() {
+    callTimer.innerText = "Connecting...";
+    inboundCallBtns.style.display = 'none';
+    outboundCallBtns.style.display = 'none';
+    activeCallControls.style.display = 'flex';
+
+    peerConnection = new RTCPeerConnection(configuration);
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    peerConnection.ontrack = (event) => {
+        if(activeCall.type === 'video') {
+            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.style.display = 'block';
+            mainCallCard.classList.add('connected-video');
+        } else {
+            document.getElementById('remoteAudio').srcObject = event.streams[0];
+        }
+        startCallTimer();
+    };
+
+    const callNode = activeCall.role === 'caller' ? activeCall.target : username;
+    
+    peerConnection.onicecandidate = (event) => {
+        if(event.candidate) {
+            db.ref(`calls/${callNode}/candidates/${activeCall.role}`).push(event.candidate.toJSON());
+        }
+    };
+
+    db.ref(`calls/${callNode}/candidates/${activeCall.role === 'caller' ? 'callee' : 'caller'}`).on('child_added', snap => {
+        if(peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+    });
+
+    if(activeCall.role === 'caller') {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        await db.ref(`calls/${callNode}/offer`).set({ sdp: offer.sdp, type: offer.type });
+        
+        db.ref(`calls/${callNode}/answer`).on('value', async snap => {
+            const ans = snap.val();
+            if(ans && peerConnection && peerConnection.signalingState !== "stable") {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(ans));
+            }
+        });
+    } else {
+        const offerSnap = await db.ref(`calls/${callNode}/offer`).once('value');
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offerSnap.val()));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        await db.ref(`calls/${callNode}/answer`).set({ sdp: answer.sdp, type: answer.type });
+    }
+
+    db.ref(`calls/${callNode}/status`).on('value', snap => {
+        if(snap.val() === 'ended') { showToast("Call ended"); endCall(); }
+    });
+    if(activeCall.role === 'callee') {
+        db.ref(`calls/${username}`).onDisconnect().update({ status: 'ended' });
+    } else {
+        db.ref(`calls/${activeCall.target}`).onDisconnect().update({ status: 'ended' });
+    }
+}
+
+function startCallTimer() {
+    clearInterval(callTimerInterval);
+    let sec = 0;
+    callTimerInterval = setInterval(() => {
+        sec++;
+        let m = Math.floor(sec/60).toString().padStart(2,'0');
+        let s = (sec%60).toString().padStart(2,'0');
+        callTimer.innerText = `${m}:${s}`;
+    }, 1000);
+}
+
+function endCall() {
+    clearInterval(callTimerInterval);
+    ringtone.pause();
+    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if(peerConnection) { peerConnection.close(); peerConnection = null; }
+    
+    const callNode = activeCall ? (activeCall.role === 'caller' ? activeCall.target : username) : null;
+    if(callNode) {
+        db.ref(`calls/${callNode}`).remove();
+    }
+
+    remoteVideo.style.display = 'none'; remoteVideo.srcObject = null;
+    localVideo.style.display = 'none'; localVideo.srcObject = null;
+    mainCallCard.classList.remove('connected-video');
+    callOverlay.style.display = 'none';
+    activeCall = null;
+}
+endCallBtnBig.onclick = () => {
+    if(activeCall) {
+        const callNode = activeCall.role === 'caller' ? activeCall.target : username;
+        db.ref(`calls/${callNode}/status`).set('ended');
+    }
+    endCall();
+};
+
+micBtn.onpointerdown = async () => {
+    if(!privateChatWith) return;
+    try {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
+            const reader = new FileReader();
+            reader.onload = () => {
+                const chatKey = [username, privateChatWith].sort().join('_');
+                db.ref(`messages/conversations/${chatKey}`).push({
+                    sender: username, url: reader.result, type: 'audio', timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                db.ref(`messages/private_notifications/${privateChatWith}/${username}`).runTransaction(current => {
+                    const data = current || { unreadCount: 0 };
+                    data.unreadCount = (data.unreadCount || 0) + 1;
+                    data.lastSnippet = "🎤 Voice Note";
+                    return data;
+                });
+            };
+            reader.readAsDataURL(blob);
+            stream.getTracks().forEach(t=>t.stop());
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.classList.add('recording');
+        setTimeout(() => { if(isRecording) stopAudioRecording(); }, 10000);
+    } catch(e) { showToast("Cannot initialize audio capture node."); }
+};
+
+micBtn.onpointerup = () => { if(isRecording) stopAudioRecording(); };
+micBtn.onpointerleave = () => { if(isRecording) stopAudioRecording(); };
+
+function stopAudioRecording() {
+    if(mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        micBtn.classList.remove('recording');
+    }
+}
+
+joinBtn.onclick = () => {
+    const val = nameInput.value.trim();
+    if(!val) { showToast("Name is mandatory parameter."); return; }
+    username = val;
+    userAge = ageSelect.value;
+    localStorage.setItem('guestName', username);
+    localStorage.setItem('userAge', userAge);
+    initApp();
+};
+
+loginPhotoInput.onchange = () => {
+    const file = loginPhotoInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        profileImage = reader.result;
+        localStorage.setItem('profileImage', profileImage);
+    };
+    reader.readAsDataURL(file);
+};
+
+profileImgInput.onchange = () => {
+    const file = profileImgInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        profileImage = reader.result;
+        localStorage.setItem('profileImage', profileImage);
+        if(username) db.ref(`profiles/${username}/photo`).set(profileImage);
+        showToast("Profile layout image refreshed.");
+    };
+    reader.readAsDataURL(file);
+};
+
+logoutBtn.onclick = () => {
+    if(username) {
+        db.ref(`status/${username}`).remove();
+        db.ref(`profiles/${username}`).remove();
+    }
+    localStorage.clear();
+    location.reload();
+};
+
+if(username) {
+    initApp();
+}
+
+function escapeHtml(string) {
+    return String(string).replace(/[&<>"'`=\/]/g, function (s) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '=': '&#x3D;' }[s];
+    });
+}
+
+const liveStreamBtn = document.getElementById('liveStreamBtn'), stopStreamBtn = document.getElementById('stopStreamBtn'), exitStreamBtn = document.getElementById('exitStreamBtn'), liveStreamOverlay = document.getElementById('liveStreamOverlay'), streamVideo = document.getElementById('streamVideo'), streamHostName = document.getElementById('streamHostName'), streamViewerNumber = document.getElementById('streamViewerNumber');
+
+function listenLiveStreams() {
+    db.ref('livestreams/active').on('value', snap => {
+        currentActiveBroadcast = snap.val();
+        if(currentActiveBroadcast) {
+            liveStreamBtn.innerText = `📺 Watch ${currentActiveBroadcast.host}`;
+            liveStreamBtn.classList.add('streaming');
+        } else {
+            liveStreamBtn.innerText = "📺 Go Live";
+            liveStreamBtn.classList.remove('streaming');
+        }
+    });
+}
+
+liveStreamBtn.onclick = () => {
+    if(currentActiveBroadcast) {
+        enterLiveStreamView();
+    } else {
+        startLiveStreamBroadcasting();
+    }
+};
+
+async function startLiveStreamBroadcasting() {
+    try {
+        liveStreamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamVideo.srcObject = liveStreamStream;
+        streamVideo.muted = true;
+    } catch(e) {
+        showToast("Could not attach camera feeds for streaming.");
+        return;
+    }
+
+    liveStreamOverlay.style.display = 'flex';
+    stopStreamBtn.style.display = 'inline-block';
+    exitStreamBtn.style.display = 'none';
+    streamHostName.innerText = `You (${username})`;
+
+    await db.ref('livestreams/active').set({ host: username, timestamp: firebase.database.ServerValue.TIMESTAMP });
+
+    db.ref('livestreams/offers').on('child_added', async snap => {
+        const viewerId = snap.key;
+        const offerData = snap.val().offer;
+        
+        const pc = new RTCPeerConnection(configuration);
+        livePeerConnections[viewerId] = pc;
+
+        liveStreamStream.getTracks().forEach(t => pc.addTrack(t, liveStreamStream));
+
+        pc.onicecandidate = e => {
+            if(e.candidate) db.ref(`livestreams/candidates/${username}/${viewerId}`).push(e.candidate.toJSON());
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        await db.ref(`livestreams/answers/${viewerId}`).set({ answer: { sdp: answer.sdp, type: answer.type } });
+    });
+
+    db.ref('livestreams/viewers').on('value', snap => {
+        streamViewerNumber.innerText = snap.numChildren();
+    });
+}
+
+function stopLiveStreamBroadcasting() {
+    db.ref('livestreams/active').remove();
+    db.ref('livestreams/offers').off();
+    db.ref('livestreams/offers').remove();
+    db.ref('livestreams/answers').remove();
+    db.ref('livestreams/candidates').remove();
+    db.ref('livestreams/viewers').remove();
+
+    if(liveStreamStream) { liveStreamStream.getTracks().forEach(t=>t.stop()); liveStreamStream = null; }
+    Object.keys(livePeerConnections).forEach(k => livePeerConnections[k].close());
+    livePeerConnections = {};
+
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+}
+stopStreamBtn.onclick = stopLiveStreamBroadcasting;
+
+async function enterLiveStreamView() {
+    if(!currentActiveBroadcast) return;
+    const hostName = currentActiveBroadcast.host;
+    
+    liveStreamOverlay.style.display = 'flex';
+    stopStreamBtn.style.display = 'none';
+    exitStreamBtn.style.display = 'inline-block';
+    streamHostName.innerText = hostName;
+
+    db.ref(`livestreams/viewers/${username}`).set(true);
+
+    const pc = new RTCPeerConnection(configuration);
+    livePeerConnections[hostName] = pc;
+
+    pc.ontrack = e => { streamVideo.srcObject = e.streams[0]; streamVideo.muted = false; };
+    pc.onicecandidate = e => {
+        if(e.candidate) db.ref(`livestreams/candidates/${hostName}/${username}`).push(e.candidate.toJSON());
+    };
+
+    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
+    await pc.setLocalDescription(offer);
+    await db.ref(`livestreams/offers/${username}`).set({ offer: { sdp: offer.sdp, type: offer.type } });
+
+    db.ref(`livestreams/answers/${username}`).on('value', async snap => {
+        const data = snap.val();
+        if(data && data.answer && pc.signalingState !== "stable") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    });
+
+    db.ref(`livestreams/candidates/${hostName}/${username}`).on('child_added', cSnap => {
+        if(pc) pc.addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
+    });
+
+    db.ref('livestreams/active').on('value', snap => {
+        if(!snap.exists()) {
+            showToast("Stream ended by broadcaster");
+            exitLiveStreamView();
+        }
+    });
+}
+
+function exitLiveStreamView() {
+    db.ref(`livestreams/viewers/${username}`).remove();
+    if(livePeerConnections[currentActiveBroadcast?.host]) {
+        livePeerConnections[currentActiveBroadcast.host].close();
+    }
+    livePeerConnections = {};
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+}
+exitStreamBtn.onclick = exitLiveStreamView;
+
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}`).remove(); } };
 </script>
 </body>
 </html>
