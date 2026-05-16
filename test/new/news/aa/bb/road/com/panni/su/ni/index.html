@@ -19,19 +19,17 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
 #title{font-weight:600;display:flex;align-items:center;gap:10px}
 #notifWrap{display:flex;align-items:center;gap:8px}
-.bell, .translate-toggle{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
-.translate-toggle { font-size: 10px; font-weight: bold; color: var(--accent); }
+.bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
 .badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.6)}
-
-/* Hide Google Branding */
-.goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon { display: none !important; }
-body { top: 0px !important; }
-.goog-te-gadget-simple { background-color: transparent !important; border: none !important; padding: 0 !important; }
-.goog-te-menu-value span { color: var(--accent) !important; font-size: 10px; }
 
 #onlineCount { background: rgba(37, 211, 102, 0.1); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(37, 211, 102, 0.3); font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
 #onlineCount:hover { background: rgba(37, 211, 102, 0.2); }
 #onlineCount::before { content: ''; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; }
+
+/* --- LIVE STREAM ACTION BUTTON --- */
+#liveStreamBtn { background: rgba(234, 179, 8, 0.1); color: #eab308; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(234, 179, 8, 0.3); font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+#liveStreamBtn:hover { background: rgba(234, 179, 8, 0.2); }
+#liveStreamBtn.streaming::before { content: ''; width: 8px; height: 8px; background: #ff3b30; border-radius: 50%; display: inline-block; animation: pulse 1s infinite; }
 
 #panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
 #panel.open{transform:translateX(0)}
@@ -59,7 +57,6 @@ body { top: 0px !important; }
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
 .read-status{font-size:14px;line-height:1}
 .read-status.read{color:#53bdeb}
-
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px;position:relative}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
 #sendBtn, .groupMediaBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -173,6 +170,18 @@ body { top: 0px !important; }
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
+/* --- LIVE STREAM OVERLAY CSS --- */
+#liveStreamOverlay{position:fixed;inset:0;display:none;background:#050c0e;z-index:10005;flex-direction:column;color:#fff}
+.streamContainer{position:relative;flex:1;width:100%;background:#000;display:flex;align-items:center;justify-content:center}
+#streamVideo{width:100%;height:100%;object-fit:contain}
+.streamMetaBar{position:absolute;top:20px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.streamBadge{background:#ff3b30;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;animation:pulse 1.2s infinite}
+.streamViewerCount{background:rgba(0,0,0,0.6);padding:4px 10px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:6px}
+.streamControls{padding:20px;background:#0b141a;display:flex;justify-content:center;gap:20px;align-items:center}
+.streamBtn{padding:12px 24px;border-radius:30px;border:0;font-weight:bold;cursor:pointer;font-size:14px;transition:0.2s}
+.btnStopStream{background:#ff3b30;color:#fff}
+.btnExitStream{background:#2a3942;color:#fff}
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -220,17 +229,12 @@ body { top: 0px !important; }
 
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
-<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap">
-    <div id="google_translate_element" style="display:none"></div>
-    <div class="translate-toggle" id="translateBtn" title="Translate All to Tamil">TAM</div>
-    
-    <div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
-    <div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
+<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
     <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
     <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><button id="liveStreamBtn">📺 Go Live</button><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -312,6 +316,21 @@ body { top: 0px !important; }
     </div>
 </div>
 
+<div id="liveStreamOverlay">
+    <div class="streamContainer">
+        <video id="streamVideo" autoplay playsinline></video>
+        <div class="streamMetaBar">
+            <div class="streamBadge" id="streamBadgeStatus">LIVE</div>
+            <div class="streamViewerCount">👀 <span id="streamViewerNumber">0</span> viewers</div>
+        </div>
+    </div>
+    <div class="streamControls">
+        <div id="streamHostName" style="font-weight:bold; font-size:16px; margin-right:auto;">Broadcaster</div>
+        <button class="streamBtn btnStopStream" id="stopStreamBtn" style="display:none">End Stream</button>
+        <button class="streamBtn btnExitStream" id="exitStreamBtn" style="display:none">Exit View</button>
+    </div>
+</div>
+
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
@@ -321,38 +340,11 @@ body { top: 0px !important; }
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
-<script type="text/javascript">
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'en', 
-    includedLanguages: 'ta', 
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-    autoDisplay: false
-  }, 'google_translate_element');
-}
-</script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1500); });
-
-// Translation Logic
-let isTranslated = false;
-document.getElementById('translateBtn').onclick = () => {
-    isTranslated = !isTranslated;
-    const googleCombo = document.querySelector('.goog-te-combo');
-    if (googleCombo) {
-        googleCombo.value = isTranslated ? 'ta' : 'en';
-        googleCombo.dispatchEvent(new Event('change'));
-        showToast(isTranslated ? "Translating to Tamil..." : "Original Language");
-        document.getElementById('translateBtn').style.color = isTranslated ? '#ffeb3b' : 'var(--accent)';
-    } else {
-        showToast("Translator loading...");
-    }
-};
 
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -381,6 +373,20 @@ if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+/* --- LIVE STREAM STATE CONFIGS --- */
+const liveStreamBtn = document.getElementById('liveStreamBtn');
+const liveStreamOverlay = document.getElementById('liveStreamOverlay');
+const streamVideo = document.getElementById('streamVideo');
+const streamHostName = document.getElementById('streamHostName');
+const stopStreamBtn = document.getElementById('stopStreamBtn');
+const exitStreamBtn = document.getElementById('exitStreamBtn');
+const streamViewerNumber = document.getElementById('streamViewerNumber');
+const streamBadgeStatus = document.getElementById('streamBadgeStatus');
+
+let liveStreamStream = null;
+let livePeerConnections = {}; 
+let currentActiveBroadcast = null;
 
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
@@ -441,6 +447,7 @@ async function startAs(name){
     listenPresence(); 
     watchPrivateChatsInitial(); 
     listenBlocks(); 
+    listenLiveStreams();
     manageMessageCount('messages', 15); 
 }
 
@@ -611,16 +618,18 @@ function cleanupCall(callId){
     if(callId) db.ref(`calls/${callId}`).remove(); activeCall = null; flipCamBtn.style.display = 'none';
 }
 
-flipCamBtn.onclick = async (e) => {
+flipCamBtn.onclick = (e) => {
     e.stopPropagation(); isFrontCam = !isFrontCam;
     if(localStream) {
         localStream.getTracks().forEach(t => t.stop());
         const constraints = { audio: true, video: { facingMode: isFrontCam ? "user" : "environment" } };
-        localStream = await navigator.mediaDevices.getUserMedia(constraints);
-        localVideo.srcObject = localStream;
-        const videoTrack = localStream.getVideoTracks()[0];
-        const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-        sender.replaceTrack(videoTrack);
+        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+            localStream = stream;
+            localVideo.srcObject = localStream;
+            const videoTrack = localStream.getVideoTracks()[0];
+            const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+            sender.replaceTrack(videoTrack);
+        });
     }
 };
 
@@ -643,7 +652,167 @@ reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: 
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
+
+/* --- LIVE STREAM LOGIC FUNCTIONS --- */
+function listenLiveStreams() {
+    db.ref('livestreams/active').on('value', snap => {
+        const data = snap.val();
+        if (data && data.host !== username) {
+            currentActiveBroadcast = data;
+            liveStreamBtn.textContent = "📺 Watch Live (" + data.host + ")";
+            liveStreamBtn.classList.add('streaming');
+            liveStreamBtn.onclick = joinLiveStreamView;
+        } else if (!data) {
+            currentActiveBroadcast = null;
+            liveStreamBtn.textContent = "📺 Go Live";
+            liveStreamBtn.classList.remove('streaming');
+            liveStreamBtn.onclick = startLiveStreamBroadcast;
+        }
+    });
+}
+
+async function startLiveStreamBroadcast() {
+    if(activeCall) return showToast("Cannot stream during a call.");
+    try {
+        liveStreamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamVideo.srcObject = liveStreamStream;
+        streamVideo.muted = true;
+        streamHostName.textContent = "Your Live Broadcast";
+        
+        liveStreamOverlay.style.display = 'flex';
+        stopStreamBtn.style.display = 'block';
+        exitStreamBtn.style.display = 'none';
+        
+        await db.ref('livestreams/active').set({ host: username, startedAt: Date.now() });
+        db.ref('livestreams/active').onDisconnect().remove();
+
+        db.ref('livestreams/viewers').on('value', snap => {
+            const viewers = snap.val() || {};
+            streamViewerNumber.textContent = Object.keys(viewers).length;
+        });
+
+        db.ref('livestreams/offers').on('child_added', async snap => {
+            const viewerId = snap.key;
+            const offerData = snap.val();
+            if(!offerData || viewerId === username) return;
+
+            const pc = new RTCPeerConnection(rtcConfig);
+            livePeerConnections[viewerId] = pc;
+
+            liveStreamStream.getTracks().forEach(track => pc.addTrack(track, liveStreamStream));
+
+            pc.onicecandidate = e => {
+                if(e.candidate) db.ref(`livestreams/candidates/${username}/${viewerId}`).push(e.candidate.toJSON());
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await db.ref(`livestreams/answers/${viewerId}`).set({ answer: { sdp: answer.sdp, type: answer.type } });
+        });
+
+        db.ref(`livestreams/candidates`).on('child_added', snap => {
+            const viewerKey = snap.key;
+            if(viewerKey === username) return;
+            db.ref(`livestreams/candidates/${viewerKey}/${username}`).on('child_added', cSnap => {
+                if(livePeerConnections[viewerKey]) {
+                    livePeerConnections[viewerKey].addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
+                }
+            });
+        });
+
+    } catch(e) {
+        showToast("Stream access denied");
+    }
+}
+
+stopStreamBtn.onclick = async () => {
+    if(liveStreamStream) {
+        liveStreamStream.getTracks().forEach(t => t.stop());
+        liveStreamStream = null;
+    }
+    Object.keys(livePeerConnections).forEach(k => {
+        livePeerConnections[k].close();
+    });
+    livePeerConnections = {};
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+
+    await db.ref('livestreams/active').remove();
+    await db.ref('livestreams/viewers').remove();
+    await db.ref('livestreams/offers').remove();
+    await db.ref('livestreams/answers').remove();
+    await db.ref('livestreams/candidates').remove();
+    location.reload();
+};
+
+async function joinLiveStreamView() {
+    if(!currentActiveBroadcast) return;
+    const hostName = currentActiveBroadcast.host;
+    streamHostName.textContent = hostName + "'s Stream";
+    
+    liveStreamOverlay.style.display = 'flex';
+    stopStreamBtn.style.display = 'none';
+    exitStreamBtn.style.display = 'block';
+
+    const myViewerRef = db.ref(`livestreams/viewers/${username}`);
+    myViewerRef.set(true);
+    myViewerRef.onDisconnect().remove();
+
+    db.ref('livestreams/viewers').on('value', snap => {
+        const viewers = snap.val() || {};
+        streamViewerNumber.textContent = Object.keys(viewers).length;
+    });
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    livePeerConnections[hostName] = pc;
+
+    pc.ontrack = event => {
+        streamVideo.srcObject = event.streams[0];
+        streamVideo.muted = false;
+    };
+
+    pc.onicecandidate = e => {
+        if(e.candidate) db.ref(`livestreams/candidates/${username}/${hostName}`).push(e.candidate.toJSON());
+    };
+
+    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
+    await pc.setLocalDescription(offer);
+    await db.ref(`livestreams/offers/${username}`).set({ offer: { sdp: offer.sdp, type: offer.type } });
+
+    db.ref(`livestreams/answers/${username}`).on('value', async snap => {
+        const data = snap.val();
+        if(data && data.answer && pc.signalingState !== "stable") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    });
+
+    db.ref(`livestreams/candidates/${hostName}/${username}`).on('child_added', cSnap => {
+        if(pc) pc.addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
+    });
+
+    db.ref('livestreams/active').on('value', snap => {
+        if(!snap.exists()) {
+            showToast("Stream ended by broadcaster");
+            exitLiveStreamView();
+        }
+    });
+}
+
+function exitLiveStreamView() {
+    db.ref(`livestreams/viewers/${username}`).remove();
+    if(livePeerConnections[currentActiveBroadcast?.host]) {
+        livePeerConnections[currentActiveBroadcast.host].close();
+    }
+    livePeerConnections = {};
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+}
+exitStreamBtn.onclick = exitLiveStreamView;
+
+
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`livestreams/viewers/${username}`).remove(); } };
 </script>
 </body>
 </html>
