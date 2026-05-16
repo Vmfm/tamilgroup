@@ -26,6 +26,11 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #onlineCount:hover { background: rgba(37, 211, 102, 0.2); }
 #onlineCount::before { content: ''; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; }
 
+/* --- LIVE STREAM ACTION BUTTON --- */
+#liveStreamBtn { background: rgba(234, 179, 8, 0.1); color: #eab308; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid rgba(234, 179, 8, 0.3); font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+#liveStreamBtn:hover { background: rgba(234, 179, 8, 0.2); }
+#liveStreamBtn.streaming::before { content: ''; width: 8px; height: 8px; background: #ff3b30; border-radius: 50%; display: inline-block; animation: pulse 1s infinite; }
+
 #panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
 #panel.open{transform:translateX(0)}
 .panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
@@ -165,6 +170,18 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
+/* --- LIVE STREAM OVERLAY CSS --- */
+#liveStreamOverlay{position:fixed;inset:0;display:none;background:#050c0e;z-index:10005;flex-direction:column;color:#fff}
+.streamContainer{position:relative;flex:1;width:100%;background:#000;display:flex;align-items:center;justify-content:center}
+#streamVideo{width:100%;height:100%;object-fit:contain}
+.streamMetaBar{position:absolute;top:20px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.streamBadge{background:#ff3b30;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;animation:pulse 1.2s infinite}
+.streamViewerCount{background:rgba(0,0,0,0.6);padding:4px 10px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:6px}
+.streamControls{padding:20px;background:#0b141a;display:flex;justify-content:center;gap:20px;align-items:center}
+.streamBtn{padding:12px 24px;border-radius:30px;border:0;font-weight:bold;cursor:pointer;font-size:14px;transition:0.2s}
+.btnStopStream{background:#ff3b30;color:#fff}
+.btnExitStream{background:#2a3942;color:#fff}
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -177,7 +194,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="loader-wrapper">
     <div class="loader-wheel"></div>
-    <div class="loader-text">Loading Private Chat...</div>
+    <div class="loader-text">Loading Group Chat...</div>
 </div>
 
 <div id="onlineListOverlay">
@@ -212,38 +229,17 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
-<div id="app">
-    <div id="topBar">
-        <div id="title"><div id="titleText">Private Chat Dashboard</div></div>
-        <div style="flex:1"></div>
-        <div id="notifWrap">
-            <div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
-            <div id="settingsWrap">
-                <button id="settingsBtn">⚙️</button>
-                <div id="settingsPanel">
-                    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
-                    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
-                    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
-                    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-                    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
-                    <button id="logoutBtn">Logout</button>
-                </div>
-            </div>
-        </div>
-        <div id="onlineCount">0 online</div>
-    </div>
-    <div id="statusLine"></div>
-    <div id="messages" aria-live="polite" style="display:none;"></div>
-    <div id="inputBar" style="display:none;">
+<div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
+    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
+    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
+    <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
+    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><button id="liveStreamBtn">📺 Go Live</button><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
         <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
         <button id="sendBtn">➤</button>
-    </div>
-    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; color:var(--muted);">
-        <span style="font-size:48px; margin-bottom:10px;">💬</span>
-        <h3>Welcome to Private Messenger Layout</h3>
-        <p style="font-size:14px; max-width:400px;">Click the active users button or green status indicator badge above to find available active contacts and open custom individual direct lines.</p>
     </div>
 </div>
 <div id="toast"></div>
@@ -320,101 +316,33 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
 </div>
 
+<div id="liveStreamOverlay">
+    <div class="streamContainer">
+        <video id="streamVideo" autoplay playsinline></video>
+        <div class="streamMetaBar">
+            <div class="streamBadge" id="streamBadgeStatus">LIVE</div>
+            <div class="streamViewerCount">👀 <span id="streamViewerNumber">0</span> viewers</div>
+        </div>
+    </div>
+    <div class="streamControls">
+        <div id="streamHostName" style="font-weight:bold; font-size:16px; margin-right:auto;">Broadcaster</div>
+        <button class="streamBtn btnStopStream" id="stopStreamBtn" style="display:none">End Stream</button>
+        <button class="streamBtn btnExitStream" id="exitStreamBtn" style="display:none">Exit View</button>
+    </div>
+</div>
+
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
 <audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
+
 <script>
-// --- LOCAL/P2P SIMULATION STORAGE-BASED SIGNALING CHANNEL INTERFACES ---
-class LocalSimulatedRef {
-    constructor(path) {
-        this.path = path;
-        this.callbacks = {};
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'chatsim_event_' + this.path) {
-                const data = JSON.parse(e.newValue || '{}');
-                if (this.callbacks[data.event]) {
-                    this.callbacks[data.event](data.snapshot);
-                }
-            }
-        });
-    }
-    _trigger(event, snapshot) {
-        localStorage.setItem('chatsim_event_' + this.path, JSON.stringify({ event, snapshot, t: Date.now() }));
-        if (this.callbacks[event]) this.callbacks[event](snapshot);
-    }
-    on(event, callback) {
-        this.callbacks[event] = callback;
-        if (event === 'value' || event === 'child_added') {
-            const current = this.val_sync();
-            if (event === 'value') {
-                callback({ val: () => current, exists: () => current !== null, numChildren: () => Object.keys(current || {}).length, forEach: (cb) => { Object.keys(current || {}).forEach(k => cb({ key: k, val: () => current[k] })); } });
-            } else if (event === 'child_added' && current) {
-                Object.keys(current).forEach(k => callback({ key: k, val: () => current[k] }));
-            }
-        }
-    }
-    off() { this.callbacks = {}; }
-    val_sync() {
-        const store = JSON.parse(localStorage.getItem('chatsim_db') || '{}');
-        const parts = this.path.split('/');
-        let curr = store;
-        for (let p of parts) { if (!p) continue; if (!curr[p]) return null; curr = curr[p]; }
-        return curr;
-    }
-    once(event) {
-        return new Promise((resolve) => {
-            const current = this.val_sync();
-            resolve({ val: () => current, exists: () => current !== null, numChildren: () => Object.keys(current || {}).length, forEach: (cb) => { Object.keys(current || {}).forEach(k => cb({ key: k, val: () => current[k] })); } });
-        });
-    }
-    set(val) {
-        const store = JSON.parse(localStorage.getItem('chatsim_db') || '{}');
-        const parts = this.path.split('/');
-        let curr = store;
-        for (let i = 0; i < parts.length - 1; i++) { if (!parts[i]) continue; if (!curr[parts[i]]) curr[parts[i]] = {}; curr = curr[parts[i]]; }
-        curr[parts[parts.length - 1]] = val;
-        localStorage.setItem('chatsim_db', JSON.stringify(store));
-        this._trigger('value', { val: () => val, exists: () => val !== null });
-        this._trigger('child_added', { key: parts[parts.length - 1], val: () => val });
-    }
-    push(val = {}) {
-        const key = 'id_' + Math.random().toString(36).substr(2, 9);
-        const childRef = new LocalSimulatedRef(this.path + '/' + key);
-        childRef.set(val);
-        return { key: key };
-    }
-    update(val) {
-        const store = JSON.parse(localStorage.getItem('chatsim_db') || '{}');
-        const parts = this.path.split('/');
-        let curr = store;
-        for (let i = 0; i < parts.length; i++) { if (!parts[i]) continue; if (!curr[parts[i]]) curr[parts[i]] = {}; curr = curr[parts[i]]; }
-        Object.assign(curr, val);
-        localStorage.setItem('chatsim_db', JSON.stringify(store));
-        this._trigger('value', { val: () => curr, exists: () => true });
-        this._trigger('child_changed', { key: parts[parts.length - 1], val: () => curr });
-    }
-    remove() {
-        const store = JSON.parse(localStorage.getItem('chatsim_db') || '{}');
-        const parts = this.path.split('/');
-        let curr = store;
-        for (let i = 0; i < parts.length - 1; i++) { if (!parts[i]) continue; if (!curr[parts[i]]) return; curr = curr[parts[i]]; }
-        const oldKey = parts[parts.length - 1];
-        if (curr) delete curr[oldKey];
-        localStorage.setItem('chatsim_db', JSON.stringify(store));
-        this._trigger('value', { val: () => null, exists: () => false });
-        this._trigger('child_removed', { key: oldKey, val: () => null });
-    }
-    transaction(fn) {
-        const current = this.val_sync();
-        const next = fn(current);
-        this.set(next);
-    }
-    limitToLast() { return this; }
-}
-const db = { ref: (path) => new LocalSimulatedRef(path) };
-const firebase = { database: { ServerValue: { TIMESTAMP: Date.now() } } };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1500); });
 
@@ -435,7 +363,7 @@ const stickerUrls = [ '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200
 const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 
 const emojiPicker = document.getElementById('emojiPicker');
-let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true, mediaRecorder = null, audioChunks = [];
+let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -445,6 +373,20 @@ if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+/* --- LIVE STREAM STATE CONFIGS --- */
+const liveStreamBtn = document.getElementById('liveStreamBtn');
+const liveStreamOverlay = document.getElementById('liveStreamOverlay');
+const streamVideo = document.getElementById('streamVideo');
+const streamHostName = document.getElementById('streamHostName');
+const stopStreamBtn = document.getElementById('stopStreamBtn');
+const exitStreamBtn = document.getElementById('exitStreamBtn');
+const streamViewerNumber = document.getElementById('streamViewerNumber');
+const streamBadgeStatus = document.getElementById('streamBadgeStatus');
+
+let liveStreamStream = null;
+let livePeerConnections = {}; 
+let currentActiveBroadcast = null;
 
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
@@ -505,12 +447,13 @@ async function startAs(name){
     listenPresence(); 
     watchPrivateChatsInitial(); 
     listenBlocks(); 
+    listenLiveStreams();
     manageMessageCount('messages', 15); 
 }
 
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
 
-function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect = () => {}; db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); }
+function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
 function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
 
@@ -607,7 +550,7 @@ async function initiateCall(type) {
 async function setupWebRTC(callId, isCaller, isVideo) {
   peerConnection = new RTCPeerConnection(rtcConfig);
   try { 
-      const constraints = { audio: true, video: isVideo ? { facingMode: isFrontCam ? "user" : "environment" } : false };
+      const constraints = { audio: true, video: isVideo ? (isFrontCam ? { facingMode: "user" } : { facingMode: "environment" }) : false };
       localStream = await navigator.mediaDevices.getUserMedia(constraints); 
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream)); 
       if(isVideo) { localVideo.srcObject = localStream; localVideo.style.display = 'block'; flipCamBtn.style.display = 'flex'; }
@@ -626,14 +569,13 @@ async function setupWebRTC(callId, isCaller, isVideo) {
 function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
-      if(c && c.to === username && c.status === 'ringing') { 
+      if(c.to === username && c.status === 'ringing') { 
           if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
           activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
       } 
   });
   db.ref('calls').on('child_changed', snap => { 
       const c = snap.val(); 
-      if(!c) return;
       if(c.status === 'ended' || c.status === 'declined') cleanupCall(snap.key); 
       if(c.status === 'answered' && (c.from === username || c.to === username)) { 
           startInCallTimer(c); 
@@ -671,21 +613,23 @@ callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') sho
 function cleanupCall(callId){ 
     ringtone.pause(); callOverlay.style.display='none'; clearInterval(callTimerInterval); 
     mainCallCard.classList.remove('connected-video'); remoteVideo.style.display = 'none'; localVideo.style.display = 'none';
-    if(peerConnection) { try { peerConnection.close(); } catch(e){} peerConnection = null; } 
-    if(localStream) { try { localStream.getTracks().forEach(t => t.stop()); } catch(e){} localStream = null; } 
+    if(peerConnection) { peerConnection.close(); peerConnection = null; } 
+    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
     if(callId) db.ref(`calls/${callId}`).remove(); activeCall = null; flipCamBtn.style.display = 'none';
 }
 
-flipCamBtn.onclick = async (e) => {
+flipCamBtn.onclick = (e) => {
     e.stopPropagation(); isFrontCam = !isFrontCam;
     if(localStream) {
         localStream.getTracks().forEach(t => t.stop());
         const constraints = { audio: true, video: { facingMode: isFrontCam ? "user" : "environment" } };
-        localStream = await navigator.mediaDevices.getUserMedia(constraints);
-        localVideo.srcObject = localStream;
-        const videoTrack = localStream.getVideoTracks()[0];
-        const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-        sender.replaceTrack(videoTrack);
+        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+            localStream = stream;
+            localVideo.srcObject = localStream;
+            const videoTrack = localStream.getVideoTracks()[0];
+            const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+            sender.replaceTrack(videoTrack);
+        });
     }
 };
 
@@ -708,7 +652,167 @@ reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: 
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
+
+/* --- LIVE STREAM LOGIC FUNCTIONS --- */
+function listenLiveStreams() {
+    db.ref('livestreams/active').on('value', snap => {
+        const data = snap.val();
+        if (data && data.host !== username) {
+            currentActiveBroadcast = data;
+            liveStreamBtn.textContent = "📺 Watch Live (" + data.host + ")";
+            liveStreamBtn.classList.add('streaming');
+            liveStreamBtn.onclick = joinLiveStreamView;
+        } else if (!data) {
+            currentActiveBroadcast = null;
+            liveStreamBtn.textContent = "📺 Go Live";
+            liveStreamBtn.classList.remove('streaming');
+            liveStreamBtn.onclick = startLiveStreamBroadcast;
+        }
+    });
+}
+
+async function startLiveStreamBroadcast() {
+    if(activeCall) return showToast("Cannot stream during a call.");
+    try {
+        liveStreamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamVideo.srcObject = liveStreamStream;
+        streamVideo.muted = true;
+        streamHostName.textContent = "Your Live Broadcast";
+        
+        liveStreamOverlay.style.display = 'flex';
+        stopStreamBtn.style.display = 'block';
+        exitStreamBtn.style.display = 'none';
+        
+        await db.ref('livestreams/active').set({ host: username, startedAt: Date.now() });
+        db.ref('livestreams/active').onDisconnect().remove();
+
+        db.ref('livestreams/viewers').on('value', snap => {
+            const viewers = snap.val() || {};
+            streamViewerNumber.textContent = Object.keys(viewers).length;
+        });
+
+        db.ref('livestreams/offers').on('child_added', async snap => {
+            const viewerId = snap.key;
+            const offerData = snap.val();
+            if(!offerData || viewerId === username) return;
+
+            const pc = new RTCPeerConnection(rtcConfig);
+            livePeerConnections[viewerId] = pc;
+
+            liveStreamStream.getTracks().forEach(track => pc.addTrack(track, liveStreamStream));
+
+            pc.onicecandidate = e => {
+                if(e.candidate) db.ref(`livestreams/candidates/${username}/${viewerId}`).push(e.candidate.toJSON());
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await db.ref(`livestreams/answers/${viewerId}`).set({ answer: { sdp: answer.sdp, type: answer.type } });
+        });
+
+        db.ref(`livestreams/candidates`).on('child_added', snap => {
+            const viewerKey = snap.key;
+            if(viewerKey === username) return;
+            db.ref(`livestreams/candidates/${viewerKey}/${username}`).on('child_added', cSnap => {
+                if(livePeerConnections[viewerKey]) {
+                    livePeerConnections[viewerKey].addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
+                }
+            });
+        });
+
+    } catch(e) {
+        showToast("Stream access denied");
+    }
+}
+
+stopStreamBtn.onclick = async () => {
+    if(liveStreamStream) {
+        liveStreamStream.getTracks().forEach(t => t.stop());
+        liveStreamStream = null;
+    }
+    Object.keys(livePeerConnections).forEach(k => {
+        livePeerConnections[k].close();
+    });
+    livePeerConnections = {};
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+
+    await db.ref('livestreams/active').remove();
+    await db.ref('livestreams/viewers').remove();
+    await db.ref('livestreams/offers').remove();
+    await db.ref('livestreams/answers').remove();
+    await db.ref('livestreams/candidates').remove();
+    location.reload();
+};
+
+async function joinLiveStreamView() {
+    if(!currentActiveBroadcast) return;
+    const hostName = currentActiveBroadcast.host;
+    streamHostName.textContent = hostName + "'s Stream";
+    
+    liveStreamOverlay.style.display = 'flex';
+    stopStreamBtn.style.display = 'none';
+    exitStreamBtn.style.display = 'block';
+
+    const myViewerRef = db.ref(`livestreams/viewers/${username}`);
+    myViewerRef.set(true);
+    myViewerRef.onDisconnect().remove();
+
+    db.ref('livestreams/viewers').on('value', snap => {
+        const viewers = snap.val() || {};
+        streamViewerNumber.textContent = Object.keys(viewers).length;
+    });
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    livePeerConnections[hostName] = pc;
+
+    pc.ontrack = event => {
+        streamVideo.srcObject = event.streams[0];
+        streamVideo.muted = false;
+    };
+
+    pc.onicecandidate = e => {
+        if(e.candidate) db.ref(`livestreams/candidates/${username}/${hostName}`).push(e.candidate.toJSON());
+    };
+
+    const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
+    await pc.setLocalDescription(offer);
+    await db.ref(`livestreams/offers/${username}`).set({ offer: { sdp: offer.sdp, type: offer.type } });
+
+    db.ref(`livestreams/answers/${username}`).on('value', async snap => {
+        const data = snap.val();
+        if(data && data.answer && pc.signalingState !== "stable") {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    });
+
+    db.ref(`livestreams/candidates/${hostName}/${username}`).on('child_added', cSnap => {
+        if(pc) pc.addIceCandidate(new RTCIceCandidate(cSnap.val())).catch(err=>{});
+    });
+
+    db.ref('livestreams/active').on('value', snap => {
+        if(!snap.exists()) {
+            showToast("Stream ended by broadcaster");
+            exitLiveStreamView();
+        }
+    });
+}
+
+function exitLiveStreamView() {
+    db.ref(`livestreams/viewers/${username}`).remove();
+    if(livePeerConnections[currentActiveBroadcast?.host]) {
+        livePeerConnections[currentActiveBroadcast.host].close();
+    }
+    livePeerConnections = {};
+    streamVideo.srcObject = null;
+    liveStreamOverlay.style.display = 'none';
+}
+exitStreamBtn.onclick = exitLiveStreamView;
+
+
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); db.ref(`livestreams/viewers/${username}`).remove(); } };
 </script>
 </body>
 </html>
