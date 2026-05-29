@@ -165,6 +165,14 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
+/* --- BLOCKED USERS STYLE --- */
+.blocked-list-container { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); max-height: 150px; overflow-y: auto; width: 100%; }
+.blocked-user-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.btn-unblock-inline { background: var(--accent); color: #fff; border: 0; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; }
+.btn-unblock-inline:hover { opacity: 0.9; }
+.no-blocked-text { font-size: 12px; color: var(--muted); text-align: center; padding: 5px 0; }
+#btnOpenBlockedList { width: 100%; background: #2a3942; color: #fff; border: 0; padding: 8px; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: 600; font-size: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -217,7 +225,13 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
+    
+    <button id="btnOpenBlockedList">🚫 Blocked Users</button>
+    <div class="blocked-list-container" id="blockedListContainer"></div>
+    
+    <button id="logoutBtn">Logout</button>
+</div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -342,6 +356,10 @@ if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
+// New elements for managing UI interactions within settings
+const btnOpenBlockedList = document.getElementById('btnOpenBlockedList');
+const blockedListContainer = document.getElementById('blockedListContainer');
+
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
 document.addEventListener('click', (e) => { if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) stickerPicker.style.display = 'none'; });
@@ -376,7 +394,42 @@ function chatId(a,b){ return [a,b].sort().join('_'); }
 function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
-document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
+
+// Handle setting subpanel interactions safely
+document.onclick = (e) => { if(!settingsPanel.contains(e.target)) { settingsPanel.style.display = 'none'; blockedListContainer.style.display = 'none'; } };
+
+btnOpenBlockedList.onclick = (e) => {
+    e.stopPropagation();
+    if(blockedListContainer.style.display === 'block') {
+        blockedListContainer.style.display = 'none';
+    } else {
+        blockedListContainer.style.display = 'block';
+        renderBlockedSettingsList();
+    }
+};
+
+function renderBlockedSettingsList() {
+    blockedListContainer.innerHTML = '';
+    if(blockedUsers.size === 0) {
+        blockedListContainer.innerHTML = `<div class="no-blocked-text">No blocked users</div>`;
+        return;
+    }
+    blockedUsers.forEach(user => {
+        const row = document.createElement('div');
+        row.className = 'blocked-user-row';
+        row.innerHTML = `<span>${user}</span><button class="btn-unblock-inline" data-user="${user}">Unblock</button>`;
+        row.querySelector('.btn-unblock-inline').onclick = (evt) => {
+            evt.stopPropagation();
+            const targetUser = evt.target.dataset.user;
+            db.ref(`blocks/${username}/${targetUser}`).remove().then(() => {
+                showToast(`${targetUser} Unblocked`);
+                renderBlockedSettingsList();
+            });
+        };
+        blockedListContainer.appendChild(row);
+    });
+}
+
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
@@ -592,7 +645,8 @@ function listenBlocks(){
   db.ref(`blocks/${username}`).on('value', s => { 
       blockedUsers = new Set(Object.keys(s.val()||{})); 
       if(privateChatWith) { updateBlockUI(blockedUsers.has(privateChatWith)); openPrivatePopup(privateChatWith); }
-      startGroupListeners();
+      // Dynamically update subpanel visibility elements if open
+      if(blockedListContainer.style.display === 'block') { renderBlockedSettingsList(); }
       refreshPanelList(); 
   }); 
   db.ref('blocks').on('value', snap => { const all = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(all).forEach(u => { if(all[u][username]) iHaveBeenBlockedBy.add(u); }); });
