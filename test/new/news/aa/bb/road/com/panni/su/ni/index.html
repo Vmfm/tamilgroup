@@ -165,6 +165,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
 .onlineUserAvatar { width: 40px; height: 40px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
+/* BLOCKED LIST MODAL CSS */
+#blockedListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3001; display: none; align-items: center; justify-content: center; }
+.blockedListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; border: 1px solid rgba(255,255,255,0.05); }
+.blockedListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: #fff; }
+#blockedUsersContainer { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.blockedUserItem { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.02); }
+.btnUnblockRow { background: var(--accent); color: #fff; border: 0; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.btnUnblockRow:hover { opacity: 0.9; }
+
 @media(max-width:600px){
   #panel{width:100%} 
   #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
@@ -187,6 +196,16 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             <button onclick="document.getElementById('onlineListOverlay').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
         </div>
         <div id="onlineUsersContainer"></div>
+    </div>
+</div>
+
+<div id="blockedListOverlay">
+    <div class="blockedListCard">
+        <div class="blockedListHeader">
+            <span>Blocked Users</span>
+            <button onclick="document.getElementById('blockedListOverlay').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div id="blockedUsersContainer"></div>
     </div>
 </div>
 
@@ -217,7 +236,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div><button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
+    <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
+    <div class="settingRow" style="padding: 5px 0;"><button id="viewBlockedBtn" style="width:100%; background:#2a3942; color:#fff; border:0; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">🚫 Blocked Users List</button></div>
+    <button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
     <div id="inputBar">
         <div id="stickerPicker"></div>
         <button class="groupMediaBtn" id="stickerBtn" title="Stickers">🎭</button>
@@ -594,6 +615,7 @@ function listenBlocks(){
       if(privateChatWith) { updateBlockUI(blockedUsers.has(privateChatWith)); openPrivatePopup(privateChatWith); }
       startGroupListeners();
       refreshPanelList(); 
+      updateBlockedUsersModalList();
   }); 
   db.ref('blocks').on('value', snap => { const all = snap.val() || {}; iHaveBeenBlockedBy = new Set(); Object.keys(all).forEach(u => { if(all[u][username]) iHaveBeenBlockedBy.add(u); }); });
 }
@@ -603,6 +625,33 @@ blockBtn.onclick = () => { if(!privateChatWith) return; const ref = db.ref(`bloc
 reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); };
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
+
+/* BLOCKED USERS LIST LOGIC */
+document.getElementById('viewBlockedBtn').onclick = (e) => {
+    e.stopPropagation();
+    settingsPanel.style.display = 'none';
+    document.getElementById('blockedListOverlay').style.display = 'flex';
+    updateBlockedUsersModalList();
+};
+
+function updateBlockedUsersModalList() {
+    const container = document.getElementById('blockedUsersContainer');
+    container.innerHTML = '';
+    if(blockedUsers.size === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted); font-size:14px;">No blocked users</div>';
+        return;
+    }
+    blockedUsers.forEach(user => {
+        const row = document.createElement('div');
+        row.className = 'blockedUserItem';
+        row.innerHTML = `<span style="font-weight:600; color:#fff;">${user}</span><button class="btnUnblockRow" data-user="${user}">Unblock</button>`;
+        row.querySelector('.btnUnblockRow').onclick = () => {
+            db.ref(`blocks/${username}/${user}`).remove();
+            showToast(`${user} Unblocked`);
+        };
+        container.appendChild(row);
+    });
+}
 
 window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
 </script>
