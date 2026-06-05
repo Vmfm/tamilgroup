@@ -58,7 +58,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .groupMediaBtn{background:#2a3942;font-size:20px}
 #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
-#toast.show{opacity:1;bottom:40px}
+.show{opacity:1;bottom:40px}
 
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
 #loginCard{background:#0b141a;padding:22px;border-radius:16px;display:flex;flex-direction:column;gap:12px;min-width:320px;box-shadow: 0 10px 40px rgba(0,0,0,0.8);border: 1px solid rgba(255,255,255,0.05)}
@@ -352,7 +352,7 @@ const stickerUrls = [ '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200
 const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 
 const emojiPicker = document.getElementById('emojiPicker');
-let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
+let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true, mediaRecorder, audioChunks;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -403,19 +403,20 @@ toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySet
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 
-logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); localStorage.removeItem('guestName'); location.reload(); };
 
 const savedName = localStorage.getItem('guestName');
 if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
 
 async function startAs(name){ 
     const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    // Strict check: if a status entry exists, deny login
-    if(statusSnap.exists()) { 
-        showToast("Username already active on another device."); 
+    // FIX: Check if already online. If exists and we are not the current session, block login.
+    if(statusSnap.exists()) {
+        showToast("Username is already active on another device.");
         localStorage.removeItem('isLoggedIn');
-        loginWrap.style.display = 'flex'; 
-        return; 
+        loginWrap.style.display = 'flex';
+        nameInput.disabled = false;
+        return;
     } 
     username = name; 
     localStorage.setItem('guestName', name); 
@@ -632,7 +633,6 @@ reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: 
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
 
-/* BLOCKED USERS LIST LOGIC */
 document.getElementById('viewBlockedBtn').onclick = (e) => {
     e.stopPropagation();
     settingsPanel.style.display = 'none';
