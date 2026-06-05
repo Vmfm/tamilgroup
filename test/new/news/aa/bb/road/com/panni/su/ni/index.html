@@ -233,6 +233,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
 <div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
     <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
+    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
     <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
@@ -274,6 +275,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             </div>
             <div style="flex:1"></div>
             <button id="privateCallBtn" class="headerActionBtn" style="border-color: var(--accent); color: var(--accent); margin-right: 4px; font-size: 14px;">📞</button>
+            <button id="privateVideoBtn" class="headerActionBtn" style="border-color: var(--accent); color: var(--accent); margin-right: 8px; font-size: 14px;">📹</button>
             <button id="blockBtn" class="headerActionBtn not-blocked">Block</button>
             <button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button>
         </div>
@@ -339,7 +341,7 @@ const messagesEl = document.getElementById('messages'), messageInput = document.
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
-const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
+const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), toggleVideo = document.getElementById('toggleVideo'), toggleVideoKnob = document.getElementById('toggleVideoKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
 const callAvatarContainer = document.getElementById('callAvatarContainer'), callTypeText = document.getElementById('callTypeText'), callTimer = document.getElementById('callTimer'), inboundCallBtns = document.getElementById('inboundCallBtns'), outboundCallBtns = document.getElementById('outboundCallBtns'), activeCallControls = document.getElementById('activeCallControls'), muteBtn = document.getElementById('muteBtn'), speakerBtn = document.getElementById('speakerBtn'), endCallBtnBig = document.getElementById('endCallBtnBig'), cancelCallBtn = document.getElementById('cancelCallBtn');
@@ -347,7 +349,7 @@ const headerDot = document.getElementById('headerDot'), headerStatusText = docum
 
 const loginPhotoInput = document.getElementById('loginPhotoInput'), ageSelect = document.getElementById('ageSelect'), stickerBtn = document.getElementById('stickerBtn'), stickerPicker = document.getElementById('stickerPicker');
 const stickerUrls = [ '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp' ];
-const privateCallBtn = document.getElementById('privateCallBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
+const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 
 const emojiPicker = document.getElementById('emojiPicker');
 let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
@@ -355,6 +357,7 @@ const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
+if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null;
@@ -391,11 +394,12 @@ function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinute
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
+function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
 document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
+toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 
@@ -406,7 +410,13 @@ if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.styl
 
 async function startAs(name){ 
     const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
+    // Strict check: if a status entry exists, deny login
+    if(statusSnap.exists()) { 
+        showToast("Username already active on another device."); 
+        localStorage.removeItem('isLoggedIn');
+        loginWrap.style.display = 'flex'; 
+        return; 
+    } 
     username = name; 
     localStorage.setItem('guestName', name); 
     localStorage.setItem('isLoggedIn', 'true');
@@ -499,6 +509,7 @@ bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panel
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 
 privateCallBtn.onclick = () => initiateCall('audio');
+privateVideoBtn.onclick = () => initiateCall('video');
 
 async function initiateCall(type) {
     if(!privateChatWith) return;
@@ -506,13 +517,14 @@ async function initiateCall(type) {
     if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
     if(!await checkTargetPrivateChatStatus()) return;
     if(type === 'audio' && !settings.audioCall) return showToast('Audio calls disabled');
+    if(type === 'video' && !settings.videoCall) return showToast('Video calls disabled');
     if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing', type);
-    setupWebRTC(callId, true, false);
+    setupWebRTC(callId, true, type === 'video');
 }
 
 async function setupWebRTC(callId, isCaller, isVideo) {
@@ -521,10 +533,12 @@ async function setupWebRTC(callId, isCaller, isVideo) {
       const constraints = { audio: true, video: isVideo ? (isFrontCam ? { facingMode: "user" } : { facingMode: "environment" }) : false };
       localStream = await navigator.mediaDevices.getUserMedia(constraints); 
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream)); 
+      if(isVideo) { localVideo.srcObject = localStream; localVideo.style.display = 'block'; flipCamBtn.style.display = 'flex'; }
   } catch(e) { showToast("Media denied"); cleanupCall(callId); return; }
 
   peerConnection.ontrack = (event) => { 
-      document.getElementById('remoteAudio').srcObject = event.streams[0];
+      if(activeCall && activeCall.type === 'video') { remoteVideo.srcObject = event.streams[0]; remoteVideo.style.display = 'block'; mainCallCard.classList.add('connected-video'); } 
+      else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
   };
   peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
@@ -536,7 +550,7 @@ function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
-          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
+          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
           activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
       } 
   });
@@ -555,11 +569,11 @@ async function showCallOverlay(otherName, type, callType) {
   callFrom.textContent = otherName; callOverlay.style.display = 'flex';
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
   if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
-  if(type === 'incoming') { callTypeText.textContent = "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
+  if(type === 'incoming') { callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
   else { callTypeText.textContent = "Calling..."; inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'flex'; activeCallControls.style.display = 'none'; }
 }
 
-async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, false); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
+async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
 acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
 declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
@@ -568,7 +582,7 @@ endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
-  activeCallControls.classList.remove('hidden');
+  if(c.type === 'video') { mainCallCard.classList.add('connected-video'); showTemporaryControls(); } else { activeCallControls.classList.remove('hidden'); }
   clearInterval(callTimerInterval);
   callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
 }
