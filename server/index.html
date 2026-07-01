@@ -280,7 +280,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             <button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button>
         </div>
         <div id="privateMessages"></div>
-        <div id="typingPrivate" class="small"></div>
+        <div id="typingPrivate" style="font-size:11px; color:var(--accent); padding:2px 8px; height: 16px;"></div>
         <div id="privateInputBar">
             <input type="file" id="privImgFile" accept="image/*" style="display:none">
             <button class="mediaBtn" onclick="document.getElementById('privImgFile').click()" title="Send Image">📷</button>
@@ -340,6 +340,7 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
 const loginWrap = document.getElementById('loginWrap'), nameInput = document.getElementById('nameInput'), joinBtn = document.getElementById('joinBtn');
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
+const typingPrivateEl = document.getElementById('typingPrivate');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
 const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), toggleVideo = document.getElementById('toggleVideo'), toggleVideoKnob = document.getElementById('toggleVideoKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
@@ -360,7 +361,7 @@ if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
-let peerConnection = null, localStream = null;
+let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
@@ -469,9 +470,22 @@ async function openPrivatePopup(other){
         if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); 
     }); 
     db.ref(`unread/${username}/${other}`).set(0); 
+    
+    // Listen for typing
+    db.ref(`typing/private/${key}/${other}`).on('value', s => typingPrivateEl.textContent = s.val() ? `${other} is typing...` : '');
+    
     panelEl.classList.remove('open'); 
     document.getElementById('app').style.transform = ''; 
 }
+
+// Typing logic for private
+privateInput.oninput = () => {
+    if(!privateChatWith) return;
+    const key = chatId(username, privateChatWith);
+    db.ref(`typing/private/${key}/${username}`).set(true);
+    clearTimeout(privateTypingTimer);
+    privateTypingTimer = setTimeout(() => db.ref(`typing/private/${key}/${username}`).remove(), 2000);
+};
 
 function renderPrivateMessageWithId(chatKey, id, msg){ 
     if(msg.name !== username && blockedUsers.has(msg.name)) return; 
@@ -498,7 +512,10 @@ privateSend.onclick = async () => {
     const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
 };
 
-closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; };
+closePrivate.onclick = () => { 
+    if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove();
+    privatePopup.style.display='none'; privateChatWith=null; 
+};
 bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 
@@ -626,7 +643,6 @@ reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: 
 
 profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
 
-/* BLOCKED USERS LIST LOGIC */
 document.getElementById('viewBlockedBtn').onclick = (e) => {
     e.stopPropagation();
     settingsPanel.style.display = 'none';
@@ -653,7 +669,7 @@ function updateBlockedUsersModalList() {
     });
 }
 
-window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); } };
+window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove(); } };
 </script>
 </body>
 </html>
