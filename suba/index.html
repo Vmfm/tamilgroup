@@ -562,7 +562,7 @@ async function showCallOverlay(otherName, type, callType) {
   callFrom.textContent = otherName; 
   callOverlay.style.display = 'flex';
   
-  // Request native fullscreen so it escapes mobile/desktop app containers & headers completely
+  // Request native fullscreen automatically right when the call starts (incoming/outgoing)
   try {
       if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
@@ -634,7 +634,6 @@ speakerBtn.onclick = (e) => { e.stopPropagation(); const audioEl = document.getE
 fullScreenBtn.onclick = (e) => { 
     e.stopPropagation(); 
     mainCallCard.classList.toggle('connected-video'); 
-    // Toggle actual device fullscreen API
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {});
     } else {
