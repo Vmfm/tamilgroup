@@ -530,7 +530,18 @@ async function setupWebRTC(callId, isCaller, isVideo) {
   } catch(e) { showToast("Media denied"); cleanupCall(callId); return; }
 
   peerConnection.ontrack = (event) => { 
-      if(activeCall && activeCall.type === 'video') { remoteVideo.srcObject = event.streams[0]; remoteVideo.style.display = 'block'; mainCallCard.classList.add('connected-video'); } 
+      if(activeCall && activeCall.type === 'video') { 
+          remoteVideo.srcObject = event.streams[0]; 
+          remoteVideo.style.display = 'block'; 
+          mainCallCard.classList.add('connected-video'); 
+          try {
+              if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen();
+              } else if (document.documentElement.webkitRequestFullscreen) {
+                  document.documentElement.webkitRequestFullscreen();
+              }
+          } catch(err) {}
+      } 
       else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
   };
   peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
@@ -561,14 +572,6 @@ function watchCallsForMe(){
 async function showCallOverlay(otherName, type, callType) {
   callFrom.textContent = otherName; 
   callOverlay.style.display = 'flex';
-  
-  try {
-      if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
-      } else if (document.documentElement.webkitRequestFullscreen) {
-          document.documentElement.webkitRequestFullscreen();
-      }
-  } catch(err) {}
 
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
   if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
@@ -578,29 +581,24 @@ async function showCallOverlay(otherName, type, callType) {
 
 async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
-acceptCallBtn.onclick = () => {
-    ringtone.pause();
-    db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
-    if(activeCall.type === 'video') {
-        setupWebRTC(activeCall.id, false, true).then(() => {
-            if(activeCall && activeCall.offer) {
-                peerConnection.setRemoteDescription(new RTCSessionDescription(activeCall.offer)).then(() => {
-                    peerConnection.createAnswer().then(answer => {
-                        peerConnection.setLocalDescription(answer);
-                        db.ref(`calls/${activeCall.id}`).update({ answer: { sdp: answer.sdp, type: answer.type } });
-                    });
-                });
-            }
-        });
-    }
-};
+acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
 declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
 cancelCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
 endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
-  if(c.type === 'video') { mainCallCard.classList.add('connected-video'); showTemporaryControls(); } else { activeCallControls.classList.remove('hidden'); }
+  if(c.type === 'video') { 
+      mainCallCard.classList.add('connected-video'); 
+      showTemporaryControls(); 
+      try {
+          if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen();
+          } else if (document.documentElement.webkitRequestFullscreen) {
+              document.documentElement.webkitRequestFullscreen();
+          }
+      } catch(err) {}
+  } else { activeCallControls.classList.remove('hidden'); }
   clearInterval(callTimerInterval);
   callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
 }
@@ -687,7 +685,7 @@ function updateBlockedUsersModalList() {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted); font-size:14px;">No blocked users</div>';
         return;
     }
-    blockedUsers.slice().forEach(user => {
+    blockedUsers.forEach(user => {
         const row = document.createElement('div');
         row.className = 'blockedUserItem';
         row.innerHTML = `<span style="font-weight:600; color:#fff;">${user}</span><button class="btnUnblockRow" data-user="${user}">Unblock</button>`;
@@ -695,7 +693,7 @@ function updateBlockedUsersModalList() {
             db.ref(`blocks/${username}/${user}`).remove();
             showToast(`${user} Unblocked`);
         };
-        container.container.appendChild ? container.appendChild(row) : container.appendChild(row);
+        container.appendChild(row);
     });
 }
 
