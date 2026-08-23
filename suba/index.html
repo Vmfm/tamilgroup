@@ -562,7 +562,6 @@ async function showCallOverlay(otherName, type, callType) {
   callFrom.textContent = otherName; 
   callOverlay.style.display = 'flex';
   
-  // Request native fullscreen automatically right when the call starts (incoming/outgoing)
   try {
       if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
@@ -579,7 +578,22 @@ async function showCallOverlay(otherName, type, callType) {
 
 async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
-acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
+acceptCallBtn.onclick = () => {
+    ringtone.pause();
+    db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
+    if(activeCall.type === 'video') {
+        setupWebRTC(activeCall.id, false, true).then(() => {
+            if(activeCall && activeCall.offer) {
+                peerConnection.setRemoteDescription(new RTCSessionDescription(activeCall.offer)).then(() => {
+                    peerConnection.createAnswer().then(answer => {
+                        peerConnection.setLocalDescription(answer);
+                        db.ref(`calls/${activeCall.id}`).update({ answer: { sdp: answer.sdp, type: answer.type } });
+                    });
+                });
+            }
+        });
+    }
+};
 declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
 cancelCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
 endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
@@ -602,7 +616,6 @@ function cleanupCall(callId){
     remoteVideo.style.display = 'none'; 
     localVideo.style.display = 'none';
     
-    // Exit native fullscreen when call finishes
     try {
         if (document.exitFullscreen) {
             document.exitFullscreen();
@@ -674,7 +687,7 @@ function updateBlockedUsersModalList() {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted); font-size:14px;">No blocked users</div>';
         return;
     }
-    blockedUsers.forEach(user => {
+    blockedUsers.slice().forEach(user => {
         const row = document.createElement('div');
         row.className = 'blockedUserItem';
         row.innerHTML = `<span style="font-weight:600; color:#fff;">${user}</span><button class="btnUnblockRow" data-user="${user}">Unblock</button>`;
@@ -682,7 +695,7 @@ function updateBlockedUsersModalList() {
             db.ref(`blocks/${username}/${user}`).remove();
             showToast(`${user} Unblocked`);
         };
-        container.appendChild(row);
+        container.container.appendChild ? container.appendChild(row) : container.appendChild(row);
     });
 }
 
