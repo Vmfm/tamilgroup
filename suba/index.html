@@ -208,15 +208,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
 </div>
 
-<div id="emojiPicker">
-    <span class="emoji-btn">❤️</span>
-    <span class="emoji-btn">😂</span>
-    <span class="emoji-btn">😮</span>
-    <span class="emoji-btn">😢</span>
-    <span class="emoji-btn">🙏</span>
-    <span class="emoji-btn">👍</span>
-</div>
-
 <div id="profilePreviewOverlay">
     <div class="profilePreviewCard">
         <button class="btnClosePreview" id="closePreviewBtn">✕</button>
@@ -351,14 +342,13 @@ const loginPhotoInput = document.getElementById('loginPhotoInput'), ageSelect = 
 const stickerUrls = [ '/tamilgroup/images/200 (1).webp', '/tamilgroup/images/200 (10).webp', '/tamilgroup/images/200 (11).webp', '/tamilgroup/images/200 (12).webp', '/tamilgroup/images/200 (13).webp', '/tamilgroup/images/200 (14).webp', '/tamilgroup/images/200 (2).webp', '/tamilgroup/images/200 (3).webp', '/tamilgroup/images/200 (4).webp', '/tamilgroup/images/200 (5).webp', '/tamilgroup/images/200 (6).webp', '/tamilgroup/images/200 (7).webp', '/tamilgroup/images/100 (1).webp', '/tamilgroup/images/100.webp', '/tamilgroup/images/giphy (1).webp', '/tamilgroup/images/giphy (2).webp', '/tamilgroup/images/giphy (3).webp', '/tamilgroup/images/giphy (4).webp', '/tamilgroup/images/giphy.webp', '/tamilgroup/images/vadivelu-seri-vidu.webp' ];
 const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBtn = document.getElementById('privateVideoBtn'), profilePreviewOverlay = document.getElementById('profilePreviewOverlay'), previewImgBox = document.getElementById('previewImgBox'), previewName = document.getElementById('previewName'), closePreviewBtn = document.getElementById('closePreviewBtn'), previewMsgBtn = document.getElementById('previewMsgBtn');
 
-const emojiPicker = document.getElementById('emojiPicker');
-let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
+let username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
 const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
-if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
+if(typeof settings.privateCall === 'undefined') settings.privateCall = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -373,10 +363,6 @@ closePreviewBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; 
 profilePreviewOverlay.onclick = (e) => { if(e.target === profilePreviewOverlay) profilePreviewOverlay.style.display = "none"; };
 previewMsgBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; openPrivatePopup(previewSelectedUser); };
 
-function showEmojiPicker(x, y, refPath) { currentReactionRef = refPath; emojiPicker.style.left = x + 'px'; emojiPicker.style.top = (y - 50) + 'px'; emojiPicker.style.display = 'flex'; }
-document.querySelectorAll('.emoji-btn').forEach(btn => { btn.onclick = () => { if(currentReactionRef) db.ref(currentReactionRef + '/reactions/' + username).set(btn.textContent); emojiPicker.style.display = 'none'; }; });
-document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
-function attachLongPress(el, refPath) { const start = (e) => { longPressTimer = setTimeout(() => { const touch = e.touches ? e.touches[0] : e; showEmojiPicker(touch.clientX, touch.clientY, refPath); }, 600); }; const cancel = () => clearTimeout(longPressTimer); el.addEventListener('mousedown', start); el.addEventListener('touchstart', start); el.addEventListener('mouseup', cancel); el.addEventListener('mouseleave', cancel); el.addEventListener('touchend', cancel); }
 function renderReactions(container, reactionsObj) { let existing = container.querySelector('.reaction-container'); if(existing) existing.remove(); if(!reactionsObj) return; const reactions = Object.values(reactionsObj); const unique = [...new Set(reactions)]; const div = document.createElement('div'); div.className = 'reaction-container'; div.innerHTML = unique.join(''); container.appendChild(div); }
 function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
 function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
@@ -431,7 +417,7 @@ function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/$
 
 function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
 
-function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
+function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
@@ -497,7 +483,6 @@ function renderPrivateMessageWithId(chatKey, id, msg){
     row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
     const bubble = row.querySelector('.private-bubble'); 
     if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
-    attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
     if(msg.reactions) renderReactions(bubble, msg.reactions);
     privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
 }
@@ -670,3 +655,4 @@ window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remov
 </script>
 </body>
 </html>
+```[cite: 1]
