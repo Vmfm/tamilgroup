@@ -335,21 +335,6 @@ const db = firebase.database();
 
 window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1500); });
 
-/* --- DEVICE/BROWSER FINGERPRINTING (UUID) GENERATOR/VERIFIER --- */
-function getOrCreateDeviceUUID() {
-    let uuid = localStorage.getItem('device_fingerprint_uuid');
-    if (!uuid) {
-        // Fallback generator for a standard RFC4122 version 4 UUID
-        uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-        localStorage.setItem('device_fingerprint_uuid', uuid);
-    }
-    return uuid;
-}
-const currentDeviceUUID = getOrCreateDeviceUUID();
-
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const messagesEl = document.getElementById('messages'), messageInput = document.getElementById('messageInput'), sendBtn = document.getElementById('sendBtn'), statusLine = document.getElementById('statusLine'), onlineCountEl = document.getElementById('onlineCount'), toastEl = document.getElementById('toast');
@@ -404,7 +389,7 @@ micBtn.onclick = async () => { if(!await checkTargetPrivateChatStatus()) return;
 
 privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
 
-function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false, deviceUUID: currentDeviceUUID }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
+function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
@@ -422,23 +407,19 @@ toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; apply
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
 const savedName = localStorage.getItem('guestName');
-if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
+if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; } }
 
 async function startAs(name){ 
-    const profileSnap = await db.ref(`profiles/${name}`).once('value');
-    const profileData = profileSnap.val();
-    if(profileData && profileData.deviceUUID && profileData.deviceUUID !== currentDeviceUUID) {
-        showToast("This username is locked to another device/browser fingerprint!");
-        loginWrap.style.display = 'flex';
-        return;
-    }
     const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
+    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { 
+        showToast("Already taken! This ID is currently logged in on another device."); 
+        loginWrap.style.display = 'flex'; 
+        return; 
+    } 
     username = name; 
     localStorage.setItem('guestName', name); 
     localStorage.setItem('isLoggedIn', 'true');
-    if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge, deviceUUID: currentDeviceUUID }); 
-    else db.ref(`profiles/${username}`).update({ deviceUUID: currentDeviceUUID });
+    if(profileImage) db.ref(`profiles/${username}`).update({ profileImage, age: userAge }); 
     loginWrap.style.display = 'none'; 
     setPresence(); 
     startGroupListeners(); 
@@ -453,11 +434,10 @@ joinBtn.onclick = async () => {
     const n = nameInput.value.trim(); 
     if(!n) return showToast('Enter name'); 
     
-    // Check if profile exists in database and deviceUUID matches/mismatches
-    const profileSnap = await db.ref(`profiles/${n}`).once('value');
-    const profileData = profileSnap.val();
-    if(profileData && profileData.deviceUUID && profileData.deviceUUID !== currentDeviceUUID) {
-        showToast("This username is already taken on another device!");
+    // Check if user is already logged in elsewhere before letting them join
+    const statusSnap = await db.ref(`status/${n}`).once('value');
+    if(statusSnap.exists()) {
+        showToast("Already taken! This ID is currently logged in on another device.");
         return;
     }
 
@@ -477,7 +457,7 @@ joinBtn.onclick = async () => {
     } 
 };
 
-function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings, deviceUUID: currentDeviceUUID }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
+function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
 function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
 
@@ -485,7 +465,7 @@ function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name))
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
-function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now(), deviceUUID: currentDeviceUUID }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
+function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
 function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
 
 function listenPresence(){ db.ref('status').on('value', async snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]); const container = document.getElementById('onlineUsersContainer'); container.innerHTML = ''; for(let user in val) { if(user === username) continue; const profSnap = await db.ref(`profiles/${user}`).once('value'); const prof = profSnap.val() || {}; const userDiv = document.createElement('div'); userDiv.className = 'onlineUserItem'; let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase(); userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`; userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); }; container.appendChild(userDiv); } }); }
@@ -558,7 +538,7 @@ privateSend.onclick = async () => {
     const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
     if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); 
     if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); 
-    const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false, deviceUUID: currentDeviceUUID }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
+    const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
 };
 
 closePrivate.onclick = () => { 
@@ -582,7 +562,7 @@ async function initiateCall(type) {
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
-    await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now(), deviceUUID: currentDeviceUUID });
+    await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing', type);
     setupWebRTC(callId, true, type === 'video');
 }
