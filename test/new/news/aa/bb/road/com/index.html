@@ -252,7 +252,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="statusPopup">
     <div class="statusCard">
         <div class="statusHeader">
-            <span>Statuses</span>
+            <span>Status</span>
             <button onclick="document.getElementById('statusPopup').style.display='none'" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>
         </div>
         <div class="statusBody">
@@ -260,7 +260,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
                 <div class="statusSectionTitle">My Status</div>
                 <div class="myStatusBox">
                     <div class="statusInputRow">
-                        <input type="text" id="statusTextInput" placeholder="Type text status..." autocomplete="off"/>
+                        <input type="text" id="statusTextInput" placeholder="Type text status (replaces active)..." autocomplete="off"/>
                         <button class="statusUploadBtn" id="postTextStatusBtn">Post</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
@@ -270,9 +270,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
                 </div>
             </div>
             <div>
-                <div class="statusSectionTitle">Recent Updates</div>
                 <div id="otherStatusesContainer" style="display:flex; flex-direction:column; gap:8px;">
-                    <!-- Populated dynamically -->
+                    <!-- Populated dynamically (Only My Status shown, others hidden) -->
                 </div>
             </div>
         </div>
@@ -775,8 +774,8 @@ function updateBlockedUsersModalList() {
     });
 }
 
-/* --- STATUS LOGIC (IN-MEMORY / LOCALSTORAGE & BLOCKED STATUS FILTERING) --- */
-let myStatuses = JSON.parse(localStorage.getItem('local_my_statuses') || '[]');
+/* --- STATUS LOGIC (1 STATUS PER PERSON ONLY, 24HR EXPIRY, NO OTHER USERS SHOWN) --- */
+let myStatus = JSON.parse(localStorage.getItem('local_single_status') || 'null');
 const statusBtnHeader = document.getElementById('statusBtnHeader');
 const statusPopup = document.getElementById('statusPopup');
 const statusTextInput = document.getElementById('statusTextInput');
@@ -793,20 +792,23 @@ const storyViewCounterText = document.getElementById('storyViewCounterText');
 const storyReplyBtn = document.getElementById('storyReplyBtn');
 
 let activeStoryUser = null;
-let activeStoryIndex = 0;
 let storyTimer = null;
 
-// Clean up expired statuses (> 24 hr)
-function cleanExpiredStatuses() {
-    const now = Date.now();
-    const expiryLimit = 24 * 60 * 60 * 1000;
-    myStatuses = myStatuses.filter(st => (now - st.time) < expiryLimit);
-    localStorage.setItem('local_my_statuses', JSON.stringify(myStatuses));
+// Clean up if older than 24 hr
+function cleanExpiredStatus() {
+    if(myStatus) {
+        const now = Date.now();
+        const expiryLimit = 24 * 60 * 60 * 1000;
+        if((now - myStatus.time) >= expiryLimit) {
+            myStatus = null;
+            localStorage.removeItem('local_single_status');
+        }
+    }
 }
-cleanExpiredStatuses();
+cleanExpiredStatus();
 
 statusBtnHeader.onclick = () => {
-    cleanExpiredStatuses();
+    cleanExpiredStatus();
     statusPopup.style.display = 'flex';
     renderStatusesPopupList();
 };
@@ -814,19 +816,16 @@ statusBtnHeader.onclick = () => {
 postTextStatusBtn.onclick = () => {
     const txt = statusTextInput.value.trim();
     if(!txt) return showToast("Enter status text");
-    const newStatus = {
-        id: 'st_' + Date.now() + Math.random().toString(36).substr(2, 5),
+    myStatus = {
+        id: 'st_' + Date.now(),
         type: 'text',
         content: txt,
-        time: Date.now(),
-        views: {}
+        time: Date.now()
     };
-    myStatuses.push(newStatus);
-    localStorage.setItem('local_my_statuses', JSON.stringify(myStatuses));
+    localStorage.setItem('local_single_status', JSON.stringify(myStatus));
     statusTextInput.value = '';
-    showToast("Status posted successfully!");
+    showToast("Status updated successfully!");
     renderStatusesPopupList();
-    broadcastMyStatuses();
 };
 
 statusMediaInput.onchange = (e) => {
@@ -835,163 +834,71 @@ statusMediaInput.onchange = (e) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
         const isVideo = file.type.startsWith('video');
-        const newStatus = {
-            id: 'st_' + Date.now() + Math.random().toString(36).substr(2, 5),
+        myStatus = {
+            id: 'st_' + Date.now(),
             type: isVideo ? 'video' : 'image',
             content: ev.target.result,
-            time: Date.now(),
-            views: {}
+            time: Date.now()
         };
-        myStatuses.push(newStatus);
-        localStorage.setItem('local_my_statuses', JSON.stringify(myStatuses));
-        showToast("Media status posted!");
+        localStorage.setItem('local_single_status', JSON.stringify(myStatus));
+        showToast("Media status updated!");
         renderStatusesPopupList();
-        broadcastMyStatuses();
     };
     reader.readAsDataURL(file);
 };
 
-// Sync statuses via Firebase without permanently storing heavy payloads in Firebase database memory long-term (ephemeral peer sync simulation / ephemeral node update)
-function broadcastMyStatuses() {
-    if(!username) return;
-    cleanExpiredStatuses();
-    // Publish only lightweight active items to Firebase status broadcast node temporarily
-    db.ref(`ephemeralStatuses/${username}`).set({
-        name: username,
-        profileImage: profileImage || '',
-        statuses: myStatuses,
-        lastUpdated: Date.now()
-    });
-}
-
-// Periodically broadcast presence / heartbeat for status sync
-setInterval(() => {
-    if(username) {
-        cleanExpiredStatuses();
-        broadcastMyStatuses();
-    }
-}, 10000);
-
 function renderStatusesPopupList() {
     otherStatusesContainer.innerHTML = '';
-    
-    // Render My Statuses Section inside popup
+    cleanExpiredStatus();
+
     const mySection = document.createElement('div');
-    mySection.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom:14px;";
-    mySection.innerHTML = `<div style="font-size:12px; color:var(--muted); font-weight:bold;">Active Stories (${myStatuses.length})</div>`;
+    mySection.style.cssText = "display:flex; flex-direction:column; gap:6px;";
+    mySection.innerHTML = `<div style="font-size:12px; color:var(--muted); font-weight:bold;">Your Active 24hr Status</div>`;
     
-    if(myStatuses.length === 0) {
-        mySection.innerHTML += `<div style="font-size:12px; color:var(--muted); font-style:italic;">No active statuses posted by you.</div>`;
+    if(!myStatus) {
+        mySection.innerHTML += `<div style="font-size:12px; color:var(--muted); font-style:italic;">No active status posted. Posting a new status will replace any previous one.</div>`;
     } else {
-        myStatuses.forEach((st, idx) => {
-            const row = document.createElement('div');
-            row.className = 'statusItemRow';
-            let previewLabel = st.type === 'text' ? st.content : (st.type === 'image' ? '📷 Photo Status' : '📹 Video Status');
-            row.innerHTML = `
-                <div class="statusItemInfo">
-                    <div class="statusItemThumb">${profileImage ? `<img src="${profileImage}">` : username.charAt(0)}</div>
-                    <div class="statusItemMeta">
-                        <span class="statusItemName">${previewLabel}</span>
-                        <span class="statusItemTime">${formatTime(st.time)} • Views: ${Object.keys(st.views || {}).length}</span>
-                    </div>
+        let previewLabel = myStatus.type === 'text' ? myStatus.content : (myStatus.type === 'image' ? '📷 Photo Status' : '📹 Video Status');
+        const row = document.createElement('div');
+        row.className = 'statusItemRow';
+        row.innerHTML = `
+            <div class="statusItemInfo">
+                <div class="statusItemThumb">${profileImage ? `<img src="${profileImage}">` : username.charAt(0)}</div>
+                <div class="statusItemMeta">
+                    <span class="statusItemName">${previewLabel}</span>
+                    <span class="statusItemTime">Posted: ${formatTime(myStatus.time)}</span>
                 </div>
-                <div class="statusActions">
-                    <button class="statusActionBtn" onclick="viewMyStory(${idx})">View</button>
-                    <button class="statusDeleteBtn" onclick="deleteMyStatus('${st.id}')">Delete</button>
-                </div>
-            `;
-            mySection.appendChild(row);
-        });
+            </div>
+            <div class="statusActions">
+                <button class="statusActionBtn" onclick="viewMyStory()">View</button>
+                <button class="statusDeleteBtn" onclick="deleteMyStatus()">Delete</button>
+            </div>
+        `;
+        mySection.appendChild(row);
     }
     otherStatusesContainer.appendChild(mySection);
-
-    // Fetch other users' statuses from Firebase ephemeral node, filtering out blocked users
-    db.ref('ephemeralStatuses').once('value').then(snap => {
-        const allData = snap.val() || {};
-        const headerOthersTitle = document.createElement('div');
-        headerOthersTitle.className = 'statusSectionTitle';
-        headerOthersTitle.style.marginTop = '10px';
-        headerOthersTitle.textContent = 'Other People Statuses';
-        otherStatusesContainer.appendChild(headerOthersTitle);
-
-        let countOther = 0;
-        Object.keys(allData).forEach(u => {
-            if(u === username) return;
-            if(blockedUsers.has(u) || iHaveBeenBlockedBy.has(u)) return; // Respect block rules
-            
-            const userData = allData[u];
-            if(!userData || !userData.statuses || !Array.isArray(userData.statuses)) return;
-
-            // Clean expired for others
-            const now = Date.now();
-            const validSts = userData.statuses.filter(st => (now - st.time) < (24 * 60 * 60 * 1000));
-            if(validSts.length === 0) return;
-
-            countOther++;
-            const userRow = document.createElement('div');
-            userRow.className = 'statusItemRow';
-            let avatarHtml = userData.profileImage ? `<img src="${userData.profileImage}">` : u.charAt(0);
-            userRow.innerHTML = `
-                <div class="statusItemInfo">
-                    <div class="statusItemThumb">${avatarHtml}</div>
-                    <div class="statusItemMeta">
-                        <span class="statusItemName">${u}</span>
-                        <span class="statusItemTime">${validSts.length} update(s) available</span>
-                    </div>
-                </div>
-                <div class="statusActions">
-                    <button class="statusActionBtn" onclick="openUserStory('${u}')">View Status</button>
-                </div>
-            `;
-            otherStatusesContainer.appendChild(userRow);
-        });
-
-        if(countOther === 0) {
-            const noneEl = document.createElement('div');
-            noneEl.style.cssText = "font-size:12px; color:var(--muted); font-style:italic;";
-            noneEl.textContent = "No status updates from other contacts.";
-            otherStatusesContainer.appendChild(noneEl);
-        }
-    });
 }
 
-window.deleteMyStatus = function(statusId) {
-    myStatuses = myStatuses.filter(s => s.id !== statusId);
-    localStorage.setItem('local_my_statuses', JSON.stringify(myStatuses));
+window.deleteMyStatus = function() {
+    myStatus = null;
+    localStorage.removeItem('local_single_status');
     showToast("Status deleted");
     renderStatusesPopupList();
-    broadcastMyStatuses();
 };
 
-window.viewMyStory = function(idx) {
+window.viewMyStory = function() {
     statusPopup.style.display = 'none';
+    if(!myStatus) return;
     startStoryViewer({
         name: username,
         profileImage: profileImage,
-        statuses: myStatuses
-    }, idx, true);
-};
-
-window.openUserStory = async function(targetUser) {
-    statusPopup.style.display = 'none';
-    const snap = await db.ref(`ephemeralStatuses/${targetUser}`).once('value');
-    const val = snap.val();
-    if(!val || !val.statuses || val.statuses.length === 0) {
-        return showToast("No statuses found");
-    }
-    
-    // Register view counter increment in Firebase ephemeral node
-    val.statuses.forEach((st, idx) => {
-        db.ref(`ephemeralStatuses/${targetUser}/statuses/${idx}/views/${username}`).set(true);
+        status: myStatus
     });
-
-    startStoryViewer(val, 0, false);
 };
 
-function startStoryViewer(userData, startIndex, isSelf) {
+function startStoryViewer(userData) {
     storyViewerOverlay.style.display = 'flex';
     activeStoryUser = userData;
-    activeStoryIndex = startIndex;
 
     if(userData.profileImage) {
         storyUserAvatarBox.innerHTML = `<img src="${userData.profileImage}">`;
@@ -1000,47 +907,31 @@ function startStoryViewer(userData, startIndex, isSelf) {
     }
     storyViewerUsername.textContent = userData.name;
 
-    // Setup story progress indicator bars
     storyBarsContainer.innerHTML = '';
-    userData.statuses.forEach((_, i) => {
-        const track = document.createElement('div');
-        track.className = 'storyBarTrack';
-        track.innerHTML = `<div class="storyBarFill" id="barFill_${i}"></div>`;
-        storyBarsContainer.appendChild(track);
-    });
+    const track = document.createElement('div');
+    track.className = 'storyBarTrack';
+    track.innerHTML = `<div class="storyBarFill" id="barFill_0"></div>`;
+    storyBarsContainer.appendChild(track);
 
-    storyReplyBtn.onclick = () => {
-        closeStoryViewer();
-        if(!isSelf) openPrivatePopup(userData.name);
-    };
+    storyReplyBtn.style.display = 'none'; // Since it's only your status viewer
 
-    playCurrentStoryItem(isSelf);
+    playCurrentStoryItem();
 }
 
-function playCurrentStoryItem(isSelf) {
+function playCurrentStoryItem() {
     clearTimeout(storyTimer);
-    if(!activeStoryUser || !activeStoryUser.statuses[activeStoryIndex]) {
+    if(!activeStoryUser || !activeStoryUser.status) {
         closeStoryViewer();
         return;
     }
 
-    const st = activeStoryUser.statuses[activeStoryIndex];
+    const st = activeStoryUser.status;
     storyViewerTime.textContent = formatTime(st.time);
-    const viewCount = Object.keys(st.views || {}).length;
-    storyViewCounterText.textContent = `👀 Viewed by ${viewCount} people`;
+    storyViewCounterText.textContent = `Expires in 24 hours`;
 
-    // Fill bars
-    activeStoryUser.statuses.forEach((_, i) => {
-        const fill = document.getElementById(`barFill_${i}`);
-        if(fill) {
-            if(i < activeStoryIndex) fill.style.width = '100%';
-            else if(i === activeStoryIndex) fill.style.width = '0%';
-            else fill.style.width = '0%';
-        }
-    });
-
-    const currentFill = document.getElementById(`barFill_${activeStoryIndex}`);
+    const currentFill = document.getElementById(`barFill_0`);
     if(currentFill) {
+        currentFill.style.width = '0%';
         currentFill.style.transition = 'width 5s linear';
         setTimeout(() => currentFill.style.width = '100%', 50);
     }
@@ -1064,12 +955,7 @@ function playCurrentStoryItem(isSelf) {
     }
 
     storyTimer = setTimeout(() => {
-        activeStoryIndex++;
-        if(activeStoryIndex < activeStoryUser.statuses.length) {
-            playCurrentStoryItem(isSelf);
-        } else {
-            closeStoryViewer();
-        }
+        closeStoryViewer();
     }, 5000);
 }
 
@@ -1077,7 +963,6 @@ window.closeStoryViewer = function() {
     clearTimeout(storyTimer);
     storyViewerOverlay.style.display = 'none';
     activeStoryUser = null;
-    activeStoryIndex = 0;
 };
 
 window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); db.ref(`typing/group/${username}`).remove(); if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove(); } };
