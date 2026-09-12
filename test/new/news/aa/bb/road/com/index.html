@@ -2,10 +2,419 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Just Nothing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Text & Audio Chat - No Registration</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            font-size: 0.85rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: #334155;
+            color: var(--text-muted);
+        }
+
+        .status-indicator.online {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+            height: calc(100vh - 70px);
+        }
+
+        /* Lobby / Landing Screen */
+        .lobby-panel {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin: auto;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+        }
+
+        .lobby-panel h2 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .lobby-panel p {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        /* Chat Workspace */
+        .chat-workspace {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .message.system {
+            align-self: center;
+            background: #334155;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .message.incoming {
+            align-self: flex-start;
+            background: #334155;
+            color: var(--text-main);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message.outgoing {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message audio {
+            max-width: 220px;
+            height: 35px;
+            margin-top: 5px;
+        }
+
+        /* Controls Bar */
+        .chat-controls {
+            padding: 15px;
+            background: #111827;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-top: 1px solid #334155;
+        }
+
+        .chat-controls input[type="text"] {
+            flex: 1;
+            background: var(--panel-bg);
+            border: 1px solid #334155;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .chat-controls input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        .icon-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .icon-btn:hover {
+            background: #475569;
+        }
+
+        .icon-btn.recording {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-    <h1>Empty Space</h1>
-    <p>Everything is working. Now, what goes here?</p>
+
+    <header>
+        <h1>⚡ AnonChat <span style="font-size:0.7rem; background:#334155; padding:2px 8px; border-radius:4px; color:#cbd5e1;">No Registration</span></h1>
+        <div id="connectionStatus" class="status-indicator">Disconnected</div>
+    </header>
+
+    <div class="container">
+        <!-- Lobby Panel -->
+        <div id="lobbyPanel" class="lobby-panel">
+            <h2>Start Random Chat</h2>
+            <p>Connect instantly with a random stranger globally for live text & audio messaging. No account or password required.</p>
+            <button class="btn" id="findPartnerBtn">Find Stranger</button>
+        </div>
+
+        <!-- Chat Workspace -->
+        <div id="chatWorkspace" class="chat-workspace">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">You are connected to a random stranger. Say hello!</div>
+            </div>
+
+            <!-- Action panel inside chat workspace -->
+            <div class="chat-controls">
+                <button class="icon-btn btn-danger" id="skipBtn" title="Disconnect / Skip Partner">✕</button>
+                <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+                <button class="icon-btn" id="micBtn" title="Hold/Click to Record Audio">🎤</button>
+                <button class="icon-btn" id="sendBtn" style="background:var(--accent);" title="Send Text">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const lobbyPanel = document.getElementById('lobbyPanel');
+        const chatWorkspace = document.getElementById('chatWorkspace');
+        const findPartnerBtn = document.getElementById('findPartnerBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const micBtn = document.getElementById('micBtn');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let simulatedResponderTimer = null;
+
+        // Sample lines for simulated stranger interaction if running locally offline
+        const sampleResponses = [
+            "Hey there! How's your day going?",
+            "That's awesome! Where are you tuning in from?",
+            "Haha totally agree with you.",
+            "Can you send a voice note? I want to hear your voice!",
+            "Cool stuff. Tell me something interesting.",
+            "That's wild! Never thought of it that way."
+        ];
+
+        findPartnerBtn.addEventListener('click', () => {
+            findPartnerBtn.innerText = "Searching for stranger...";
+            findPartnerBtn.disabled = true;
+
+            setTimeout(() => {
+                lobbyPanel.classList.add('hidden');
+                chatWorkspace.classList.remove('hidden');
+                chatWorkspace.style.display = 'flex';
+                connectionStatus.innerText = "Connected to Stranger";
+                connectionStatus.classList.add('online');
+                findPartnerBtn.innerText = "Find Stranger";
+                findPartnerBtn.disabled = false;
+                messageInput.focus();
+            }, 1500);
+        });
+
+        skipBtn.addEventListener('click', () => {
+            resetChatSession();
+        });
+
+        function resetChatSession() {
+            if(simulatedResponderTimer) clearTimeout(simulatedResponderTimer);
+            chatMessages.innerHTML = `<div class="message system">You disconnected. Finding a new stranger...</div>`;
+            chatWorkspace.style.display = 'none';
+            lobbyPanel.classList.remove('hidden');
+            connectionStatus.innerText = "Disconnected";
+            connectionStatus.classList.remove('online');
+        }
+
+        // Send Text Message
+        function sendTextMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, 'outgoing', 'text');
+            messageInput.value = '';
+
+            // Simulate stranger reply context
+            triggerSimulatedResponse();
+        }
+
+        sendBtn.addEventListener('click', sendTextMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendTextMessage();
+        });
+
+        // Append message to UI container
+        function appendMessage(content, type, format, mimeType = '') {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', type);
+
+            if (format === 'text') {
+                msgDiv.innerText = content;
+            } else if (format === 'audio') {
+                const audioEl = document.createElement('audio');
+                audioEl.controls = true;
+                audioEl.src = URL.createObjectURL(new Blob([content], { type: mimeType }));
+                msgDiv.appendChild(audioEl);
+            }
+
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Audio Recording Logic using HTML5 MediaRecorder API
+        micBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = event => {
+                        if (event.data.size > 0) audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        appendMessage(audioBlob, 'outgoing', 'audio', 'audio/webm');
+                        
+                        // Stop all mic tracks
+                        stream.getTracks().forEach(track => track.stop());
+
+                        // Simulate reply audio or text from partner
+                        triggerSimulatedResponse();
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.classList.add('recording');
+                    micBtn.title = "Recording... Click to Stop";
+                } catch (err) {
+                    alert("Microphone access is blocked or unavailable on your browser.");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('recording');
+                micBtn.title = "Hold/Click to Record Audio";
+            }
+        });
+
+        // Simulated automated peer response engine to keep the UI interactive instantly
+        function triggerSimulatedResponse() {
+            if(simulatedResponderTimer) clearTimeout(simulatedResponderTimer);
+            
+            simulatedResponderTimer = setTimeout(() => {
+                if(chatWorkspace.style.display === 'flex') {
+                    const randomText = sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
+                    appendMessage(randomText, 'incoming', 'text');
+                }
+            }, 2500);
+        }
+    </script>
 </body>
 </html>
