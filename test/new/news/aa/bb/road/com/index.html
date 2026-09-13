@@ -89,7 +89,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privateSend, .mediaBtn{width:40px;height:40px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .mediaBtn{background:#2a3942;font-size:18px}
 #micBtn.recording, #groupMicBtn.recording{background:#ff3b30;animation:pulse 1s infinite}
-#privateMessages img{max-width:200px;border-radius:8px;margin-top:5px;display:block}
+#privateMessages img{max-width:200px;border-radius:8px;margin-top:5px;display:block;cursor:pointer;transition:transform 0.2s;}
+#privateMessages img:hover{transform:scale(1.02);}
 #privateMessages audio{max-width:240px;height:35px;margin-top:5px}
 .headerActionBtn { background: none; border: 1px solid rgba(255,255,255,0.1); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
 #blockBtn.blocked { border-color: #25d366; color: #25d366; }
@@ -99,10 +100,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
 .unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
 
-/* --- CALL OVERLAY UPDATED FOR ABSOLUTE FULLSCREEN --- */
+/* --- CALL OVERLAY UPDATED --- */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:10000;flex-direction:column;color:#fff}
 .callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:90%;max-width:450px;height:70%;justify-content: space-between;transition: all 0.3s;position:relative;overflow:hidden;z-index: 5;}
-.callCard.connected-video { background: transparent; position: fixed; inset: 0; width: 100vw; height: 100vh; max-width: none; border-radius: 0; padding: 20px; justify-content: space-between; align-items: center; }
+.callCard.connected-video { background: transparent; width: 100%; height: 100%; max-width: 100%; border-radius: 0; padding: 20px; }
 .callCard.connected-video .callAvatar, .callCard.connected-video .callName, .callCard.connected-video #callTypeText { display: none; }
 
 .callAvatar{width:120px;height:120px;border-radius:50%;background:#2a3942;display:flex;align-items:center;justify-content:center;font-size:50px;overflow:hidden;border:3px solid var(--accent);z-index: 2;}
@@ -144,6 +145,13 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .previewActions button{flex:1;padding:10px;border-radius:8px;border:0;cursor:pointer;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
 .btnMsg{background:var(--accent);color:#fff}
 .btnClosePreview{position:absolute;top:10px;right:10px;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+
+/* --- FULLSCREEN IMAGE VIEWER CSS --- */
+#imageViewerModal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 20000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+#imageViewerModal img { max-width: 90%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+.imageViewerActions { margin-top: 20px; display: flex; gap: 15px; }
+.imageViewerBtn { background: #202c33; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+.imageViewerBtn:hover { background: var(--accent); }
 
 /* --- EMOJI REACTIONS CSS --- */
 .reaction-container { position: absolute; bottom: -10px; right: 4px; background: #2a3942; border-radius: 10px; padding: 1px 4px; font-size: 12px; display: flex; gap: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 10; }
@@ -226,6 +234,15 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
         <div class="previewActions">
             <button class="btnMsg" id="previewMsgBtn">💬 Private Chat</button>
         </div>
+    </div>
+</div>
+
+<!-- FULLSCREEN IMAGE VIEWER MODAL -->
+<div id="imageViewerModal">
+    <button id="closeImageViewer" style="position:absolute;top:20px;right:25px;background:none;border:0;color:#fff;font-size:28px;cursor:pointer">✕</button>
+    <img id="fullScreenImageElement" src="" alt="Full Screen Preview" />
+    <div class="imageViewerActions">
+        <button class="imageViewerBtn" id="downloadImageBtn">⬇ Download Image</button>
     </div>
 </div>
 
@@ -494,16 +511,50 @@ function renderPrivateMessageWithId(chatKey, id, msg){
     const isSelf = msg.name === username; 
     const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; 
     let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; 
-    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; 
+    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" class="priv-sent-img" style="max-width:100%;border-radius:8px"></div>`; 
     if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; 
     const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; 
     row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
+    
+    // Attach Fullscreen & Download features to image messages
+    if(msg.image) {
+        const imgEl = row.querySelector('.priv-sent-img');
+        if(imgEl) {
+            imgEl.onclick = (e) => {
+                e.stopPropagation();
+                const viewerModal = document.getElementById('imageViewerModal');
+                const fullScreenImg = document.getElementById('fullScreenImageElement');
+                const downloadBtn = document.getElementById('downloadImageBtn');
+                fullScreenImg.src = msg.image;
+                viewerModal.style.display = 'flex';
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = msg.image;
+                    a.download = `chat_image_${Date.now()}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+            };
+        }
+    }
+
     const bubble = row.querySelector('.private-bubble'); 
     if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
     attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
     if(msg.reactions) renderReactions(bubble, msg.reactions);
     privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
 }
+
+// Close image viewer modal events
+document.getElementById('closeImageViewer').onclick = () => {
+    document.getElementById('imageViewerModal').style.display = 'none';
+};
+document.getElementById('imageViewerModal').onclick = (e) => {
+    if(e.target === document.getElementById('imageViewerModal')) {
+        document.getElementById('imageViewerModal').style.display = 'none';
+    }
+};
 
 privateSend.onclick = async () => { 
     const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
