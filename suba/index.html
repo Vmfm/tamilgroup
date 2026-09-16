@@ -236,6 +236,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
     <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
+    <div class="settingRow"><div>Call (On/Off)</div><div class="toggleBtn" id="toggleGlobalCall"><div class="toggleKnob" id="toggleGlobalCallKnob"></div></div></div>
+    <div class="settingRow"><div>Messages (On/Off)</div><div class="toggleBtn" id="toggleGlobalMsg"><div class="toggleKnob" id="toggleGlobalMsgKnob"></div></div></div>
     <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
     <div class="settingRow" style="padding: 5px 0;"><button id="viewBlockedBtn" style="width:100%; background:#2a3942; color:#fff; border:0; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">🚫 Blocked Users List</button></div>
     <button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
@@ -342,7 +344,7 @@ const loginWrap = document.getElementById('loginWrap'), nameInput = document.get
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
 const typingPrivateEl = document.getElementById('typingPrivate');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
-const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), toggleVideo = document.getElementById('toggleVideo'), toggleVideoKnob = document.getElementById('toggleVideoKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
+const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), toggleVideo = document.getElementById('toggleVideo'), toggleVideoKnob = document.getElementById('toggleVideoKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), toggleGlobalCall = document.getElementById('toggleGlobalCall'), toggleGlobalCallKnob = document.getElementById('toggleGlobalCallKnob'), toggleGlobalMsg = document.getElementById('toggleGlobalMsg'), toggleGlobalMsgKnob = document.getElementById('toggleGlobalMsgKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
 const callAvatarContainer = document.getElementById('callAvatarContainer'), callTypeText = document.getElementById('callTypeText'), callTimer = document.getElementById('callTimer'), inboundCallBtns = document.getElementById('inboundCallBtns'), outboundCallBtns = document.getElementById('outboundCallBtns'), activeCallControls = document.getElementById('activeCallControls'), muteBtn = document.getElementById('muteBtn'), speakerBtn = document.getElementById('speakerBtn'), endCallBtnBig = document.getElementById('endCallBtnBig'), cancelCallBtn = document.getElementById('cancelCallBtn');
@@ -361,10 +363,12 @@ if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
+if(typeof settings.globalCall === 'undefined') settings.globalCall = true;
+if(typeof settings.globalMsg === 'undefined') settings.globalMsg = true;
 let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
+stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { if(!settings.globalMsg) return showToast('Messages are turned off'); db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
 document.addEventListener('click', (e) => { if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) stickerPicker.style.display = 'none'; });
 
@@ -379,23 +383,32 @@ document.querySelectorAll('.emoji-btn').forEach(btn => { btn.onclick = () => { i
 document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
 function attachLongPress(el, refPath) { const start = (e) => { longPressTimer = setTimeout(() => { const touch = e.touches ? e.touches[0] : e; showEmojiPicker(touch.clientX, touch.clientY, refPath); }, 600); }; const cancel = () => clearTimeout(longPressTimer); el.addEventListener('mousedown', start); el.addEventListener('touchstart', start); el.addEventListener('mouseup', cancel); el.addEventListener('mouseleave', cancel); el.addEventListener('touchend', cancel); }
 function renderReactions(container, reactionsObj) { let existing = container.querySelector('.reaction-container'); if(existing) existing.remove(); if(!reactionsObj) return; const reactions = Object.values(reactionsObj); const unique = [...new Set(reactions)]; const div = document.createElement('div'); div.className = 'reaction-container'; div.innerHTML = unique.join(''); container.appendChild(div); }
-function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
-function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
+function playDing() { if(settings.messageTone && settings.globalMsg) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
+function playTing() { if(settings.messageTone && settings.globalMsg) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
 function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
 
-micBtn.onclick = async () => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); micBtn.classList.remove('recording'); return; } try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const blob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.onload = e => sendPrivateMedia(e.target.result, 'voice'); reader.readAsDataURL(blob); stream.getTracks().forEach(t => t.stop()); }; mediaRecorder.start(); micBtn.classList.add('recording'); setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); micBtn.classList.remove('recording'); }, 10000); } catch (err) { showToast("Mic error"); } };
+micBtn.onclick = async () => { if(!settings.globalMsg) return showToast('Messages are turned off'); if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send media"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); micBtn.classList.remove('recording'); return; } try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const blob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.onload = e => sendPrivateMedia(e.target.result, 'voice'); reader.readAsDataURL(blob); stream.getTracks().forEach(t => t.stop()); }; mediaRecorder.start(); micBtn.classList.add('recording'); setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); micBtn.classList.remove('recording'); }, 10000); } catch (err) { showToast("Mic error"); } };
 
-privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
+privImgFile.onchange = async (e) => { if(!settings.globalMsg) return showToast('Messages are turned off'); if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
 
-function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
+function sendPrivateMedia(data, type) { if(!settings.globalMsg) return; if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
+function applySettingsToUI(){ 
+    toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; 
+    toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; 
+    togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; 
+    toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; 
+    toggleGlobalCall.style.background = settings.globalCall ? '#25d366' : '#2a3942'; toggleGlobalCallKnob.style.left = settings.globalCall ? '23px' : '3px'; 
+    toggleGlobalMsg.style.background = settings.globalMsg ? '#25d366' : '#2a3942'; toggleGlobalMsgKnob.style.left = settings.globalMsg ? '23px' : '3px'; 
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); 
+    if(username) db.ref(`profiles/${username}`).update({ settings: settings }); 
+}
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
 document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
@@ -403,6 +416,22 @@ toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySett
 toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
+toggleGlobalCall.onclick = () => { settings.globalCall = !settings.globalCall; applySettingsToUI(); };
+toggleGlobalMsg.onclick = () => { 
+    settings.globalMsg = !settings.globalMsg; 
+    applySettingsToUI(); 
+    if(!settings.globalMsg) {
+        messageInput.disabled = true;
+        messageInput.placeholder = "Messages are turned off";
+        privateInput.disabled = true;
+        privateInput.placeholder = "Messages are turned off";
+    } else {
+        messageInput.disabled = false;
+        messageInput.placeholder = "Type a message";
+        privateInput.disabled = false;
+        privateInput.placeholder = "Type a message";
+    }
+};
 
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
@@ -436,8 +465,11 @@ function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name))
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
-function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
-function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
+function sendGroupMessage(){ 
+    if(!settings.globalMsg) return showToast('Messages are turned off');
+    const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); 
+}
+function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { if(!settings.globalMsg) return; db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
 
 function listenPresence(){ db.ref('status').on('value', async snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]); const container = document.getElementById('onlineUsersContainer'); container.innerHTML = ''; for(let user in val) { if(user === username) continue; const profSnap = await db.ref(`profiles/${user}`).once('value'); const prof = profSnap.val() || {}; const userDiv = document.createElement('div'); userDiv.className = 'onlineUserItem'; let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase(); userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`; userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); }; container.appendChild(userDiv); } }); }
 onlineCountEl.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'flex'; };
@@ -478,6 +510,7 @@ async function openPrivatePopup(other){
 }
 
 privateInput.oninput = () => {
+    if(!settings.globalMsg) return;
     if(!privateChatWith) return;
     const key = chatId(username, privateChatWith);
     db.ref(`typing/private/${key}/${username}`).set(true);
@@ -504,6 +537,7 @@ function renderPrivateMessageWithId(chatKey, id, msg){
 }
 
 privateSend.onclick = async () => { 
+    if(!settings.globalMsg) return showToast('Messages are turned off');
     const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
     if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); 
     if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); 
@@ -521,6 +555,7 @@ privateCallBtn.onclick = () => initiateCall('audio');
 privateVideoBtn.onclick = () => initiateCall('video');
 
 async function initiateCall(type) {
+    if(!settings.globalCall) return showToast('Calls are turned off');
     if(!privateChatWith) return;
     const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
     if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
@@ -560,7 +595,7 @@ function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
-          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
+          if(!settings.globalCall || blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
           activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play().catch(e => {}); 
       } 
   });
