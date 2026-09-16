@@ -99,7 +99,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
 .unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
 
-/* --- CALL OVERLAY UPDATED --- */
+/* --- CALL OVERLAY FULL SCREEN UPDATED --- */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:10000;flex-direction:column;color:#fff}
 .callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:90%;max-width:450px;height:70%;justify-content: space-between;transition: all 0.3s;position:relative;overflow:hidden;z-index: 5;}
 .callCard.connected-video { background: transparent; width: 100%; height: 100%; max-width: 100%; border-radius: 0; padding: 20px; }
@@ -321,7 +321,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </div>
 
 <audio id="remoteAudio" autoplay></audio>
-<audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
+<audio id="ringtone" src="https://vmfm.github.io/tamilgroup/images/vm-video.mp3.mp3" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
 <audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
 
@@ -404,25 +404,7 @@ toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySet
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 
-logoutBtn.onclick = () => { 
-    if(username) { 
-        db.ref(`status/${username}`).remove(); 
-        db.ref(`profiles/${username}/online`).remove(); 
-        db.ref(`typing/group/${username}`).remove();
-        if(currentGroupRef) currentGroupRef.off();
-        db.ref('status').off();
-        db.ref('privateChats').off();
-        db.ref('calls').off();
-        db.ref(`blocks/${username}`).off();
-        db.ref('blocks').off();
-        db.ref(`unread/${username}`).off();
-    } 
-    localStorage.removeItem('isLoggedIn'); 
-    localStorage.removeItem('guestName');
-    localStorage.removeItem('profileImage');
-    localStorage.removeItem('userAge');
-    location.reload(); 
-};
+logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
 const savedName = localStorage.getItem('guestName');
 if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
@@ -551,6 +533,7 @@ async function initiateCall(type) {
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing', type);
+    ringtone.play().catch(e => {});
     setupWebRTC(callId, true, type === 'video');
 }
 
@@ -578,13 +561,15 @@ function watchCallsForMe(){
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
           if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
-          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
+          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play().catch(e => {}); 
       } 
   });
   db.ref('calls').on('child_changed', snap => { 
       const c = snap.val(); 
       if(c.status === 'ended' || c.status === 'declined') cleanupCall(snap.key); 
       if(c.status === 'answered' && (c.from === username || c.to === username)) { 
+          ringtone.pause();
+          ringtone.currentTime = 0;
           startInCallTimer(c); 
           if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c); 
       } 
@@ -602,10 +587,10 @@ async function showCallOverlay(otherName, type, callType) {
 
 async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
-acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
-declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
-cancelCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
-endCallBtnBig.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
+acceptCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() }); };
+declineCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
+cancelCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
+endCallBtnBig.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
@@ -618,7 +603,7 @@ function showTemporaryControls() { activeCallControls.classList.remove('hidden')
 callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') showTemporaryControls(); };
 
 function cleanupCall(callId){ 
-    ringtone.pause(); callOverlay.style.display='none'; clearInterval(callTimerInterval); 
+    ringtone.pause(); ringtone.currentTime = 0; callOverlay.style.display='none'; clearInterval(callTimerInterval); 
     mainCallCard.classList.remove('connected-video'); remoteVideo.style.display = 'none'; localVideo.style.display = 'none';
     if(peerConnection) { peerConnection.close(); peerConnection = null; } 
     if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
