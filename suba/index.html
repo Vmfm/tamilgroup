@@ -99,7 +99,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
 .unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
 
-/* --- CALL OVERLAY FULL SCREEN UPDATED --- */
+/* --- CALL OVERLAY UPDATED --- */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:10000;flex-direction:column;color:#fff}
 .callCard{background:#071215;padding:40px 20px;border-radius:24px;display:flex;flex-direction:column;align-items:center;gap:20px;width:90%;max-width:450px;height:70%;justify-content: space-between;transition: all 0.3s;position:relative;overflow:hidden;z-index: 5;}
 .callCard.connected-video { background: transparent; width: 100%; height: 100%; max-width: 100%; border-radius: 0; padding: 20px; }
@@ -232,9 +232,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <div id="deleteModal"><div class="deleteCard"><h3 id="deleteTitle">Delete this message for everyone?</h3><div class="deleteBtns"><button id="cancelDel">Cancel</button><button id="confirmDel">Delete for everyone</button></div></div></div>
 <div id="panel" aria-hidden="true"><div class="panelHeader"><div class="panelTitle">Private Messages</div><button id="clearHistoryBtn">Clear History</button><button id="panelClose" class="panelClose">✕</button></div><div class="panelList" id="panelList"></div></div>
 <div id="app"><div id="topBar"><div id="title"><div id="titleText">Group Chat</div></div><div style="flex:1"></div><div id="notifWrap"><div class="bell" id="bellBtn" title="Private messages">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div><div id="settingsWrap"><button id="settingsBtn">⚙️</button><div id="settingsPanel">
-    <div class="settingRow"><div>Tone Control</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
-    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleMessageTone"><div class="toggleKnob" id="toggleMessageToneKnob"></div></div></div>
+    <div class="settingRow"><div>Audio Call</div><div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div></div>
+    <div class="settingRow"><div>Video Call</div><div class="toggleBtn" id="toggleVideo"><div class="toggleKnob" id="toggleVideoKnob"></div></div></div>
     <div class="settingRow"><div>Private Chat</div><div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div></div>
+    <div class="settingRow"><div>Message Tone</div><div class="toggleBtn" id="toggleTone"><div class="toggleKnob" id="toggleToneKnob"></div></div></div>
     <div class="settingRow" style="flex-direction:column; align-items:flex-start;"><div style="margin-bottom:8px">Profile Image</div><input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%"></div>
     <div class="settingRow" style="padding: 5px 0;"><button id="viewBlockedBtn" style="width:100%; background:#2a3942; color:#fff; border:0; padding:8px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">🚫 Blocked Users List</button></div>
     <button id="logoutBtn">Logout</button></div></div></div><div id="onlineCount">0 online</div></div><div id="statusLine"></div><div id="messages" aria-live="polite"></div>
@@ -320,7 +321,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 </div>
 
 <audio id="remoteAudio" autoplay></audio>
-<audio id="ringtone" src="https://vmfm.github.io/tamilgroup/images/vm-video.mp3.mp3" loop></audio>
+<audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
 <audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
 
@@ -341,11 +342,7 @@ const loginWrap = document.getElementById('loginWrap'), nameInput = document.get
 const privatePopup = document.getElementById('privatePopup'), privateTitle = document.getElementById('privateTitle'), privateMessages = document.getElementById('privateMessages'), privateInput = document.getElementById('privateInput'), privateSend = document.getElementById('privateSend'), closePrivate = document.getElementById('closePrivate'), blockBtn = document.getElementById('blockBtn'), reportBtn = document.getElementById('reportBtn');
 const typingPrivateEl = document.getElementById('typingPrivate');
 const callOverlay = document.getElementById('callOverlay'), callFrom = document.getElementById('callFrom'), acceptCallBtn = document.getElementById('acceptCallBtn'), declineCallBtn = document.getElementById('declineCallBtn'), ringtone = document.getElementById('ringtone'), dingAudio = document.getElementById('dingAudio'), tingAudio = document.getElementById('tingAudio');
-const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel');
-const toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob');
-const toggleMessageTone = document.getElementById('toggleMessageTone'), toggleMessageToneKnob = document.getElementById('toggleMessageToneKnob');
-const togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob');
-const profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
+const settingsBtn = document.getElementById('settingsBtn'), settingsPanel = document.getElementById('settingsPanel'), toggleCall = document.getElementById('toggleCall'), toggleCallKnob = document.getElementById('toggleCallKnob'), toggleVideo = document.getElementById('toggleVideo'), toggleVideoKnob = document.getElementById('toggleVideoKnob'), togglePrivate = document.getElementById('togglePrivate'), togglePrivateKnob = document.getElementById('togglePrivateKnob'), toggleTone = document.getElementById('toggleTone'), toggleToneKnob = document.getElementById('toggleToneKnob'), profileImgInput = document.getElementById('profileImgInput'), logoutBtn = document.getElementById('logoutBtn');
 const privImgFile = document.getElementById('privImgFile'), micBtn = document.getElementById('micBtn');
 const deleteModal = document.getElementById('deleteModal'), confirmDel = document.getElementById('confirmDel'), cancelDel = document.getElementById('cancelDel');
 const callAvatarContainer = document.getElementById('callAvatarContainer'), callTypeText = document.getElementById('callTypeText'), callTimer = document.getElementById('callTimer'), inboundCallBtns = document.getElementById('inboundCallBtns'), outboundCallBtns = document.getElementById('outboundCallBtns'), activeCallControls = document.getElementById('activeCallControls'), muteBtn = document.getElementById('muteBtn'), speakerBtn = document.getElementById('speakerBtn'), endCallBtnBig = document.getElementById('endCallBtnBig'), cancelCallBtn = document.getElementById('cancelCallBtn');
@@ -358,11 +355,12 @@ const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBt
 const emojiPicker = document.getElementById('emojiPicker');
 let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
-const SETTINGS_KEY = 'chat_settings_v3';
+const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-if(typeof settings.toneControl === 'undefined') settings.toneControl = true;
-if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
+if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
+if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
+if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
@@ -397,22 +395,14 @@ function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinute
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
-function applySettingsToUI(){ 
-    toggleTone.style.background = settings.toneControl ? '#25d366' : '#2a3942'; 
-    toggleToneKnob.style.left = settings.toneControl ? '23px' : '3px'; 
-    toggleMessageTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; 
-    toggleMessageToneKnob.style.left = settings.messageTone ? '23px' : '3px'; 
-    togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; 
-    togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; 
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); 
-    if(username) db.ref(`profiles/${username}`).update({ settings: { audioCall: settings.toneControl, videoCall: settings.toneControl, privateChat: settings.privateChat, messageTone: settings.messageTone } }); 
-}
+function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
 document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
-toggleTone.onclick = () => { settings.toneControl = !settings.toneControl; applySettingsToUI(); };
-toggleMessageTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
+toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
+toggleVideo.onclick = () => { settings.videoCall = !settings.videoCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
+toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; applySettingsToUI(); };
 
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
@@ -438,7 +428,7 @@ async function startAs(name){
 
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
 
-function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings: { audioCall: settings.toneControl, videoCall: settings.toneControl, privateChat: settings.privateChat, messageTone: settings.messageTone } }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
+function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
 function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
 
@@ -535,14 +525,21 @@ async function initiateCall(type) {
     const onlineSnap = await db.ref(`status/${privateChatWith}`).once('value');
     if(!onlineSnap.exists()) return showToast(`${privateChatWith} is offline`);
     if(!await checkTargetPrivateChatStatus()) return;
-    if(!settings.toneControl) return showToast('Calls disabled via Tone Control');
+    if(type === 'audio' && !settings.audioCall) return showToast('Audio calls disabled');
+    if(type === 'video' && !settings.videoCall) return showToast('Video calls disabled');
     if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
+    
+    // Auto-enter fullscreen mode when initiating call (user action gesture)
+    const elem = document.documentElement;
+    if (!document.fullscreenElement && elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {});
+    }
+
     const callId = db.ref('calls').push().key;
     activeCall = { id: callId, from: username, to: privateChatWith, status: 'ringing', type: type };
     await db.ref(`calls/${callId}`).set({ from: username, to: privateChatWith, status: 'ringing', type: type, timestamp: Date.now() });
     showCallOverlay(privateChatWith, 'outgoing', type);
-    ringtone.play().catch(e => {});
     setupWebRTC(callId, true, type === 'video');
 }
 
@@ -569,16 +566,14 @@ function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
-          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || !settings.toneControl) return db.ref(`calls/${snap.key}/status`).set('declined');
-          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play().catch(e => {}); 
+          if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
+          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
       } 
   });
   db.ref('calls').on('child_changed', snap => { 
       const c = snap.val(); 
       if(c.status === 'ended' || c.status === 'declined') cleanupCall(snap.key); 
       if(c.status === 'answered' && (c.from === username || c.to === username)) { 
-          ringtone.pause();
-          ringtone.currentTime = 0;
           startInCallTimer(c); 
           if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c); 
       } 
@@ -596,10 +591,24 @@ async function showCallOverlay(otherName, type, callType) {
 
 async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
 
-acceptCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() }); };
-declineCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
-cancelCallBtn.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
-endCallBtnBig.onclick = () => { ringtone.pause(); ringtone.currentTime = 0; db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
+acceptCallBtn.onclick = () => {
+    // Auto-enter fullscreen mode when accepting incoming call (user action gesture)
+    const elem = document.documentElement;
+    if (!document.fullscreenElement && elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {});
+    }
+    db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
+};
+
+declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(activeCall.id); };
+cancelCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(activeCall.id); };
+endCallBtnBig.onclick = () => { 
+    db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); 
+    cleanupCall(activeCall.id); 
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => {});
+    }
+};
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
@@ -612,7 +621,7 @@ function showTemporaryControls() { activeCallControls.classList.remove('hidden')
 callOverlay.onclick = (e) => { if(activeCall && activeCall.type === 'video') showTemporaryControls(); };
 
 function cleanupCall(callId){ 
-    ringtone.pause(); ringtone.currentTime = 0; callOverlay.style.display='none'; clearInterval(callTimerInterval); 
+    ringtone.pause(); callOverlay.style.display='none'; clearInterval(callTimerInterval); 
     mainCallCard.classList.remove('connected-video'); remoteVideo.style.display = 'none'; localVideo.style.display = 'none';
     if(peerConnection) { peerConnection.close(); peerConnection = null; } 
     if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
@@ -634,7 +643,17 @@ flipCamBtn.onclick = async (e) => {
 
 muteBtn.onclick = (e) => { e.stopPropagation(); if(localStream) { const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = track.enabled ? '🎤' : '🔇'; } };
 speakerBtn.onclick = (e) => { e.stopPropagation(); const audioEl = document.getElementById('remoteAudio'); speakerBtn.classList.toggle('active'); const isSpeakerOn = speakerBtn.classList.contains('active'); audioEl.volume = isSpeakerOn ? 1.0 : 0.3; speakerBtn.textContent = isSpeakerOn ? '🔊' : '🔈'; };
-fullScreenBtn.onclick = (e) => { e.stopPropagation(); mainCallCard.classList.toggle('connected-video'); };
+
+// Fullscreen toggle button implementation retained & updated
+fullScreenBtn.onclick = (e) => { 
+    e.stopPropagation(); 
+    const elem = document.documentElement;
+    if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => alert("Error: " + err.message));
+    } else {
+        document.exitFullscreen();      
+    }
+};
 
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => { 
