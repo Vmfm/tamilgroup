@@ -530,7 +530,6 @@ async function initiateCall(type) {
     if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
     
-    // Auto-enter fullscreen mode when initiating call (user action gesture)
     const elem = document.documentElement;
     if (!document.fullscreenElement && elem.requestFullscreen) {
         elem.requestFullscreen().catch(err => {});
@@ -545,21 +544,46 @@ async function initiateCall(type) {
 
 async function setupWebRTC(callId, isCaller, isVideo) {
   peerConnection = new RTCPeerConnection(rtcConfig);
+  
+  peerConnection.ontrack = (event) => { 
+      if(activeCall && activeCall.type === 'video') { 
+          remoteVideo.srcObject = event.streams[0]; 
+          remoteVideo.style.display = 'block'; 
+          mainCallCard.classList.add('connected-video'); 
+      } else { 
+          document.getElementById('remoteAudio').srcObject = event.streams[0]; 
+      }
+  };
+
+  peerConnection.onicecandidate = (event) => { 
+      if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); 
+  };
+
   try { 
       const constraints = { audio: true, video: isVideo ? (isFrontCam ? { facingMode: "user" } : { facingMode: "environment" }) : false };
       localStream = await navigator.mediaDevices.getUserMedia(constraints); 
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream)); 
-      if(isVideo) { localVideo.srcObject = localStream; localVideo.style.display = 'block'; flipCamBtn.style.display = 'flex'; }
-  } catch(e) { showToast("Media denied"); cleanupCall(callId); return; }
+      if(isVideo) { 
+          localVideo.srcObject = localStream; 
+          localVideo.style.display = 'block'; 
+          flipCamBtn.style.display = 'flex'; 
+      }
+  } catch(e) { 
+      showToast("Media denied"); 
+      cleanupCall(callId); 
+      return; 
+  }
 
-  peerConnection.ontrack = (event) => { 
-      if(activeCall && activeCall.type === 'video') { remoteVideo.srcObject = event.streams[0]; remoteVideo.style.display = 'block'; mainCallCard.classList.add('connected-video'); } 
-      else { document.getElementById('remoteAudio').srcObject = event.streams[0]; }
-  };
-  peerConnection.onicecandidate = (event) => { if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); };
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
-  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => { if (peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {}); });
-  if (isCaller) { const offer = await peerConnection.createOffer(); await peerConnection.setLocalDescription(offer); db.ref(`calls/${callId}`).update({ offer: { sdp: offer.sdp, type: offer.type } }); }
+  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => { 
+      if (peerConnection && snap.val()) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {}); 
+  });
+
+  if (isCaller) { 
+      const offer = await peerConnection.createOffer(); 
+      await peerConnection.setLocalDescription(offer); 
+      db.ref(`calls/${callId}`).update({ offer: { sdp: offer.sdp, type: offer.type } }); 
+  }
 }
 
 function watchCallsForMe(){
@@ -567,7 +591,9 @@ function watchCallsForMe(){
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
           if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
-          activeCall = { id: snap.key, ...c }; showCallOverlay(c.from, 'incoming', c.type); ringtone.play(); 
+          activeCall = { id: snap.key, ...c }; 
+          showCallOverlay(c.from, 'incoming', c.type); 
+          ringtone.play(); 
       } 
   });
   db.ref('calls').on('child_changed', snap => { 
@@ -577,22 +603,43 @@ function watchCallsForMe(){
           startInCallTimer(c); 
           if (c.to === username && c.offer && !peerConnection) handleIncomingAnswer(snap.key, c); 
       } 
-      if(c.answer && c.from === username && peerConnection && peerConnection.signalingState !== "stable") peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer));
+      if(c.answer && c.from === username && peerConnection && peerConnection.signalingState !== "stable") {
+          peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer)).catch(e => {});
+      }
   });
 }
 
 async function showCallOverlay(otherName, type, callType) {
-  callFrom.textContent = otherName; callOverlay.style.display = 'flex';
+  callFrom.textContent = otherName; 
+  callOverlay.style.display = 'flex';
   const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
-  if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
-  if(type === 'incoming') { callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; inboundCallBtns.style.display = 'flex'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'none'; } 
-  else { callTypeText.textContent = "Calling..."; inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'flex'; activeCallControls.style.display = 'none'; }
+  if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; 
+  else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
+
+  if(type === 'incoming') { 
+      callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; 
+      inboundCallBtns.style.display = 'flex'; 
+      outboundCallBtns.style.display = 'none'; 
+      activeCallControls.style.display = 'none'; 
+  } else { 
+      callTypeText.textContent = "Calling..."; 
+      inboundCallBtns.style.display = 'none'; 
+      outboundCallBtns.style.display = 'flex'; 
+      activeCallControls.style.display = 'none'; 
+  }
 }
 
-async function handleIncomingAnswer(callId, c) { await setupWebRTC(callId, false, c.type === 'video'); await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); const answer = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); }
+async function handleIncomingAnswer(callId, c) { 
+    await setupWebRTC(callId, false, c.type === 'video'); 
+    if (peerConnection && c.offer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer)); 
+        const answer = await peerConnection.createAnswer(); 
+        await peerConnection.setLocalDescription(answer); 
+        db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } }); 
+    }
+}
 
 acceptCallBtn.onclick = () => {
-    // Auto-enter fullscreen mode when accepting incoming call (user action gesture)
     const elem = document.documentElement;
     if (!document.fullscreenElement && elem.requestFullscreen) {
         elem.requestFullscreen().catch(err => {});
@@ -612,9 +659,19 @@ endCallBtnBig.onclick = () => {
 
 function startInCallTimer(c){
   ringtone.pause(); inboundCallBtns.style.display = 'none'; outboundCallBtns.style.display = 'none'; activeCallControls.style.display = 'flex';
-  if(c.type === 'video') { mainCallCard.classList.add('connected-video'); showTemporaryControls(); } else { activeCallControls.classList.remove('hidden'); }
+  if(c.type === 'video') { 
+      mainCallCard.classList.add('connected-video'); 
+      remoteVideo.style.display = 'block';
+      showTemporaryControls(); 
+  } else { 
+      activeCallControls.classList.remove('hidden'); 
+  }
   clearInterval(callTimerInterval);
-  callTimerInterval = setInterval(() => { const diff = Date.now() - (c.answeredAt || Date.now()); const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); callTimer.textContent = `${m}:${s}`; }, 1000);
+  callTimerInterval = setInterval(() => { 
+      const diff = Date.now() - (c.answeredAt || Date.now()); 
+      const m = String(Math.floor(diff/60000)).padStart(2,'0'), s = String(Math.floor((diff%60000)/1000)).padStart(2,'0'); 
+      callTimer.textContent = `${m}:${s}`; 
+  }, 1000);
 }
 
 function showTemporaryControls() { activeCallControls.classList.remove('hidden'); clearTimeout(controlHideTimer); controlHideTimer = setTimeout(() => { if(activeCall && activeCall.type === 'video') activeCallControls.classList.add('hidden'); }, 4000); }
@@ -636,15 +693,14 @@ flipCamBtn.onclick = async (e) => {
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         localVideo.srcObject = localStream;
         const videoTrack = localStream.getVideoTracks()[0];
-        const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-        sender.replaceTrack(videoTrack);
+        const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+        if(sender) sender.replaceTrack(videoTrack);
     }
 };
 
-muteBtn.onclick = (e) => { e.stopPropagation(); if(localStream) { const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = track.enabled ? '🎤' : '🔇'; } };
+muteBtn.onclick = (e) => { e.stopPropagation(); if(localStream) { const track = localStream.getAudioTracks()[0]; if(track) { track.enabled = !track.enabled; muteBtn.classList.toggle('active'); muteBtn.textContent = track.enabled ? '🎤' : '🔇'; } } };
 speakerBtn.onclick = (e) => { e.stopPropagation(); const audioEl = document.getElementById('remoteAudio'); speakerBtn.classList.toggle('active'); const isSpeakerOn = speakerBtn.classList.contains('active'); audioEl.volume = isSpeakerOn ? 1.0 : 0.3; speakerBtn.textContent = isSpeakerOn ? '🔊' : '🔈'; };
 
-// Fullscreen toggle button implementation retained & updated
 fullScreenBtn.onclick = (e) => { 
     e.stopPropagation(); 
     const elem = document.documentElement;
