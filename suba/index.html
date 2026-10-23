@@ -41,7 +41,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#071215}
 .msg-row{display:flex;align-items:flex-end;max-width:80%;position:relative}
 .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
-.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
+.avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden;flex-shrink:0}
 .avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
 .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word;position:relative}
@@ -322,18 +322,29 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
-<audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
-<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3"></audio>
+<audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3" preload="auto"></audio>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="/tamilgroup/test/new/news/aa/bb/road/com/config.js"></script>
 
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 1500); });
+// Enable persistent connection handling across mobile networks (4G/5G) and Wi-Fi
+db.ref('.info/connected').on('value', (snap) => {
+    if (snap.val() === true) {
+        if (username) {
+            setPresence();
+        }
+    } else {
+        firebase.database().goOnline();
+    }
+});
+
+window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 600); });
 
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -423,16 +434,34 @@ async function startAs(name){
     listenPresence(); 
     watchPrivateChatsInitial(); 
     listenBlocks(); 
-    manageMessageCount('messages', 15); 
+    manageMessageCount('messages', 30); 
 }
 
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
 
 function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
-function startGroupListeners(){ if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = ''; currentGroupRef = db.ref('messages').limitToLast(50); currentGroupRef.on('child_added', snap => { renderGroupMessage(snap.val(), snap.key); if(snap.val().name !== username) playDing(); }); currentGroupRef.on('child_changed', snap => { const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); if(el) renderReactions(el, snap.val().reactions); }); currentGroupRef.on('child_removed', snap => { const el = document.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); }); }
+function startGroupListeners(){ 
+    if(currentGroupRef) currentGroupRef.off(); 
+    messagesEl.innerHTML = ''; 
+    currentGroupRef = db.ref('messages').limitToLast(30); 
+    let initialLoad = true;
+    currentGroupRef.once('value', () => { initialLoad = false; scrollToBottomSoon(messagesEl); });
+    currentGroupRef.on('child_added', snap => { 
+        renderGroupMessage(snap.val(), snap.key); 
+        if(!initialLoad && snap.val().name !== username) playDing(); 
+    }); 
+    currentGroupRef.on('child_changed', snap => { 
+        const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); 
+        if(el) renderReactions(el, snap.val().reactions); 
+    }); 
+    currentGroupRef.on('child_removed', snap => { 
+        const el = document.querySelector(`[data-key="${snap.key}"]`); 
+        if(el) el.remove(); 
+    }); 
+}
 
-function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
+function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; if(document.querySelector(`[data-key="${key}"]`)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.loading='lazy'; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
