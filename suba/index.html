@@ -159,7 +159,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* ONLINE LIST MODAL CSS */
 #onlineListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; display: none; align-items: center; justify-content: center; }
 .onlineListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; }
-.onlineListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+.onlineListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-space-between; align-items: center; }
 #onlineUsersContainer { flex: 1; overflow-y: auto; padding: 10px; }
 .onlineUserItem { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
@@ -168,7 +168,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* BLOCKED LIST MODAL CSS */
 #blockedListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3001; display: none; align-items: center; justify-content: center; }
 .blockedListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; border: 1px solid rgba(255,255,255,0.05); }
-.blockedListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: #fff; }
+.blockedListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-space-between; align-items: center; color: #fff; }
 #blockedUsersContainer { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .blockedUserItem { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.02); }
 .btnUnblockRow { background: var(--accent); color: #fff; border: 0; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
@@ -333,7 +333,6 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Enable persistent connection handling across mobile networks (4G/5G) and Wi-Fi
 db.ref('.info/connected').on('value', (snap) => {
     if (snap.val() === true) {
         if (username) {
@@ -373,7 +372,16 @@ if(typeof settings.videoCall === 'undefined') settings.videoCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
-const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+// Fixed STUN configuration for cross-network WebRTC audio & video communication (4G/5G and cross-WiFi)
+const rtcConfig = { 
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" }
+  ] 
+};
 
 stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
 stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
@@ -558,7 +566,7 @@ async function initiateCall(type) {
     if(type === 'video' && !settings.videoCall) return showToast('Video calls disabled');
     if(blockedUsers.has(privateChatWith)) return showToast('Blocked');
     if(iHaveBeenBlockedBy.has(privateChatWith)) return showToast('Blocked');
-    
+
     const elem = document.documentElement;
     if (!document.fullscreenElement && elem.requestFullscreen) {
         elem.requestFullscreen().catch(err => {});
@@ -575,17 +583,24 @@ async function setupWebRTC(callId, isCaller, isVideo) {
   peerConnection = new RTCPeerConnection(rtcConfig);
   
   peerConnection.ontrack = (event) => { 
-      if(activeCall && activeCall.type === 'video') { 
-          remoteVideo.srcObject = event.streams[0]; 
-          remoteVideo.style.display = 'block'; 
-          mainCallCard.classList.add('connected-video'); 
-      } else { 
-          document.getElementById('remoteAudio').srcObject = event.streams[0]; 
+      if(event.streams && event.streams[0]) {
+          if(activeCall && activeCall.type === 'video') { 
+              remoteVideo.srcObject = event.streams[0]; 
+              remoteVideo.style.display = 'block'; 
+              remoteVideo.play().catch(e => {});
+              mainCallCard.classList.add('connected-video'); 
+          } else { 
+              const ra = document.getElementById('remoteAudio');
+              ra.srcObject = event.streams[0]; 
+              ra.play().catch(e => {});
+          }
       }
   };
 
   peerConnection.onicecandidate = (event) => { 
-      if (event.candidate) db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); 
+      if (event.candidate) {
+          db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON()); 
+      }
   };
 
   try { 
@@ -595,17 +610,22 @@ async function setupWebRTC(callId, isCaller, isVideo) {
       if(isVideo) { 
           localVideo.srcObject = localStream; 
           localVideo.style.display = 'block'; 
+          localVideo.play().catch(e => {});
           flipCamBtn.style.display = 'flex'; 
       }
   } catch(e) { 
-      showToast("Media denied"); 
+      showToast("Media access error"); 
       cleanupCall(callId); 
       return; 
   }
 
   const other = activeCall.from === username ? activeCall.to : activeCall.from;
-  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => { 
-      if (peerConnection && snap.val()) peerConnection.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {}); 
+  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', async snap => { 
+      if (peerConnection && snap.val()) {
+          try {
+              await peerConnection.addIceCandidate(new RTCIceCandidate(snap.val()));
+          } catch(e) {}
+      }
   });
 
   if (isCaller) { 
@@ -622,7 +642,7 @@ function watchCallsForMe(){
           if(blockedUsers.has(c.from) || iHaveBeenBlockedBy.has(c.from) || (c.type === 'video' && !settings.videoCall) || (c.type === 'audio' && !settings.audioCall)) return db.ref(`calls/${snap.key}/status`).set('declined');
           activeCall = { id: snap.key, ...c }; 
           showCallOverlay(c.from, 'incoming', c.type); 
-          ringtone.play(); 
+          ringtone.play().catch(e => {}); 
       } 
   });
   db.ref('calls').on('child_changed', snap => { 
