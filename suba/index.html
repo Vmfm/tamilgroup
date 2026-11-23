@@ -159,7 +159,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* ONLINE LIST MODAL CSS */
 #onlineListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; display: none; align-items: center; justify-content: center; }
 .onlineListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; }
-.onlineListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-space-between; align-items: center; }
+.onlineListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
 #onlineUsersContainer { flex: 1; overflow-y: auto; padding: 10px; }
 .onlineUserItem { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
 .onlineUserItem:hover { background: rgba(255,255,255,0.05); }
@@ -168,7 +168,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* BLOCKED LIST MODAL CSS */
 #blockedListOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3001; display: none; align-items: center; justify-content: center; }
 .blockedListCard { background: #0b141a; width: 90%; max-width: 400px; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; border: 1px solid rgba(255,255,255,0.05); }
-.blockedListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-space-between; align-items: center; color: #fff; }
+.blockedListHeader { padding: 15px; background: #202c33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: #fff; }
 #blockedUsersContainer { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .blockedUserItem { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.02); }
 .btnUnblockRow { background: var(--accent); color: #fff; border: 0; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
@@ -322,8 +322,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 <audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
-<audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3" preload="auto"></audio>
+<audio id="dingAudio" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="none"></audio>
+<audio id="tingAudio" src="https://assets.mixkit.co/active_storage/sfx/2360/2360-preview.mp3" preload="none"></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -332,6 +332,14 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 <script>
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+const loaderWrapper = document.getElementById('loader-wrapper');
+function hideLoader() {
+    if (loaderWrapper && loaderWrapper.style.display !== 'none') {
+        loaderWrapper.style.display = 'none';
+    }
+}
+document.addEventListener('DOMContentLoaded', () => setTimeout(hideLoader, 150));
 
 db.ref('.info/connected').on('value', (snap) => {
     if (snap.val() === true) {
@@ -342,8 +350,6 @@ db.ref('.info/connected').on('value', (snap) => {
         firebase.database().goOnline();
     }
 });
-
-window.addEventListener('load', () => { setTimeout(() => { document.getElementById('loader-wrapper').style.display = 'none'; }, 600); });
 
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -365,6 +371,9 @@ const privateCallBtn = document.getElementById('privateCallBtn'), privateVideoBt
 const emojiPicker = document.getElementById('emojiPicker');
 let longPressTimer, currentReactionRef = null, username = localStorage.getItem('guestName') || '', profileImage = localStorage.getItem('profileImage') || '', userAge = localStorage.getItem('userAge') || '18+', blockedUsers = new Set(), iHaveBeenBlockedBy = new Set(), currentGroupRef = null, currentPrivateRef = null, privateChatWith = null, typingTimer = null, privateTypingTimer = null, previewSelectedUser = "", activeCall = null, callTimerInterval = null, currentDeleteAction = null, controlHideTimer = null, isFrontCam = true;
 const privateListeners = new Map(), renderedPrivateMsgIds = new Map();
+const profileCache = new Map(), activePrivateUsers = new Set();
+let onlineUsersMap = {}, stickersLoaded = false, activePrivateTypingRef = null;
+
 const SETTINGS_KEY = 'chat_settings_v2';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
@@ -373,7 +382,6 @@ if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 if(typeof settings.messageTone === 'undefined') settings.messageTone = true;
 let peerConnection = null, localStream = null, mediaRecorder = null, audioChunks = [];
 
-// Fixed STUN configuration for cross-network WebRTC audio & video communication (4G/5G and cross-WiFi)
 const rtcConfig = { 
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -383,12 +391,62 @@ const rtcConfig = {
   ] 
 };
 
-stickerUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.className = 'sticker-item'; img.onclick = () => { db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() }); stickerPicker.style.display = 'none'; }; stickerPicker.appendChild(img); });
-stickerBtn.onclick = (e) => { e.stopPropagation(); stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid'; };
+function initStickers() {
+    if (stickersLoaded) return;
+    stickersLoaded = true;
+    const frag = document.createDocumentFragment();
+    stickerUrls.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.loading = 'lazy';
+        img.className = 'sticker-item';
+        img.onclick = () => {
+            db.ref('messages').push({ name: username, profileImage: profileImage || '', sticker: url, time: Date.now() });
+            stickerPicker.style.display = 'none';
+        };
+        frag.appendChild(img);
+    });
+    stickerPicker.appendChild(frag);
+}
+stickerBtn.onclick = (e) => {
+    e.stopPropagation();
+    initStickers();
+    stickerPicker.style.display = stickerPicker.style.display === 'grid' ? 'none' : 'grid';
+};
 document.addEventListener('click', (e) => { if (!stickerPicker.contains(e.target) && e.target !== stickerBtn) stickerPicker.style.display = 'none'; });
 
-function manageMessageCount(path, limit) { db.ref(path).on('value', snap => { const count = snap.numChildren(); if (count > limit) { let deletedCount = 0; const targetCount = count - limit; snap.forEach(child => { if (deletedCount < targetCount) { db.ref(`${path}/${child.key}`).remove(); deletedCount++; } }); } }); }
-async function openProfilePop(targetUser) { previewSelectedUser = targetUser; previewName.textContent = targetUser; previewImgBox.innerHTML = targetUser.charAt(0).toUpperCase(); const profSnap = await db.ref(`profiles/${targetUser}`).once('value'); const prof = profSnap.val(); if (prof && prof.profileImage) previewImgBox.innerHTML = `<img src="${prof.profileImage}">`; profilePreviewOverlay.style.display = "flex"; }
+function trimOldMessages(path, limit) {
+    db.ref(path).limitToLast(limit + 15).once('value', snap => {
+        const count = snap.numChildren();
+        if (count > limit) {
+            let deletedCount = 0;
+            const targetCount = count - limit;
+            snap.forEach(child => {
+                if (deletedCount < targetCount) {
+                    db.ref(`${path}/${child.key}`).remove();
+                    deletedCount++;
+                }
+            });
+        }
+    });
+}
+
+async function getProfileFast(targetUser) {
+    if (profileCache.has(targetUser)) return profileCache.get(targetUser);
+    const profSnap = await db.ref(`profiles/${targetUser}`).once('value');
+    const prof = profSnap.val() || {};
+    profileCache.set(targetUser, prof);
+    return prof;
+}
+
+async function openProfilePop(targetUser) {
+    previewSelectedUser = targetUser;
+    previewName.textContent = targetUser;
+    previewImgBox.innerHTML = targetUser.charAt(0).toUpperCase();
+    profilePreviewOverlay.style.display = "flex";
+    const prof = await getProfileFast(targetUser);
+    if (prof && prof.profileImage) previewImgBox.innerHTML = `<img src="${prof.profileImage}">`;
+}
 closePreviewBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; };
 profilePreviewOverlay.onclick = (e) => { if(e.target === profilePreviewOverlay) profilePreviewOverlay.style.display = "none"; };
 previewMsgBtn.onclick = () => { profilePreviewOverlay.style.display = "none"; openPrivatePopup(previewSelectedUser); };
@@ -398,8 +456,8 @@ document.querySelectorAll('.emoji-btn').forEach(btn => { btn.onclick = () => { i
 document.addEventListener('mousedown', (e) => { if(!emojiPicker.contains(e.target)) emojiPicker.style.display = 'none'; });
 function attachLongPress(el, refPath) { const start = (e) => { longPressTimer = setTimeout(() => { const touch = e.touches ? e.touches[0] : e; showEmojiPicker(touch.clientX, touch.clientY, refPath); }, 600); }; const cancel = () => clearTimeout(longPressTimer); el.addEventListener('mousedown', start); el.addEventListener('touchstart', start); el.addEventListener('mouseup', cancel); el.addEventListener('mouseleave', cancel); el.addEventListener('touchend', cancel); }
 function renderReactions(container, reactionsObj) { let existing = container.querySelector('.reaction-container'); if(existing) existing.remove(); if(!reactionsObj) return; const reactions = Object.values(reactionsObj); const unique = [...new Set(reactions)]; const div = document.createElement('div'); div.className = 'reaction-container'; div.innerHTML = unique.join(''); container.appendChild(div); }
-function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play(); } catch(e){} } }
-function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play(); } catch(e){} } }
+function playDing() { if(settings.messageTone) { try { dingAudio.currentTime = 0; dingAudio.play().catch(()=>{}); } catch(e){} } }
+function playTing() { if(settings.messageTone) { try { tingAudio.currentTime = 0; tingAudio.play().catch(()=>{}); } catch(e){} } }
 function openDeletePrompt(action) { currentDeleteAction = action; deleteModal.style.display = 'flex'; }
 confirmDel.onclick = () => { if(currentDeleteAction) currentDeleteAction(); deleteModal.style.display = 'none'; };
 cancelDel.onclick = () => { deleteModal.style.display = 'none'; currentDeleteAction = null; };
@@ -408,10 +466,10 @@ micBtn.onclick = async () => { if(!await checkTargetPrivateChatStatus()) return;
 
 privImgFile.onchange = async (e) => { if(!await checkTargetPrivateChatStatus()) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height; if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); sendPrivateMedia(canvas.toDataURL('image/jpeg', 0.3), 'image'); }; img.src = ev.target.result; }; reader.readAsDataURL(file); };
 
-function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
+function sendPrivateMedia(data, type) { if(!privateChatWith) return; if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); activePrivateUsers.add(privateChatWith); const key = chatId(username, privateChatWith); const msgData = { name:username, time:Date.now(), read: false }; if(type === 'image') msgData.image = data; else msgData.voice = data; db.ref(`privateChats/${key}`).push(msgData); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); }
 function showToast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1600); }
 function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinutes().toString().padStart(2,'0'); const am = h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m} ${am}`; }
-function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
+function scrollToBottomSoon(el){ requestAnimationFrame(()=> { el.scrollTop = el.scrollHeight; }); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
 function applySettingsToUI(){ toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942'; toggleCallKnob.style.left = settings.audioCall ? '23px' : '3px'; toggleVideo.style.background = settings.videoCall ? '#25d366' : '#2a3942'; toggleVideoKnob.style.left = settings.videoCall ? '23px' : '3px'; togglePrivate.style.background = settings.privateChat ? '#25d366' : '#2a3942'; togglePrivateKnob.style.left = settings.privateChat ? '23px' : '3px'; toggleTone.style.background = settings.messageTone ? '#25d366' : '#2a3942'; toggleToneKnob.style.left = settings.messageTone ? '23px' : '3px'; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(username) db.ref(`profiles/${username}`).update({ settings: settings }); }
@@ -426,11 +484,22 @@ toggleTone.onclick = () => { settings.messageTone = !settings.messageTone; apply
 logoutBtn.onclick = () => { if(username) { db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } localStorage.removeItem('isLoggedIn'); location.reload(); };
 
 const savedName = localStorage.getItem('guestName');
-if (savedName && localStorage.getItem('isLoggedIn') === 'true') { loginWrap.style.display = 'none'; startAs(savedName); } else { loginWrap.style.display = 'flex'; if(savedName) { nameInput.value = savedName; nameInput.disabled = true; } }
+if (savedName && localStorage.getItem('isLoggedIn') === 'true') {
+    loginWrap.style.display = 'none';
+    hideLoader();
+    startAs(savedName);
+} else {
+    loginWrap.style.display = 'flex';
+    hideLoader();
+    if(savedName) { nameInput.value = savedName; nameInput.disabled = true; }
+}
 
 async function startAs(name){ 
-    const statusSnap = await db.ref(`status/${name}`).once('value'); 
-    if(statusSnap.exists() && localStorage.getItem('isLoggedIn') !== 'true') { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
+    const isAlreadyLogged = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isAlreadyLogged) {
+        const statusSnap = await db.ref(`status/${name}`).once('value'); 
+        if(statusSnap.exists()) { showToast("Username active."); loginWrap.style.display = 'flex'; return; } 
+    }
     username = name; 
     localStorage.setItem('guestName', name); 
     localStorage.setItem('isLoggedIn', 'true');
@@ -442,22 +511,89 @@ async function startAs(name){
     listenPresence(); 
     watchPrivateChatsInitial(); 
     listenBlocks(); 
-    manageMessageCount('messages', 30); 
 }
 
 joinBtn.onclick = () => { const n = nameInput.value.trim(); if(!n) return showToast('Enter name'); userAge = ageSelect.value; localStorage.setItem('userAge', userAge); if(loginPhotoInput.files && loginPhotoInput.files[0]) { if(userAge !== '18+') { alert("18+ only for photo."); return; } const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); startAs(n); }; reader.readAsDataURL(loginPhotoInput.files[0]); } else { startAs(n); } };
 
 function setPresence(){ db.ref(`status/${username}`).set(true); db.ref(`status/${username}`).onDisconnect().remove(); db.ref(`profiles/${username}`).update({ online: true, profileImage, settings }); db.ref(`profiles/${username}/online`).onDisconnect().remove(); db.ref(`profiles/${username}/lastSeen`).onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); }
 
+function buildGroupMessageElement(data, key) {
+    if(!data || blockedUsers.has(data.name)) return null;
+    if(document.querySelector(`[data-key="${key}"]`)) return null;
+    if (data.profileImage && !profileCache.has(data.name)) {
+        profileCache.set(data.name, { profileImage: data.profileImage });
+    }
+    const isSelf = data.name === username;
+    const row = document.createElement('div');
+    row.className = 'msg-row' + (isSelf ? ' self' : '');
+    row.dataset.key = key;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar' + (onlineUsersMap[data.name] ? ' online' : '');
+    avatar.dataset.username = data.name;
+    avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); };
+    if(data.profileImage){
+        const img = document.createElement('img');
+        img.src = data.profileImage;
+        img.loading = 'lazy';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        avatar.appendChild(img);
+    } else {
+        avatar.textContent = data.name.charAt(0).toUpperCase();
+    }
+
+    const content = document.createElement('div');
+    content.style.display = 'flex';
+    content.style.flexDirection = 'column';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = data.name;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if(data.text) bubble.textContent = data.text;
+    if(data.voice) bubble.innerHTML = `<audio controls preload="none" src="${data.voice}"></audio>`;
+    if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" loading="lazy" class="sticker-img">`;
+    if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove());
+    attachLongPress(bubble, `messages/${key}`);
+    renderReactions(bubble, data.reactions);
+
+    const t = document.createElement('div');
+    t.className = 'time';
+    t.textContent = formatTime(data.time);
+
+    content.append(meta, bubble, t);
+    row.append(avatar, content);
+    return row;
+}
+
 function startGroupListeners(){ 
     if(currentGroupRef) currentGroupRef.off(); 
     messagesEl.innerHTML = ''; 
     currentGroupRef = db.ref('messages').limitToLast(30); 
     let initialLoad = true;
-    currentGroupRef.once('value', () => { initialLoad = false; scrollToBottomSoon(messagesEl); });
+    let initialBatch = document.createDocumentFragment();
+
+    currentGroupRef.once('value', () => {
+        initialLoad = false;
+        if (initialBatch.childNodes.length > 0) {
+            messagesEl.appendChild(initialBatch);
+        }
+        scrollToBottomSoon(messagesEl);
+    });
+
     currentGroupRef.on('child_added', snap => { 
-        renderGroupMessage(snap.val(), snap.key); 
-        if(!initialLoad && snap.val().name !== username) playDing(); 
+        const el = buildGroupMessageElement(snap.val(), snap.key);
+        if (!el) return;
+        if (initialLoad) {
+            initialBatch.appendChild(el);
+        } else {
+            messagesEl.appendChild(el);
+            scrollToBottomSoon(messagesEl);
+            if(snap.val().name !== username) playDing();
+            trimOldMessages('messages', 30);
+        }
     }); 
     currentGroupRef.on('child_changed', snap => { 
         const el = document.querySelector(`[data-key="${snap.key}"] .bubble`); 
@@ -469,49 +605,240 @@ function startGroupListeners(){
     }); 
 }
 
-function renderGroupMessage(data, key){ if(!data || blockedUsers.has(data.name)) return; if(document.querySelector(`[data-key="${key}"]`)) return; const isSelf = data.name===username; const row = document.createElement('div'); row.className='msg-row'+(isSelf?' self':''); row.dataset.key=key; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.dataset.username=data.name; avatar.onclick = () => { if(!isSelf) openProfilePop(data.name); }; if(data.profileImage){ const img=document.createElement('img'); img.src=data.profileImage; img.loading='lazy'; img.style.cssText='width:100%;height:100%;object-fit:cover'; avatar.appendChild(img); } else { avatar.textContent=data.name.charAt(0).toUpperCase(); } const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name; const bubble=document.createElement('div'); bubble.className='bubble'; if(data.text) bubble.textContent=data.text; if(data.voice) bubble.innerHTML = `<audio controls src="${data.voice}"></audio>`; if(data.sticker) bubble.innerHTML = `<img src="${data.sticker}" class="sticker-img">`; if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`messages/${key}`).remove()); attachLongPress(bubble, `messages/${key}`); renderReactions(bubble, data.reactions); const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time); content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl); }
+function renderGroupMessage(data, key){
+    const el = buildGroupMessageElement(data, key);
+    if (el) {
+        messagesEl.appendChild(el);
+        scrollToBottomSoon(messagesEl);
+    }
+}
 
 sendBtn.onclick = sendGroupMessage;
 messageInput.onkeypress = (e) => { if(e.key==='Enter') sendGroupMessage(); };
 function sendGroupMessage(){ const text=messageInput.value.trim(); if(!text) return; db.ref('messages').push({ name: username, profileImage: profileImage || '', text, time: Date.now() }); messageInput.value=''; db.ref(`typing/group/${username}`).remove(); }
 function listenTypingGroup(){ db.ref('typing/group').on('value', snap=>{ const obj=snap.val()||{}; delete obj[username]; const who=Object.keys(obj); statusLine.textContent = who.length > 0 ? `${who.join(', ')} is typing...` : ''; }); messageInput.oninput = () => { db.ref(`typing/group/${username}`).set(true); clearTimeout(typingTimer); typingTimer=setTimeout(() => db.ref(`typing/group/${username}`).remove(), 2000); }; }
 
-function listenPresence(){ db.ref('status').on('value', async snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, val[privateChatWith]); const container = document.getElementById('onlineUsersContainer'); container.innerHTML = ''; for(let user in val) { if(user === username) continue; const profSnap = await db.ref(`profiles/${user}`).once('value'); const prof = profSnap.val() || {}; const userDiv = document.createElement('div'); userDiv.className = 'onlineUserItem'; let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase(); userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`; userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); }; container.appendChild(userDiv); } }); }
-onlineCountEl.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'flex'; };
+async function renderOnlineUsersList() {
+    const container = document.getElementById('onlineUsersContainer');
+    const users = Object.keys(onlineUsersMap).filter(u => u !== username);
+    if (users.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted); font-size:14px;">No other users online</div>';
+        return;
+    }
+    const profiles = await Promise.all(users.map(u => getProfileFast(u)));
+    const frag = document.createDocumentFragment();
+    users.forEach((user, idx) => {
+        const prof = profiles[idx] || {};
+        const userDiv = document.createElement('div');
+        userDiv.className = 'onlineUserItem';
+        let avHtml = prof.profileImage ? `<img src="${prof.profileImage}" style="width:100%;height:100%;object-fit:cover">` : user.charAt(0).toUpperCase();
+        userDiv.innerHTML = `<div class="onlineUserAvatar">${avHtml}</div><div style="flex:1"><b>${user}</b></div><div style="color:var(--accent); font-size:12px;">Active</div>`;
+        userDiv.onclick = () => { document.getElementById('onlineListOverlay').style.display = 'none'; openPrivatePopup(user); };
+        frag.appendChild(userDiv);
+    });
+    container.innerHTML = '';
+    container.appendChild(frag);
+}
 
-async function updatePrivateHeaderStatus(targetUser, isOnline) { if(isOnline) { headerDot.style.background = 'var(--online)'; headerStatusText.textContent = 'online'; } else { headerDot.style.background = 'var(--offline)'; const profileSnap = await db.ref(`profiles/${targetUser}`).once('value'); const profile = profileSnap.val(); headerStatusText.textContent = (profile && profile.lastSeen) ? 'Last seen ' + formatTime(profile.lastSeen) : 'offline'; } }
+function listenPresence(){
+    db.ref('status').on('value', snap => {
+        onlineUsersMap = snap.val() || {};
+        onlineCountEl.textContent = `${Object.keys(onlineUsersMap).length} online`;
+        document.querySelectorAll('.avatar').forEach(a => {
+            const u = a.dataset.username;
+            onlineUsersMap[u] ? a.classList.add('online') : a.classList.remove('online');
+        });
+        if(privateChatWith) updatePrivateHeaderStatus(privateChatWith, onlineUsersMap[privateChatWith]);
+        if(document.getElementById('onlineListOverlay').style.display === 'flex') {
+            renderOnlineUsersList();
+        }
+    });
+}
+onlineCountEl.onclick = () => {
+    document.getElementById('onlineListOverlay').style.display = 'flex';
+    renderOnlineUsersList();
+};
 
-function watchPrivateChatsInitial(){ db.ref('privateChats').on('child_added', snap => { if(snap.key.includes(username)) attachPrivateListener(snap.key); }); listenUnreadForMe(); watchCallsForMe(); }
-function attachPrivateListener(chatKey){ if(privateListeners.has(chatKey)) return; const chatRef = db.ref(`privateChats/${chatKey}`); manageMessageCount(`privateChats/${chatKey}`, 10); const handler = chatRef.on('child_added', snap => { const msg = snap.val(); if(!msg) return; const other = chatKey.split('_').find(x=>x!==username); if(blockedUsers.has(other)) return; if(privateChatWith === other && privatePopup.style.display === 'flex') { renderPrivateMessageWithId(chatKey, snap.key, msg); if(msg.name !== username && !msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true}); } else if(msg.name !== username) { playTing(); } refreshPanelList(); }); chatRef.on('child_changed', snap => { const msg = snap.val(); const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`); if(msgEl && msg.read) msgEl.classList.add('read'); const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`); if(bubble) renderReactions(bubble, msg.reactions); }); chatRef.on('child_removed', snap => { const el = document.querySelector(`[data-msgid="${snap.key}"]`); if(el) el.remove(); }); privateListeners.set(chatKey, { ref: chatRef, handler }); }
+async function updatePrivateHeaderStatus(targetUser, isOnline) {
+    if(isOnline) {
+        headerDot.style.background = 'var(--online)';
+        headerStatusText.textContent = 'online';
+    } else {
+        headerDot.style.background = 'var(--offline)';
+        const profile = await getProfileFast(targetUser);
+        headerStatusText.textContent = (profile && profile.lastSeen) ? 'Last seen ' + formatTime(profile.lastSeen) : 'offline';
+    }
+}
 
-function listenUnreadForMe(){ db.ref(`unread/${username}`).on('value', snap => { const val = snap.val() || {}; const total = Object.values(val).reduce((a,b)=>a+b, 0); bellBadge.style.display = total > 0 ? 'flex' : 'none'; bellBadge.textContent = total; refreshPanelList(); }); }
-async function refreshPanelList(){ panelListEl.innerHTML = ''; const all = await db.ref('privateChats').once('value').then(s=>s.val()||{}); const unread = await db.ref(`unread/${username}`).once('value').then(s=>s.val()||{}); const list = Object.keys(all).filter(k=>k.includes(username)).map(k=>{ const other = k.split('_').find(x=>x!==username); return { other, ucount: unread[other]||0 }; }); list.forEach(item => { if(blockedUsers.has(item.other)) return; const el = document.createElement('div'); el.className='panelItem'; el.innerHTML = `<div class="who">${item.other}</div><div class="count" style="display:${item.ucount?'block':'none'}">${item.ucount}</div>`; el.onclick = () => openPrivatePopup(item.other); panelListEl.appendChild(el); }); }
+function watchPrivateChatsInitial(){
+    db.ref('privateChats').on('child_added', snap => {
+        if(snap.key.includes(username)) {
+            const other = snap.key.split('_').find(x => x !== username);
+            if (other) activePrivateUsers.add(other);
+            attachPrivateListener(snap.key);
+            refreshPanelList();
+        }
+    });
+    db.ref('privateChats').on('child_removed', snap => {
+        if(snap.key.includes(username)) {
+            const other = snap.key.split('_').find(x => x !== username);
+            if (other) activePrivateUsers.delete(other);
+            privateListeners.delete(snap.key);
+            refreshPanelList();
+        }
+    });
+    listenUnreadForMe();
+    watchCallsForMe();
+}
 
-clearHistoryBtn.onclick = async () => { await db.ref(`unread/${username}`).remove(); const allChatsSnap = await db.ref('privateChats').once('value'); const allChats = allChatsSnap.val() || {}; Object.keys(allChats).forEach(chatKey => { if(chatKey.includes(username)) db.ref(`privateChats/${chatKey}`).remove(); }); showToast("Cleared"); refreshPanelList(); };
-async function checkTargetPrivateChatStatus() { if(!privateChatWith) return false; const targetProfSnap = await db.ref(`profiles/${privateChatWith}`).once('value'); const targetProf = targetProfSnap.val(); if (targetProf && targetProf.settings && targetProf.settings.privateChat === false) { showToast("User disabled private chat"); return false; } return true; }
+function attachPrivateListener(chatKey){
+    if(privateListeners.has(chatKey)) return;
+    const chatRef = db.ref(`privateChats/${chatKey}`).limitToLast(10);
+    const handler = chatRef.on('child_added', snap => {
+        const msg = snap.val();
+        if(!msg) return;
+        const other = chatKey.split('_').find(x => x !== username);
+        if (other) activePrivateUsers.add(other);
+        if(blockedUsers.has(other)) return;
+        if(privateChatWith === other && privatePopup.style.display === 'flex') {
+            renderPrivateMessageWithId(chatKey, snap.key, msg);
+            if(msg.name !== username && !msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true});
+        } else if(msg.name !== username) {
+            playTing();
+        }
+        trimOldMessages(`privateChats/${chatKey}`, 10);
+        refreshPanelList();
+    });
+    chatRef.on('child_changed', snap => {
+        const msg = snap.val();
+        const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`);
+        if(msgEl && msg.read) msgEl.classList.add('read');
+        const bubble = document.querySelector(`[data-msgid="${snap.key}"] .private-bubble`);
+        if(bubble) renderReactions(bubble, msg.reactions);
+    });
+    chatRef.on('child_removed', snap => {
+        const el = document.querySelector(`[data-msgid="${snap.key}"]`);
+        if(el) el.remove();
+    });
+    privateListeners.set(chatKey, { ref: chatRef, handler });
+}
+
+let cachedUnreadMap = {};
+function listenUnreadForMe(){
+    db.ref(`unread/${username}`).on('value', snap => {
+        cachedUnreadMap = snap.val() || {};
+        Object.keys(cachedUnreadMap).forEach(u => {
+            if (cachedUnreadMap[u] > 0) activePrivateUsers.add(u);
+        });
+        const total = Object.values(cachedUnreadMap).reduce((a,b)=>a+b, 0);
+        bellBadge.style.display = total > 0 ? 'flex' : 'none';
+        bellBadge.textContent = total;
+        refreshPanelList();
+    });
+}
+
+function refreshPanelList(){
+    const frag = document.createDocumentFragment();
+    activePrivateUsers.forEach(other => {
+        if(!other || blockedUsers.has(other)) return;
+        const ucount = cachedUnreadMap[other] || 0;
+        const el = document.createElement('div');
+        el.className = 'panelItem';
+        el.innerHTML = `<div class="who">${other}</div><div class="count" style="display:${ucount?'block':'none'}">${ucount}</div>`;
+        el.onclick = () => openPrivatePopup(other);
+        frag.appendChild(el);
+    });
+    panelListEl.innerHTML = '';
+    panelListEl.appendChild(frag);
+}
+
+clearHistoryBtn.onclick = async () => {
+    await db.ref(`unread/${username}`).remove();
+    const targets = Array.from(activePrivateUsers);
+    await Promise.all(targets.map(other => db.ref(`privateChats/${chatId(username, other)}`).remove()));
+    activePrivateUsers.clear();
+    showToast("Cleared");
+    refreshPanelList();
+};
+
+async function checkTargetPrivateChatStatus() {
+    if(!privateChatWith) return false;
+    const targetProfSnap = await db.ref(`profiles/${privateChatWith}/settings/privateChat`).once('value');
+    if (targetProfSnap.val() === false) {
+        showToast("User disabled private chat");
+        return false;
+    }
+    return true;
+}
+
+function buildPrivateMessageElement(chatKey, id, msg) {
+    if(msg.name !== username && blockedUsers.has(msg.name)) return null;
+    let set = renderedPrivateMsgIds.get(chatKey);
+    if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); }
+    if(set.has(id)) return null;
+    set.add(id);
+
+    const isSelf = msg.name === username;
+    const row = document.createElement('div');
+    row.className = 'private-row ' + (isSelf ? 'self' : '');
+    row.dataset.msgid = id;
+
+    let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`;
+    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" loading="lazy" style="max-width:100%;border-radius:8px"></div>`;
+    if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls preload="none" src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
+    const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : '';
+    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`;
+
+    const bubble = row.querySelector('.private-bubble');
+    if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove());
+    attachLongPress(bubble, `privateChats/${chatKey}/${id}`);
+    if(msg.reactions) renderReactions(bubble, msg.reactions);
+    return row;
+}
 
 async function openPrivatePopup(other){ 
     if(!settings.privateChat) return showToast('Private chat disabled'); 
     privateChatWith = other; 
+    activePrivateUsers.add(other);
     privatePopup.style.display = 'flex'; 
     privateMessages.innerHTML = ''; 
     privateTitle.textContent = `Chat with ${other}`; 
-    const statusSnap = await db.ref(`status/${other}`).once('value'); 
-    updatePrivateHeaderStatus(other, statusSnap.exists()); 
-    updateBlockUI(blockedUsers.has(other));
-    const key = chatId(username, other); 
-    renderedPrivateMsgIds.set(key, new Set());
-    const snapshot = await db.ref(`privateChats/${key}`).once('value'); 
-    snapshot.forEach(child => { 
-        renderPrivateMessageWithId(key, child.key, child.val());
-        if(child.val().name === other && !child.val().read) db.ref(`privateChats/${key}/${child.key}`).update({read: true}); 
-    }); 
-    db.ref(`unread/${username}/${other}`).set(0); 
-    
-    db.ref(`typing/private/${key}/${other}`).on('value', s => typingPrivateEl.textContent = s.val() ? `${other} is typing...` : '');
-    
     panelEl.classList.remove('open'); 
     document.getElementById('app').style.transform = ''; 
+    updateBlockUI(blockedUsers.has(other));
+
+    if (typeof onlineUsersMap[other] !== 'undefined') {
+        updatePrivateHeaderStatus(other, !!onlineUsersMap[other]);
+    } else {
+        db.ref(`status/${other}`).once('value').then(s => updatePrivateHeaderStatus(other, s.exists()));
+    }
+
+    const key = chatId(username, other); 
+    renderedPrivateMsgIds.set(key, new Set());
+    attachPrivateListener(key);
+
+    if (activePrivateTypingRef) activePrivateTypingRef.off();
+    activePrivateTypingRef = db.ref(`typing/private/${key}/${other}`);
+    activePrivateTypingRef.on('value', s => typingPrivateEl.textContent = s.val() ? `${other} is typing...` : '');
+
+    db.ref(`unread/${username}/${other}`).set(0);
+
+    const snapshot = await db.ref(`privateChats/${key}`).limitToLast(10).once('value'); 
+    const frag = document.createDocumentFragment();
+    const updates = {};
+    snapshot.forEach(child => { 
+        const val = child.val();
+        const el = buildPrivateMessageElement(key, child.key, val);
+        if (el) frag.appendChild(el);
+        if(val.name === other && !val.read) {
+            updates[`${child.key}/read`] = true;
+        }
+    }); 
+    privateMessages.appendChild(frag);
+    scrollToBottomSoon(privateMessages);
+    if (Object.keys(updates).length > 0) {
+        db.ref(`privateChats/${key}`).update(updates);
+    }
 }
 
 privateInput.oninput = () => {
@@ -523,31 +850,22 @@ privateInput.oninput = () => {
 };
 
 function renderPrivateMessageWithId(chatKey, id, msg){ 
-    if(msg.name !== username && blockedUsers.has(msg.name)) return; 
-    let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); } 
-    if(set.has(id)) return; set.add(id); 
-    const isSelf = msg.name === username; 
-    const row = document.createElement('div'); row.className = 'private-row ' + (isSelf?'self':''); row.dataset.msgid = id; 
-    let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`; 
-    if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`; 
-    if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`; 
-    const statusHtml = isSelf ? `<span class="read-status ${msg.read ? 'read' : ''}">✓✓</span>` : ''; 
-    row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`; 
-    const bubble = row.querySelector('.private-bubble'); 
-    if(isSelf) bubble.onclick = () => openDeletePrompt(() => db.ref(`privateChats/${chatKey}/${id}`).remove()); 
-    attachLongPress(bubble, `privateChats/${chatKey}/${id}`); 
-    if(msg.reactions) renderReactions(bubble, msg.reactions);
-    privateMessages.appendChild(row); scrollToBottomSoon(privateMessages); 
+    const row = buildPrivateMessageElement(chatKey, id, msg);
+    if (!row) return;
+    privateMessages.appendChild(row);
+    scrollToBottomSoon(privateMessages); 
 }
 
 privateSend.onclick = async () => { 
     const text = privateInput.value.trim(); if(!text || !privateChatWith) return; if(!await checkTargetPrivateChatStatus()) return; 
     if (blockedUsers.has(privateChatWith)) return showToast("Unblock user to send"); 
     if (iHaveBeenBlockedBy.has(privateChatWith)) return showToast("Blocked"); 
+    activePrivateUsers.add(privateChatWith);
     const key = chatId(username, privateChatWith); db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false }); db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1); privateInput.value = ''; 
 };
 
 closePrivate.onclick = () => { 
+    if (activePrivateTypingRef) { activePrivateTypingRef.off(); activePrivateTypingRef = null; }
     if(privateChatWith) db.ref(`typing/private/${chatId(username, privateChatWith)}/${username}`).remove();
     privatePopup.style.display='none'; privateChatWith=null; 
 };
@@ -640,7 +958,6 @@ function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => { 
       const c = snap.val(); 
       if(c.to === username && c.status === 'ringing') { 
-          // Guard: If user is already in an active call, auto reject incoming call as busy
           if(activeCall) {
               db.ref(`calls/${snap.key}/status`).set('busy');
               return;
@@ -671,9 +988,9 @@ function watchCallsForMe(){
 async function showCallOverlay(otherName, type, callType) {
   callFrom.textContent = otherName; 
   callOverlay.style.display = 'flex';
-  const prof = await db.ref(`profiles/${otherName}`).once('value').then(s => s.val() || {});
+  callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
+  const prof = await getProfileFast(otherName);
   if(prof.profileImage) callAvatarContainer.innerHTML = `<img src="${prof.profileImage}">`; 
-  else callAvatarContainer.innerHTML = otherName.charAt(0).toUpperCase();
 
   if(type === 'incoming') { 
       callTypeText.textContent = callType === 'video' ? "Incoming Video Call" : "Incoming Audio Call"; 
@@ -740,7 +1057,7 @@ function cleanupCall(callId){
     ringtone.pause(); 
     callOverlay.style.display='none'; 
     clearInterval(callTimerInterval); 
-    callTimer.textContent = "Ringing..."; // Automatically reset call timer back on disconnect
+    callTimer.textContent = "Ringing..."; 
     mainCallCard.classList.remove('connected-video'); 
     remoteVideo.style.display = 'none'; 
     localVideo.style.display = 'none';
@@ -792,7 +1109,7 @@ function updateBlockUI(isBlocked) { blockBtn.textContent = isBlocked ? 'Unblock'
 blockBtn.onclick = () => { if(!privateChatWith) return; const ref = db.ref(`blocks/${username}/${privateChatWith}`); ref.once('value', s => { if(s.exists()) { ref.remove(); showToast("User Unblocked"); } else { ref.set(true); showToast("User Blocked"); } }); };
 reportBtn.onclick = () => { showToast(`Reported`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); };
 
-profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
+profileImgInput.onchange = function(){ const file = this.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (e) => { profileImage = e.target.result; localStorage.setItem('profileImage', profileImage); profileCache.set(username, { ...(profileCache.get(username)||{}), profileImage }); if(username) db.ref(`profiles/${username}`).update({ profileImage }); }; reader.readAsDataURL(file); };
 
 document.getElementById('viewBlockedBtn').onclick = (e) => {
     e.stopPropagation();
